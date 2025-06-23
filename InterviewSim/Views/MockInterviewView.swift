@@ -65,6 +65,7 @@ struct MockInterviewView: View {
                             ) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedCategory = "Technical"
+                                    cvUploaded = false // Reset CV status when switching
                                 }
                             }
                             
@@ -79,52 +80,56 @@ struct MockInterviewView: View {
                             ) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedCategory = "Behavioral"
+                                    cvUploaded = false // Reset CV status when switching
                                 }
                             }
                         }
                         .padding(.horizontal, 20)
                     }
                     
-                    // CV Upload Section (for Technical interviews)
-                    if selectedCategory == "Technical" {
-                        VStack(alignment: .leading, spacing: 20) {
-                            HStack {
-                                Text("Personalize Your Interview")
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
-                                Spacer()
-                            }
-                            .padding(.horizontal, 20)
-                            
-                            CVUploadCard(
-                                isUploaded: cvUploaded,
-                                onUpload: {
-                                    showingCVPicker = true
-                                }
-                            )
-                            .padding(.horizontal, 20)
+                    // CV Upload Section (for both Technical and Behavioral)
+                    VStack(alignment: .leading, spacing: 20) {
+                        HStack {
+                            Text("Personalize Your Interview")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            Spacer()
                         }
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        .padding(.horizontal, 20)
+                        
+                        CVUploadCard(
+                            category: selectedCategory,
+                            isUploaded: cvUploaded,
+                            onUpload: {
+                                showingCVPicker = true
+                            }
+                        )
+                        .padding(.horizontal, 20)
                     }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                     
                     // Start Interview Button
                     VStack(spacing: 12) {
                         StartInterviewButton(
                             category: selectedCategory,
-                            isEnabled: selectedCategory != "Technical" || cvUploaded
+                            isEnabled: cvUploaded
                         ) {
                             // Start interview action
                             print("Starting \(selectedCategory) interview")
                         }
                         .padding(.horizontal, 20)
                         
-                        if selectedCategory == "Technical" && !cvUploaded {
+                        if !cvUploaded {
                             Text("Upload your CV to get personalized questions")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                         }
                     }
+                    
+                    // Built by Bolt.new Badge
+                    BoltBadgeView()
+                        .padding(.top, 20)
                     
                     Spacer(minLength: 20)
                 }
@@ -133,7 +138,7 @@ struct MockInterviewView: View {
             .navigationTitle("Mock Interview")
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showingCVPicker) {
-                CVPickerView(onUpload: { success in
+                CVPickerView(category: selectedCategory, onUpload: { success in
                     if success {
                         withAnimation(.spring()) {
                             cvUploaded = true
@@ -228,17 +233,33 @@ struct CategoryCard: View {
 }
 
 struct CVUploadCard: View {
+    let category: String
     let isUploaded: Bool
     let onUpload: () -> Void
+    
+    private var uploadDescription: String {
+        switch category {
+        case "Technical":
+            return isUploaded ? 
+                "We'll create personalized technical questions based on your skills and experience" :
+                "We'll analyze your technical background and tailor coding/problem-solving questions accordingly"
+        case "Behavioral":
+            return isUploaded ?
+                "We'll create personalized behavioral questions based on your work experience and achievements" :
+                "We'll analyze your work history and create STAR-method questions based on your background"
+        default:
+            return "We'll analyze your background and tailor questions accordingly"
+        }
+    }
     
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: isUploaded ? "checkmark.circle.fill" : "doc.text.fill")
                 .font(.title2)
-                .foregroundColor(isUploaded ? .green : .blue)
+                .foregroundColor(isUploaded ? .green : (category == "Technical" ? .blue : .purple))
                 .frame(width: 44, height: 44)
                 .background(
-                    (isUploaded ? Color.green : Color.blue).opacity(0.1)
+                    (isUploaded ? Color.green : (category == "Technical" ? Color.blue : Color.purple)).opacity(0.1)
                 )
                 .cornerRadius(10)
                 .symbolRenderingMode(.hierarchical)
@@ -249,14 +270,11 @@ struct CVUploadCard: View {
                     .fontWeight(.semibold)
                     .foregroundColor(isUploaded ? .green : .primary)
                 
-                Text(isUploaded ? 
-                     "We'll create personalized questions based on your background" :
-                     "We'll analyze your background and tailor questions accordingly"
-                )
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.leading)
-                .lineLimit(2)
+                Text(uploadDescription)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(3)
             }
             
             Spacer()
@@ -269,7 +287,7 @@ struct CVUploadCard: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(Color.blue)
+                        .background(category == "Technical" ? Color.blue : Color.purple)
                         .cornerRadius(8)
                 }
             } else {
@@ -358,9 +376,77 @@ struct StartInterviewButton: View {
     }
 }
 
+struct BoltBadgeView: View {
+    var body: some View {
+        Button(action: {
+            if let url = URL(string: "https://bolt.new") {
+                UIApplication.shared.open(url)
+            }
+        }) {
+            HStack(spacing: 8) {
+                // Bolt icon
+                Image(systemName: "bolt.fill")
+                    .font(.caption)
+                    .foregroundColor(.white)
+                
+                Text("Built by")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white.opacity(0.9))
+                
+                Text("bolt.new")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.2, green: 0.2, blue: 0.2),
+                        Color(red: 0.1, green: 0.1, blue: 0.1)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
+            )
+            .shadow(
+                color: Color.black.opacity(0.2),
+                radius: 4,
+                x: 0,
+                y: 2
+            )
+        }
+        .scaleEffect(0.95)
+        .opacity(0.8)
+    }
+}
+
 struct CVPickerView: View {
+    let category: String
     let onUpload: (Bool) -> Void
     @Environment(\.dismiss) private var dismiss
+    
+    private var categoryColor: Color {
+        category == "Technical" ? .blue : .purple
+    }
+    
+    private var analysisDescription: String {
+        switch category {
+        case "Technical":
+            return "We'll analyze your technical skills, programming languages, frameworks, and project experience to create relevant coding challenges and technical questions."
+        case "Behavioral":
+            return "We'll analyze your work experience, achievements, and career progression to create personalized STAR-method behavioral questions."
+        default:
+            return "We'll analyze your background to create personalized questions."
+        }
+    }
     
     var body: some View {
         NavigationView {
@@ -370,45 +456,71 @@ struct CVPickerView: View {
                 VStack(spacing: 20) {
                     Image(systemName: "doc.text.fill")
                         .font(.system(size: 60))
-                        .foregroundColor(.blue)
+                        .foregroundColor(categoryColor)
                         .symbolRenderingMode(.hierarchical)
                     
-                    VStack(spacing: 8) {
+                    VStack(spacing: 12) {
                         Text("Upload Your CV")
                             .font(.title2)
                             .fontWeight(.bold)
                         
-                        Text("We'll analyze your background to create personalized interview questions")
+                        Text("For \(category) Interview")
+                            .font(.headline)
+                            .foregroundColor(categoryColor)
+                            .fontWeight(.semibold)
+                        
+                        Text(analysisDescription)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal)
+                            .padding(.horizontal, 20)
+                            .lineLimit(4)
                     }
                 }
                 
                 VStack(spacing: 16) {
                     Button(action: {
                         // Simulate upload success
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                             onUpload(true)
                             dismiss()
                         }
                     }) {
-                        HStack {
+                        HStack(spacing: 12) {
                             Image(systemName: "icloud.and.arrow.up")
+                                .font(.headline)
                             Text("Choose File")
+                                .font(.headline)
+                                .fontWeight(.semibold)
                         }
-                        .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(Color.blue)
+                        .frame(height: 52)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
                         .cornerRadius(12)
+                        .shadow(
+                            color: categoryColor.opacity(0.3),
+                            radius: 8,
+                            x: 0,
+                            y: 4
+                        )
                     }
                     
-                    Text("Supported formats: PDF, DOC, DOCX")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    VStack(spacing: 4) {
+                        Text("Supported formats: PDF, DOC, DOCX")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Text("Max file size: 10MB")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 .padding(.horizontal, 32)
                 
@@ -422,6 +534,7 @@ struct CVPickerView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(categoryColor)
                 }
             }
         }
