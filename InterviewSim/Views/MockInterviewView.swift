@@ -376,29 +376,6 @@ struct StartInterviewButton: View {
     }
 }
 
-struct BoltBadgeImageView: View {
-    var body: some View {
-        Button(action: {
-            if let url = URL(string: "https://bolt.new") {
-                UIApplication.shared.open(url)
-            }
-        }) {
-            Image("bolt_badge")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(height: 28) // Slightly smaller for main view
-                .shadow(
-                    color: Color.black.opacity(0.1),
-                    radius: 2,
-                    x: 0,
-                    y: 1
-                )
-        }
-        .scaleEffect(0.95)
-        .opacity(0.8)
-    }
-}
-
 struct CVPickerView: View {
     let category: String
     let onUpload: (Bool) -> Void

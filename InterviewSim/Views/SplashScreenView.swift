@@ -64,7 +64,7 @@ struct SplashScreenView: View {
                 Spacer()
                 
                 // Built by Bolt.new Badge - Using Asset Image
-                BoltBadgeImageView()
+                BoltBadgeImageView(height: 32, scaleEffect: 0.9)
                     .opacity(isBadgeAnimated ? 1.0 : 0.0)
                     .offset(y: isBadgeAnimated ? 0 : 20)
                     .animation(
@@ -166,28 +166,6 @@ struct InterviewSimLogo: View {
                 }
             }
         }
-    }
-}
-
-struct BoltBadgeImageView: View {
-    var body: some View {
-        Button(action: {
-            if let url = URL(string: "https://bolt.new") {
-                UIApplication.shared.open(url)
-            }
-        }) {
-            Image("bolt_badge")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(height: 32) // Adjust height as needed
-                .shadow(
-                    color: Color.black.opacity(0.2),
-                    radius: 4,
-                    x: 0,
-                    y: 2
-                )
-        }
-        .scaleEffect(0.9)
     }
 }
 
