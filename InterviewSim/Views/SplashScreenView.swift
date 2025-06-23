@@ -63,8 +63,8 @@ struct SplashScreenView: View {
                 
                 Spacer()
                 
-                // Built by Bolt.new Badge
-                BoltBadgeView()
+                // Built by Bolt.new Badge - Using Asset Image
+                BoltBadgeImageView()
                     .opacity(isBadgeAnimated ? 1.0 : 0.0)
                     .offset(y: isBadgeAnimated ? 0 : 20)
                     .animation(
@@ -169,50 +169,23 @@ struct InterviewSimLogo: View {
     }
 }
 
-struct BoltBadgeView: View {
+struct BoltBadgeImageView: View {
     var body: some View {
         Button(action: {
             if let url = URL(string: "https://bolt.new") {
                 UIApplication.shared.open(url)
             }
         }) {
-            HStack(spacing: 8) {
-                // Bolt icon
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.white)
-                
-                Text("Built by")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white.opacity(0.9))
-                
-                Text("bolt.new")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 0.2, green: 0.2, blue: 0.2),
-                        Color(red: 0.1, green: 0.1, blue: 0.1)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+            Image("bolt_badge")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(height: 32) // Adjust height as needed
+                .shadow(
+                    color: Color.black.opacity(0.2),
+                    radius: 4,
+                    x: 0,
+                    y: 2
                 )
-            )
-            .cornerRadius(20)
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-            )
-            .shadow(
-                color: Color.black.opacity(0.3),
-                radius: 8,
-                x: 0,
-                y: 4
-            )
         }
         .scaleEffect(0.9)
     }
