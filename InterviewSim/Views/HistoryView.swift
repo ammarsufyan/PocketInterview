@@ -136,28 +136,11 @@ struct HistoryStatsView: View {
         sessions.reduce(0) { $0 + $1.questionsAnswered }
     }
     
-    var technicalSessions: Int {
-        sessions.filter { $0.category == "Technical" }.count
-    }
-    
-    var behavioralSessions: Int {
-        sessions.filter { $0.category == "Behavioral" }.count
-    }
-    
     var body: some View {
-        VStack(spacing: 16) {
-            // Main Stats
-            HStack(spacing: 16) {
-                StatItem(title: "Avg Score", value: "\(averageScore)%", icon: "star.fill", color: .orange)
-                StatItem(title: "Total Time", value: "\(totalDuration)m", icon: "clock.fill", color: .blue)
-                StatItem(title: "Questions", value: "\(totalQuestions)", icon: "questionmark.circle.fill", color: .green)
-            }
-            
-            // Category Breakdown
-            HStack(spacing: 16) {
-                CategoryStatItem(title: "Technical", count: technicalSessions, icon: "laptopcomputer", color: .blue)
-                CategoryStatItem(title: "Behavioral", count: behavioralSessions, icon: "person.2.fill", color: .purple)
-            }
+        HStack(spacing: 16) {
+            StatItem(title: "Avg Score", value: "\(averageScore)%", icon: "star.fill", color: .orange)
+            StatItem(title: "Total Time", value: "\(totalDuration)m", icon: "clock.fill", color: .blue)
+            StatItem(title: "Questions", value: "\(totalQuestions)", icon: "questionmark.circle.fill", color: .green)
         }
         .padding()
         .background(Color(.systemGray6))
@@ -178,30 +161,6 @@ struct StatItem: View {
                 .foregroundColor(color)
             
             Text(value)
-                .font(.headline)
-                .fontWeight(.bold)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
-struct CategoryStatItem: View {
-    let title: String
-    let count: Int
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(color)
-            
-            Text("\(count)")
                 .font(.headline)
                 .fontWeight(.bold)
             

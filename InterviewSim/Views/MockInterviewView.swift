@@ -39,13 +39,6 @@ struct MockInterviewView: View {
                     }
                     .padding(.horizontal)
                     
-                    // Quick Stats
-                    HStack(spacing: 16) {
-                        StatCard(title: "Sessions", value: "12", icon: "chart.bar.fill", color: .green)
-                        StatCard(title: "Avg Score", value: "85%", icon: "star.fill", color: .orange)
-                    }
-                    .padding(.horizontal)
-                    
                     // Interview Categories
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
@@ -116,33 +109,6 @@ struct MockInterviewView: View {
             .navigationTitle("Mock Interview")
             .navigationBarTitleDisplayMode(.large)
         }
-    }
-}
-
-struct StatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(color)
-            
-            Text(value)
-                .font(.headline)
-                .fontWeight(.bold)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
     }
 }
 
