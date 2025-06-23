@@ -234,15 +234,8 @@ struct HistorySessionCard: View {
     
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
-        
-        if Calendar.current.isDateInToday(date) {
-            return "Today"
-        } else if Calendar.current.isDateInYesterday(date) {
-            return "Yesterday"
-        } else {
-            formatter.dateFormat = "MMM d"
-            return formatter.string(from: date)
-        }
+        formatter.dateFormat = "MMM d"
+        return formatter.string(from: date)
     }
 }
 
