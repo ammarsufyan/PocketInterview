@@ -15,11 +15,11 @@ struct HistoryView: View {
     
     // Sample data - focused on Technical and Behavioral only
     let sessions = [
-        InterviewSession(id: 1, category: "Technical", difficulty: "Advanced", score: 78, date: Date(), duration: 45, questionsAnswered: 12),
-        InterviewSession(id: 2, category: "Behavioral", difficulty: "Intermediate", score: 92, date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, duration: 30, questionsAnswered: 8),
-        InterviewSession(id: 3, category: "Technical", difficulty: "Intermediate", score: 85, date: Calendar.current.date(byAdding: .day, value: -2, to: Date())!, duration: 35, questionsAnswered: 10),
-        InterviewSession(id: 4, category: "Behavioral", difficulty: "Beginner", score: 88, date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!, duration: 25, questionsAnswered: 6),
-        InterviewSession(id: 5, category: "Technical", difficulty: "Advanced", score: 74, date: Calendar.current.date(byAdding: .day, value: -5, to: Date())!, duration: 50, questionsAnswered: 15)
+        InterviewSession(id: 1, category: "Technical", score: 78, date: Date(), duration: 45, questionsAnswered: 12),
+        InterviewSession(id: 2, category: "Behavioral", score: 92, date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, duration: 30, questionsAnswered: 8),
+        InterviewSession(id: 3, category: "Technical", score: 85, date: Calendar.current.date(byAdding: .day, value: -2, to: Date())!, duration: 35, questionsAnswered: 10),
+        InterviewSession(id: 4, category: "Behavioral", score: 88, date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!, duration: 25, questionsAnswered: 6),
+        InterviewSession(id: 5, category: "Technical", score: 74, date: Calendar.current.date(byAdding: .day, value: -5, to: Date())!, duration: 50, questionsAnswered: 15)
     ]
     
     var filteredSessions: [InterviewSession] {
@@ -95,7 +95,6 @@ struct HistoryView: View {
 struct InterviewSession: Identifiable {
     let id: Int
     let category: String
-    let difficulty: String
     let score: Int
     let date: Date
     let duration: Int // in minutes
@@ -231,10 +230,6 @@ struct HistorySessionCard: View {
                     Text(session.category)
                         .font(.headline)
                         .fontWeight(.semibold)
-                    
-                    Text(session.difficulty)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
                 }
                 
                 Spacer()

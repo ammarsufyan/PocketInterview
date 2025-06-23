@@ -9,10 +9,8 @@ import SwiftUI
 
 struct MockInterviewView: View {
     @State private var selectedCategory = "Technical"
-    @State private var selectedDifficulty = "Intermediate"
     
     let categories = ["Technical", "Behavioral"]
-    let difficulties = ["Beginner", "Intermediate", "Advanced"]
     
     var body: some View {
         NavigationView {
@@ -45,7 +43,6 @@ struct MockInterviewView: View {
                     HStack(spacing: 16) {
                         StatCard(title: "Sessions", value: "12", icon: "chart.bar.fill", color: .green)
                         StatCard(title: "Avg Score", value: "85%", icon: "star.fill", color: .orange)
-                        StatCard(title: "Streak", value: "5 days", icon: "flame.fill", color: .red)
                     }
                     .padding(.horizontal)
                     
@@ -83,29 +80,6 @@ struct MockInterviewView: View {
                         .padding(.horizontal)
                     }
                     
-                    // Difficulty Selection
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("Difficulty Level")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                            Spacer()
-                        }
-                        .padding(.horizontal)
-                        
-                        HStack(spacing: 12) {
-                            ForEach(difficulties, id: \.self) { difficulty in
-                                DifficultyButton(
-                                    title: difficulty,
-                                    isSelected: selectedDifficulty == difficulty
-                                ) {
-                                    selectedDifficulty = difficulty
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    
                     // Start Interview Button
                     VStack(spacing: 16) {
                         Button(action: {
@@ -132,7 +106,7 @@ struct MockInterviewView: View {
                         }
                         .padding(.horizontal)
                         
-                        Text("Selected: \(selectedCategory) • \(selectedDifficulty)")
+                        Text("Selected: \(selectedCategory)")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -155,14 +129,12 @@ struct MockInterviewView: View {
                         VStack(spacing: 12) {
                             RecentSessionCard(
                                 category: "Technical",
-                                difficulty: "Advanced",
                                 score: 78,
                                 date: "Today"
                             )
                             
                             RecentSessionCard(
                                 category: "Behavioral",
-                                difficulty: "Intermediate",
                                 score: 92,
                                 date: "Yesterday"
                             )
@@ -269,28 +241,8 @@ struct CategoryCard: View {
     }
 }
 
-struct DifficultyButton: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(isSelected ? .white : .primary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 40)
-                .background(isSelected ? Color.blue : Color(.systemGray6))
-                .cornerRadius(8)
-        }
-    }
-}
-
 struct RecentSessionCard: View {
     let category: String
-    let difficulty: String
     let score: Int
     let date: String
     
@@ -308,7 +260,7 @@ struct RecentSessionCard: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 
-                Text("\(difficulty) • \(date)")
+                Text(date)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
