@@ -26,9 +26,10 @@ struct HistoryView: View {
         let filtered = selectedFilter == "All" ? sessions : sessions.filter { $0.category == selectedFilter }
         
         if searchText.isEmpty {
-            return filtered
+            return filtered.sorted { $0.date > $1.date }
         } else {
             return filtered.filter { $0.category.localizedCaseInsensitiveContains(searchText) }
+                .sorted { $0.date > $1.date }
         }
     }
     
@@ -36,18 +37,20 @@ struct HistoryView: View {
         NavigationView {
             VStack(spacing: 0) {
                 // Search Bar
-                HStack {
+                HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
+                        .font(.system(size: 16))
                     
                     TextField("Search sessions...", text: $searchText)
                         .textFieldStyle(PlainTextFieldStyle())
+                        .font(.subheadline)
                 }
-                .padding()
+                .padding(16)
                 .background(Color(.systemGray6))
                 .cornerRadius(12)
-                .padding(.horizontal)
-                .padding(.top)
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
                 
                 // Filter Tabs
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -57,33 +60,36 @@ struct HistoryView: View {
                                 title: filter,
                                 isSelected: selectedFilter == filter
                             ) {
-                                selectedFilter = filter
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    selectedFilter = filter
+                                }
                             }
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 20)
                 }
-                .padding(.vertical)
+                .padding(.vertical, 20)
                 
                 // Statistics Overview
                 if !filteredSessions.isEmpty {
                     HistoryStatsView(sessions: filteredSessions)
-                        .padding(.horizontal)
-                        .padding(.bottom)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
                 }
                 
                 // Sessions List
                 if filteredSessions.isEmpty {
-                    EmptyStateView()
+                    EmptyStateView(searchText: searchText)
                 } else {
-                    List {
-                        ForEach(filteredSessions) { session in
-                            HistorySessionCard(session: session)
-                                .listRowSeparator(.hidden)
-                                .listRowBackground(Color.clear)
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(filteredSessions) { session in
+                                HistorySessionCard(session: session)
+                            }
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
                     }
-                    .listStyle(PlainListStyle())
                 }
             }
             .navigationTitle("History")
@@ -112,11 +118,21 @@ struct FilterTab: View {
                 .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundColor(isSelected ? .white : .primary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color.blue : Color(.systemGray6))
-                .cornerRadius(20)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? Color.blue : Color(.systemGray6))
+                )
+                .shadow(
+                    color: isSelected ? Color.blue.opacity(0.3) : Color.clear,
+                    radius: isSelected ? 4 : 0,
+                    x: 0,
+                    y: 2
+                )
         }
+        .scaleEffect(isSelected ? 1.05 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 }
 
@@ -142,9 +158,10 @@ struct HistoryStatsView: View {
             StatItem(title: "Total Time", value: "\(totalDuration)m", icon: "clock.fill", color: .blue)
             StatItem(title: "Questions", value: "\(totalQuestions)", icon: "questionmark.circle.fill", color: .green)
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
+        .padding(20)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
 }
 
@@ -155,14 +172,16 @@ struct StatItem: View {
     let color: Color
     
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.title3)
+                .font(.title2)
                 .foregroundColor(color)
+                .symbolRenderingMode(.hierarchical)
             
             Text(value)
                 .font(.headline)
                 .fontWeight(.bold)
+                .foregroundColor(.primary)
             
             Text(title)
                 .font(.caption)
@@ -175,53 +194,59 @@ struct StatItem: View {
 struct HistorySessionCard: View {
     let session: InterviewSession
     
+    private var categoryColor: Color {
+        session.category == "Technical" ? .blue : .purple
+    }
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
-                    .font(.title2)
-                    .foregroundColor(session.category == "Technical" ? .blue : .purple)
-                    .frame(width: 40, height: 40)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
-                
-                VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 16) {
+            // Category Icon
+            Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
+                .font(.title2)
+                .foregroundColor(categoryColor)
+                .frame(width: 48, height: 48)
+                .background(categoryColor.opacity(0.1))
+                .cornerRadius(12)
+                .symbolRenderingMode(.hierarchical)
+            
+            // Session Info
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
                     Text(session.category)
                         .font(.headline)
                         .fontWeight(.semibold)
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 4) {
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
                     Text("\(session.score)%")
-                        .font(.title2)
+                        .font(.title3)
                         .fontWeight(.bold)
                         .foregroundColor(scoreColor(session.score))
-                    
-                    Text("Score")
+                }
+                
+                HStack(spacing: 16) {
+                    Label("\(session.duration) min", systemImage: "clock")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    
+                    Label("\(session.questionsAnswered) questions", systemImage: "questionmark.circle")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    Text(formatDate(session.date))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fontWeight(.medium)
                 }
             }
-            
-            HStack(spacing: 16) {
-                Label("\(session.duration) min", systemImage: "clock")
-                Label("\(session.questionsAnswered) questions", systemImage: "questionmark.circle")
-                
-                Spacer()
-                
-                Text(formatDate(session.date))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .font(.caption)
-            .foregroundColor(.secondary)
         }
-        .padding()
+        .padding(20)
         .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
     
     private func scoreColor(_ score: Int) -> Color {
@@ -240,23 +265,33 @@ struct HistorySessionCard: View {
 }
 
 struct EmptyStateView: View {
+    let searchText: String
+    
     var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "clock.badge.questionmark")
+        VStack(spacing: 20) {
+            Image(systemName: searchText.isEmpty ? "clock.badge.questionmark" : "magnifyingglass")
                 .font(.system(size: 60))
                 .foregroundColor(.secondary)
+                .symbolRenderingMode(.hierarchical)
             
-            Text("No Sessions Found")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text("Start your first mock interview to see your history here")
+            VStack(spacing: 8) {
+                Text(searchText.isEmpty ? "No Sessions Yet" : "No Results Found")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                Text(searchText.isEmpty ? 
+                     "Start your first mock interview to see your history here" :
+                     "Try adjusting your search or filter criteria"
+                )
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
+        .padding(40)
     }
 }
 
