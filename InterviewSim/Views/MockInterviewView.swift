@@ -110,37 +110,6 @@ struct MockInterviewView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
-                    // Recent Practice Sessions
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text("Continue Practice")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                            Spacer()
-                            Button("See All") {
-                                // Navigate to history
-                            }
-                            .font(.subheadline)
-                            .foregroundColor(.blue)
-                        }
-                        .padding(.horizontal)
-                        
-                        VStack(spacing: 12) {
-                            RecentSessionCard(
-                                category: "Technical",
-                                score: 78,
-                                date: "Today"
-                            )
-                            
-                            RecentSessionCard(
-                                category: "Behavioral",
-                                score: 92,
-                                date: "Yesterday"
-                            )
-                        }
-                        .padding(.horizontal)
-                    }
                 }
                 .padding(.vertical)
             }
@@ -237,58 +206,6 @@ struct CategoryCard: View {
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(isSelected ? Color.clear : Color(.systemGray4), lineWidth: 1)
             )
-        }
-    }
-}
-
-struct RecentSessionCard: View {
-    let category: String
-    let score: Int
-    let date: String
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: category == "Technical" ? "laptopcomputer" : "person.2.fill")
-                .font(.title2)
-                .foregroundColor(category == "Technical" ? .blue : .purple)
-                .frame(width: 40, height: 40)
-                .background(Color(.systemGray6))
-                .cornerRadius(8)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(category)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                
-                Text(date)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            VStack(alignment: .trailing, spacing: 4) {
-                Text("\(score)%")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundColor(scoreColor(score))
-                
-                Text("Score")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
-    }
-    
-    private func scoreColor(_ score: Int) -> Color {
-        switch score {
-        case 90...100: return .green
-        case 70...89: return .orange
-        default: return .red
         }
     }
 }
