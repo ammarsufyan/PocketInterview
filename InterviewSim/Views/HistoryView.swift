@@ -11,15 +11,15 @@ struct HistoryView: View {
     @State private var selectedFilter = "All"
     @State private var searchText = ""
     
-    let filters = ["All", "Technical", "Behavioral", "Case Study", "System Design"]
+    let filters = ["All", "Technical", "Behavioral"]
     
-    // Sample data
+    // Sample data - focused on Technical and Behavioral only
     let sessions = [
         InterviewSession(id: 1, category: "Technical", difficulty: "Advanced", score: 78, date: Date(), duration: 45, questionsAnswered: 12),
         InterviewSession(id: 2, category: "Behavioral", difficulty: "Intermediate", score: 92, date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, duration: 30, questionsAnswered: 8),
-        InterviewSession(id: 3, category: "System Design", difficulty: "Advanced", score: 65, date: Calendar.current.date(byAdding: .day, value: -2, to: Date())!, duration: 60, questionsAnswered: 5),
-        InterviewSession(id: 4, category: "Technical", difficulty: "Beginner", score: 88, date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!, duration: 25, questionsAnswered: 10),
-        InterviewSession(id: 5, category: "Case Study", difficulty: "Intermediate", score: 74, date: Calendar.current.date(byAdding: .day, value: -5, to: Date())!, duration: 40, questionsAnswered: 6)
+        InterviewSession(id: 3, category: "Technical", difficulty: "Intermediate", score: 85, date: Calendar.current.date(byAdding: .day, value: -2, to: Date())!, duration: 35, questionsAnswered: 10),
+        InterviewSession(id: 4, category: "Behavioral", difficulty: "Beginner", score: 88, date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!, duration: 25, questionsAnswered: 6),
+        InterviewSession(id: 5, category: "Technical", difficulty: "Advanced", score: 74, date: Calendar.current.date(byAdding: .day, value: -5, to: Date())!, duration: 50, questionsAnswered: 15)
     ]
     
     var filteredSessions: [InterviewSession] {
@@ -137,11 +137,28 @@ struct HistoryStatsView: View {
         sessions.reduce(0) { $0 + $1.questionsAnswered }
     }
     
+    var technicalSessions: Int {
+        sessions.filter { $0.category == "Technical" }.count
+    }
+    
+    var behavioralSessions: Int {
+        sessions.filter { $0.category == "Behavioral" }.count
+    }
+    
     var body: some View {
-        HStack(spacing: 16) {
-            StatItem(title: "Avg Score", value: "\(averageScore)%", icon: "star.fill", color: .orange)
-            StatItem(title: "Total Time", value: "\(totalDuration)m", icon: "clock.fill", color: .blue)
-            StatItem(title: "Questions", value: "\(totalQuestions)", icon: "questionmark.circle.fill", color: .green)
+        VStack(spacing: 16) {
+            // Main Stats
+            HStack(spacing: 16) {
+                StatItem(title: "Avg Score", value: "\(averageScore)%", icon: "star.fill", color: .orange)
+                StatItem(title: "Total Time", value: "\(totalDuration)m", icon: "clock.fill", color: .blue)
+                StatItem(title: "Questions", value: "\(totalQuestions)", icon: "questionmark.circle.fill", color: .green)
+            }
+            
+            // Category Breakdown
+            HStack(spacing: 16) {
+                CategoryStatItem(title: "Technical", count: technicalSessions, icon: "laptopcomputer", color: .blue)
+                CategoryStatItem(title: "Behavioral", count: behavioralSessions, icon: "person.2.fill", color: .purple)
+            }
         }
         .padding()
         .background(Color(.systemGray6))
@@ -173,12 +190,43 @@ struct StatItem: View {
     }
 }
 
+struct CategoryStatItem: View {
+    let title: String
+    let count: Int
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(color)
+            
+            Text("\(count)")
+                .font(.headline)
+                .fontWeight(.bold)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
 struct HistorySessionCard: View {
     let session: InterviewSession
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
+                Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
+                    .font(.title2)
+                    .foregroundColor(session.category == "Technical" ? .blue : .purple)
+                    .frame(width: 40, height: 40)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+                
                 VStack(alignment: .leading, spacing: 4) {
                     Text(session.category)
                         .font(.headline)

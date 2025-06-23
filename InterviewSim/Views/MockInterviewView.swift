@@ -11,7 +11,7 @@ struct MockInterviewView: View {
     @State private var selectedCategory = "Technical"
     @State private var selectedDifficulty = "Intermediate"
     
-    let categories = ["Technical", "Behavioral", "Case Study", "System Design"]
+    let categories = ["Technical", "Behavioral"]
     let difficulties = ["Beginner", "Intermediate", "Advanced"]
     
     var body: some View {
@@ -27,7 +27,7 @@ struct MockInterviewView: View {
                                     .fontWeight(.bold)
                                     .foregroundColor(.primary)
                                 
-                                Text("Choose your interview type and start practicing")
+                                Text("Master technical skills and behavioral questions")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                             }
@@ -52,26 +52,35 @@ struct MockInterviewView: View {
                     // Interview Categories
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            Text("Interview Categories")
+                            Text("Interview Types")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                             Spacer()
                         }
                         .padding(.horizontal)
                         
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(categories, id: \.self) { category in
-                                    CategoryCard(
-                                        title: category,
-                                        isSelected: selectedCategory == category
-                                    ) {
-                                        selectedCategory = category
-                                    }
-                                }
+                        VStack(spacing: 12) {
+                            CategoryCard(
+                                title: "Technical",
+                                subtitle: "Coding & Problem Solving",
+                                description: "Practice algorithms, data structures, and coding challenges",
+                                icon: "laptopcomputer",
+                                isSelected: selectedCategory == "Technical"
+                            ) {
+                                selectedCategory = "Technical"
                             }
-                            .padding(.horizontal)
+                            
+                            CategoryCard(
+                                title: "Behavioral",
+                                subtitle: "Soft Skills & Experience",
+                                description: "Master STAR method and showcase your experience",
+                                icon: "person.2.fill",
+                                isSelected: selectedCategory == "Behavioral"
+                            ) {
+                                selectedCategory = "Behavioral"
+                            }
                         }
+                        .padding(.horizontal)
                     }
                     
                     // Difficulty Selection
@@ -105,7 +114,7 @@ struct MockInterviewView: View {
                             HStack {
                                 Image(systemName: "play.circle.fill")
                                     .font(.title2)
-                                Text("Start Mock Interview")
+                                Text("Start \(selectedCategory) Interview")
                                     .font(.headline)
                                     .fontWeight(.semibold)
                             }
@@ -114,7 +123,7 @@ struct MockInterviewView: View {
                             .frame(height: 56)
                             .background(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [.blue, .purple]),
+                                    gradient: Gradient(colors: selectedCategory == "Technical" ? [.blue, .cyan] : [.purple, .pink]),
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -198,34 +207,64 @@ struct StatCard: View {
 
 struct CategoryCard: View {
     let title: String
+    let subtitle: String
+    let description: String
+    let icon: String
     let isSelected: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: iconForCategory(title))
-                    .font(.title2)
-                    .foregroundColor(isSelected ? .white : .blue)
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.title)
+                    .foregroundColor(isSelected ? .white : (title == "Technical" ? .blue : .purple))
+                    .frame(width: 50, height: 50)
+                    .background(isSelected ? (title == "Technical" ? Color.blue : Color.purple) : Color(.systemGray6))
+                    .cornerRadius(12)
                 
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(isSelected ? .white : .primary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(isSelected ? .white : .primary)
+                    
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(isSelected ? .white.opacity(0.9) : .secondary)
+                    
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
+                        .multilineTextAlignment(.leading)
+                }
+                
+                Spacer()
+                
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundColor(isSelected ? .white : .secondary)
             }
-            .frame(width: 120, height: 80)
-            .background(isSelected ? Color.blue : Color(.systemGray6))
-            .cornerRadius(12)
-        }
-    }
-    
-    private func iconForCategory(_ category: String) -> String {
-        switch category {
-        case "Technical": return "laptopcomputer"
-        case "Behavioral": return "person.2.fill"
-        case "Case Study": return "doc.text.fill"
-        case "System Design": return "network"
-        default: return "questionmark.circle"
+            .padding()
+            .background(
+                isSelected ? 
+                LinearGradient(
+                    gradient: Gradient(colors: title == "Technical" ? [.blue, .cyan] : [.purple, .pink]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ) : 
+                LinearGradient(
+                    gradient: Gradient(colors: [Color(.systemGray6), Color(.systemGray6)]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? Color.clear : Color(.systemGray4), lineWidth: 1)
+            )
         }
     }
 }
@@ -257,6 +296,13 @@ struct RecentSessionCard: View {
     
     var body: some View {
         HStack(spacing: 16) {
+            Image(systemName: category == "Technical" ? "laptopcomputer" : "person.2.fill")
+                .font(.title2)
+                .foregroundColor(category == "Technical" ? .blue : .purple)
+                .frame(width: 40, height: 40)
+                .background(Color(.systemGray6))
+                .cornerRadius(8)
+            
             VStack(alignment: .leading, spacing: 4) {
                 Text(category)
                     .font(.subheadline)
@@ -281,8 +327,9 @@ struct RecentSessionCard: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color(.systemBackground))
         .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
     }
     
     private func scoreColor(_ score: Int) -> Color {
