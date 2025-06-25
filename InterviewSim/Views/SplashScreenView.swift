@@ -78,7 +78,7 @@ struct SplashScreenView: View {
             startAnimationSequence()
         }
         .fullScreenCover(isPresented: $showMainApp) {
-            ContentView()
+            AuthenticationView()
         }
     }
     
@@ -102,7 +102,7 @@ struct SplashScreenView: View {
             }
         }
         
-        // Navigate to main app
+        // Navigate to authentication
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             withAnimation(.easeInOut(duration: 0.5)) {
                 showMainApp = true

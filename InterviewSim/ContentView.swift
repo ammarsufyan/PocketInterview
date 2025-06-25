@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var authManager = AuthenticationManager()
+    
     var body: some View {
         TabView {
             MockInterviewView()
@@ -21,8 +23,15 @@ struct ContentView: View {
                     Image(systemName: "clock.fill")
                     Text("History")
                 }
+            
+            ProfileView()
+                .tabItem {
+                    Image(systemName: "person.circle.fill")
+                    Text("Profile")
+                }
         }
         .accentColor(.blue)
+        .environmentObject(authManager)
     }
 }
 
