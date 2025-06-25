@@ -6,19 +6,14 @@
 //
 
 import Foundation
-
-// Temporarily comment out Supabase import until package is properly linked
-// import Supabase
+import Supabase
 
 class SupabaseConfig {
     static let shared = SupabaseConfig()
     
-    // Temporarily comment out client until package is fixed
-    // let client: SupabaseClient
+    let client: SupabaseClient
     
     private init() {
-        // Temporarily comment out until package is properly linked
-        /*
         guard let url = URL(string: "https://icwmrtklyfnwrbpqhksm.supabase.co") else {
             fatalError("Invalid Supabase URL")
         }
@@ -29,6 +24,5 @@ class SupabaseConfig {
             supabaseURL: url,
             supabaseKey: apiKey
         )
-        */
     }
 }

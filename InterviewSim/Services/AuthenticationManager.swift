@@ -6,39 +6,40 @@
 //
 
 import Foundation
-// Temporarily comment out Supabase import until package is properly linked
-// import Supabase
+import Supabase
 import Combine
 
 @MainActor
 class AuthenticationManager: ObservableObject {
     @Published var isAuthenticated = false
-    @Published var currentUser: MockUser?
+    @Published var currentUser: User?
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    // Temporarily use mock implementation until Supabase package is fixed
-    // private let supabase = SupabaseConfig.shared.client
+    private let supabase = SupabaseConfig.shared.client
     private var cancellables = Set<AnyCancellable>()
     
     init() {
-        // Temporarily comment out Supabase setup
-        // setupAuthStateListener()
+        setupAuthStateListener()
         checkInitialAuthState()
     }
     
-    // MARK: - Auth State Management (Mock Implementation)
+    // MARK: - Auth State Management
     
     private func checkInitialAuthState() {
-        // Check if user was previously logged in (mock implementation)
-        if let email = UserDefaults.standard.string(forKey: "mock_user_email") {
-            self.currentUser = MockUser(id: UUID().uuidString, email: email)
-            self.isAuthenticated = true
+        Task {
+            do {
+                let session = try await supabase.auth.session
+                self.currentUser = session.user
+                self.isAuthenticated = session.user != nil
+            } catch {
+                print("Error checking initial auth state: \(error)")
+                self.isAuthenticated = false
+                self.currentUser = nil
+            }
         }
     }
     
-    /*
-    // Supabase implementation - commented out until package is fixed
     private func setupAuthStateListener() {
         supabase.auth.onAuthStateChange { [weak self] event, session in
             Task { @MainActor in
@@ -62,90 +63,39 @@ class AuthenticationManager: ObservableObject {
             break
         }
     }
-    */
     
-    // MARK: - Authentication Methods (Mock Implementation)
+    // MARK: - Authentication Methods
     
     func signUp(email: String, password: String) async {
         isLoading = true
         errorMessage = nil
         
-        // Simulate network delay
-        try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
-        
-        // Mock validation
-        if !isValidEmail(email) {
-            errorMessage = "Please enter a valid email address"
-            isLoading = false
-            return
-        }
-        
-        if password.count < 6 {
-            errorMessage = "Password must be at least 6 characters"
-            isLoading = false
-            return
-        }
-        
-        // Simulate successful sign up
-        let user = MockUser(id: UUID().uuidString, email: email)
-        self.currentUser = user
-        self.isAuthenticated = true
-        
-        // Store in UserDefaults for persistence
-        UserDefaults.standard.set(email, forKey: "mock_user_email")
-        
-        isLoading = false
-        
-        /*
-        // Real Supabase implementation - commented out until package is fixed
         do {
             let response = try await supabase.auth.signUp(
                 email: email,
                 password: password
             )
             
-            // Auto sign in after successful sign up
-            if response.user != nil {
-                await signIn(email: email, password: password)
+            // Check if user needs email confirmation
+            if response.user != nil && response.session == nil {
+                // User created but needs email confirmation
+                self.errorMessage = "Please check your email and confirm your account before signing in."
+            } else if response.session != nil {
+                // User is automatically signed in
+                self.currentUser = response.user
+                self.isAuthenticated = true
             }
         } catch {
             self.errorMessage = handleAuthError(error)
         }
-        */
+        
+        isLoading = false
     }
     
     func signIn(email: String, password: String) async {
         isLoading = true
         errorMessage = nil
         
-        // Simulate network delay
-        try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
-        
-        // Mock validation
-        if !isValidEmail(email) {
-            errorMessage = "Please enter a valid email address"
-            isLoading = false
-            return
-        }
-        
-        if password.count < 6 {
-            errorMessage = "Password must be at least 6 characters"
-            isLoading = false
-            return
-        }
-        
-        // Mock authentication (accept any valid email/password combo)
-        let user = MockUser(id: UUID().uuidString, email: email)
-        self.currentUser = user
-        self.isAuthenticated = true
-        
-        // Store in UserDefaults for persistence
-        UserDefaults.standard.set(email, forKey: "mock_user_email")
-        
-        isLoading = false
-        
-        /*
-        // Real Supabase implementation - commented out until package is fixed
         do {
             let response = try await supabase.auth.signIn(
                 email: email,
@@ -157,25 +107,13 @@ class AuthenticationManager: ObservableObject {
         } catch {
             self.errorMessage = handleAuthError(error)
         }
-        */
+        
+        isLoading = false
     }
     
     func signOut() async {
         isLoading = true
         
-        // Simulate network delay
-        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-        
-        self.currentUser = nil
-        self.isAuthenticated = false
-        
-        // Remove from UserDefaults
-        UserDefaults.standard.removeObject(forKey: "mock_user_email")
-        
-        isLoading = false
-        
-        /*
-        // Real Supabase implementation - commented out until package is fixed
         do {
             try await supabase.auth.signOut()
             self.currentUser = nil
@@ -183,40 +121,26 @@ class AuthenticationManager: ObservableObject {
         } catch {
             self.errorMessage = handleAuthError(error)
         }
-        */
+        
+        isLoading = false
     }
     
     func resetPassword(email: String) async {
         isLoading = true
         errorMessage = nil
         
-        // Simulate network delay
-        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-        
-        if !isValidEmail(email) {
-            errorMessage = "Please enter a valid email address"
-            isLoading = false
-            return
-        }
-        
-        // Mock success - in real app, this would send an email
-        isLoading = false
-        
-        /*
-        // Real Supabase implementation - commented out until package is fixed
         do {
             try await supabase.auth.resetPasswordForEmail(email)
             // Success - user will receive email
         } catch {
             self.errorMessage = handleAuthError(error)
         }
-        */
+        
+        isLoading = false
     }
     
     // MARK: - Error Handling
     
-    /*
-    // Supabase error handling - commented out until package is fixed
     private func handleAuthError(_ error: Error) -> String {
         if let authError = error as? AuthError {
             switch authError {
@@ -236,7 +160,6 @@ class AuthenticationManager: ObservableObject {
         }
         return error.localizedDescription
     }
-    */
     
     // MARK: - Utility Methods
     
@@ -249,16 +172,6 @@ class AuthenticationManager: ObservableObject {
     }
     
     var userId: String? {
-        return currentUser?.id
+        return currentUser?.id.uuidString
     }
-    
-    private func isValidEmail(_ email: String) -> Bool {
-        return email.contains("@") && email.contains(".")
-    }
-}
-
-// Mock User struct for temporary implementation
-struct MockUser {
-    let id: String
-    let email: String
 }
