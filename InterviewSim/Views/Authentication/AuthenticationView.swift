@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct AuthenticationView: View {
-    @StateObject private var authManager = MockAuthenticationManager()
+    @StateObject private var authManager = AuthenticationManager()
     @State private var showingSignUp = false
     
     var body: some View {

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var authManager = MockAuthenticationManager()
+    @StateObject private var authManager = AuthenticationManager()
     
     var body: some View {
         TabView {

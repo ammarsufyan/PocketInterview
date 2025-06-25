@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ForgotPasswordView: View {
-    @ObservedObject var authManager: MockAuthenticationManager
+    @ObservedObject var authManager: AuthenticationManager
     @Environment(\.dismiss) private var dismiss
     
     @State private var email = ""
@@ -158,5 +158,5 @@ struct ForgotPasswordView: View {
 }
 
 #Preview {
-    ForgotPasswordView(authManager: MockAuthenticationManager())
+    ForgotPasswordView(authManager: AuthenticationManager())
 }
