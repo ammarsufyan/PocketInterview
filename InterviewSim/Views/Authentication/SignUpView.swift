@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct SignUpView: View {
-    @ObservedObject var authManager: AuthenticationManager
+    @ObservedObject var authManager: MockAuthenticationManager
     @Binding var showingSignUp: Bool
     
     @State private var email = ""
@@ -229,7 +229,7 @@ struct SignUpView: View {
 
 #Preview {
     SignUpView(
-        authManager: AuthenticationManager(),
+        authManager: MockAuthenticationManager(),
         showingSignUp: .constant(true)
     )
 }

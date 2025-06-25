@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @EnvironmentObject private var authManager: AuthenticationManager
+    @EnvironmentObject private var authManager: MockAuthenticationManager
     @State private var showingSignOutAlert = false
     
     var body: some View {
@@ -206,5 +206,5 @@ struct ProfileOptionCard: View {
 
 #Preview {
     ProfileView()
-        .environmentObject(AuthenticationManager())
+        .environmentObject(MockAuthenticationManager())
 }
