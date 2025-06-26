@@ -93,6 +93,16 @@ struct CVExtractionResultView: View {
                                 )
                             }
                             
+                            // Certifications
+                            if !analysis.certifications.isEmpty {
+                                ListCard(
+                                    title: "Certifications",
+                                    icon: "award.fill",
+                                    color: .yellow,
+                                    items: analysis.certifications
+                                )
+                            }
+                            
                             // Projects
                             if !analysis.projects.isEmpty {
                                 ListCard(
@@ -100,6 +110,16 @@ struct CVExtractionResultView: View {
                                     icon: "folder.fill",
                                     color: .cyan,
                                     items: analysis.projects
+                                )
+                            }
+                            
+                            // Achievements
+                            if !analysis.achievements.isEmpty {
+                                ListCard(
+                                    title: "Key Achievements",
+                                    icon: "star.fill",
+                                    color: .pink,
+                                    items: analysis.achievements
                                 )
                             }
                         }
@@ -288,7 +308,7 @@ struct ListCard: View {
             }
             
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(items, id: \.self) { item in
+                ForEach(Array(items.prefix(5)), id: \.self) { item in
                     HStack(spacing: 12) {
                         Circle()
                             .fill(color)
@@ -297,6 +317,22 @@ struct ListCard: View {
                         Text(item)
                             .font(.subheadline)
                             .foregroundColor(.primary)
+                            .lineLimit(2)
+                        
+                        Spacer()
+                    }
+                }
+                
+                if items.count > 5 {
+                    HStack(spacing: 12) {
+                        Circle()
+                            .fill(color.opacity(0.5))
+                            .frame(width: 6, height: 6)
+                        
+                        Text("and \(items.count - 5) more...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .italic()
                         
                         Spacer()
                     }
@@ -339,6 +375,10 @@ struct RawTextCard: View {
                     
                     Spacer()
                     
+                    Text("\(extractedText.count) chars")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
@@ -376,12 +416,14 @@ struct RawTextCard: View {
     extractor.extractedText = "Sample extracted text from CV..."
     
     let analysis = CVAnalysis()
-    analysis.technicalSkills = ["Swift", "SwiftUI", "iOS", "Xcode"]
-    analysis.softSkills = ["Leadership", "Communication"]
+    analysis.technicalSkills = ["Swift", "SwiftUI", "iOS", "Xcode", "Python", "JavaScript"]
+    analysis.softSkills = ["Leadership", "Communication", "Problem Solving"]
     analysis.workExperience = ["Senior iOS Developer", "Mobile Developer"]
     analysis.yearsOfExperience = 5
-    analysis.education = ["Bachelor of Computer Science"]
-    analysis.projects = ["TaskManager Pro", "WeatherNow"]
+    analysis.education = ["Bachelor of Computer Science", "iOS Development Bootcamp"]
+    analysis.projects = ["TaskManager Pro", "WeatherNow", "BudgetTracker"]
+    analysis.certifications = ["AWS Certified Developer", "iOS Developer Certificate"]
+    analysis.achievements = ["Increased app performance by 40%", "Led team of 5 developers"]
     extractor.cvAnalysis = analysis
     
     return CVExtractionResultView(cvExtractor: extractor, category: "Technical")

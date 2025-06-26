@@ -29,7 +29,7 @@ class CVExtractor: ObservableObject {
             case "pdf":
                 extractedContent = self?.extractTextFromPDF(data: data) ?? ""
             case "doc", "docx":
-                extractedContent = self?.extractTextFromWord(data: data) ?? ""
+                extractedContent = self?.extractTextFromWord(data: data, fileName: fileName) ?? ""
             default:
                 DispatchQueue.main.async {
                     self?.extractionError = "Unsupported file format. Please use PDF, DOC, or DOCX."
@@ -77,77 +77,414 @@ class CVExtractor: ObservableObject {
         return extractedText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
-    private func extractTextFromWord(data: Data) -> String {
-        // For Word documents, we'll simulate extraction since iOS doesn't have built-in Word support
+    private func extractTextFromWord(data: Data, fileName: String) -> String {
+        // Enhanced Word document simulation with more realistic content
         // In a real app, you'd use a third-party library or server-side extraction
         
-        // Simulate some extracted text for demo purposes
-        let simulatedText = """
-        John Doe
-        Senior iOS Developer
-        
-        EXPERIENCE
-        • 5+ years of iOS development experience
-        • Expert in Swift, SwiftUI, and UIKit
-        • Experience with Core Data, CloudKit, and REST APIs
-        • Published 3 apps on the App Store
-        
-        TECHNICAL SKILLS
-        • Programming Languages: Swift, Objective-C, Python
-        • Frameworks: SwiftUI, UIKit, Combine, Core Data
-        • Tools: Xcode, Git, Firebase, TestFlight
-        • Architecture: MVVM, MVC, Clean Architecture
-        
-        EDUCATION
-        • Bachelor of Computer Science
-        • iOS Development Bootcamp Certificate
-        
-        PROJECTS
-        • TaskManager Pro - Personal productivity app with 10k+ downloads
-        • WeatherNow - Real-time weather app using CoreLocation
-        • BudgetTracker - Financial management app with Core Data
-        """
+        // Generate more comprehensive simulated text based on file name patterns
+        let simulatedText = generateRealisticCVText(fileName: fileName)
         
         return simulatedText
     }
     
-    private func analyzeCV(text: String) {
+    private func generateRealisticCVText(fileName: String) -> String {
+        // Generate different CV content based on file name hints
+        let name = extractNameFromFileName(fileName)
+        
+        let cvTemplates = [
+            generateTechnicalCV(name: name),
+            generateBusinessCV(name: name),
+            generateDesignCV(name: name),
+            generateDataScienceCV(name: name)
+        ]
+        
+        // Return a random template or the first one
+        return cvTemplates.randomElement() ?? cvTemplates[0]
+    }
+    
+    private func extractNameFromFileName(_ fileName: String) -> String {
+        let baseName = (fileName as NSString).deletingPathExtension
+        let cleanName = baseName.replacingOccurrences(of: "_", with: " ")
+                                .replacingOccurrences(of: "-", with: " ")
+                                .replacingOccurrences(of: "CV", with: "")
+                                .replacingOccurrences(of: "Resume", with: "")
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        return cleanName.isEmpty ? "John Doe" : cleanName
+    }
+    
+    private func generateTechnicalCV(name: String) -> String {
+        return """
+        \(name)
+        Senior Software Engineer
+        Email: \(name.lowercased().replacingOccurrences(of: " ", with: "."))@email.com
+        Phone: +1 (555) 123-4567
+        Location: San Francisco, CA
+        LinkedIn: linkedin.com/in/\(name.lowercased().replacingOccurrences(of: " ", with: ""))
+        GitHub: github.com/\(name.lowercased().replacingOccurrences(of: " ", with: ""))
+        
+        PROFESSIONAL SUMMARY
+        Experienced software engineer with 7+ years of expertise in full-stack development, 
+        cloud architecture, and team leadership. Proven track record of delivering scalable 
+        solutions and mentoring junior developers.
+        
+        TECHNICAL SKILLS
+        • Programming Languages: Python, JavaScript, TypeScript, Java, Go, Swift
+        • Frontend: React, Vue.js, Angular, HTML5, CSS3, Sass, Tailwind CSS
+        • Backend: Node.js, Express, Django, Flask, Spring Boot, FastAPI
+        • Mobile: React Native, Flutter, iOS (Swift), Android (Kotlin)
+        • Databases: PostgreSQL, MongoDB, Redis, MySQL, DynamoDB
+        • Cloud Platforms: AWS, Google Cloud Platform, Microsoft Azure
+        • DevOps: Docker, Kubernetes, Jenkins, GitLab CI/CD, Terraform
+        • Tools: Git, Jira, Confluence, Figma, Postman, VS Code
+        
+        PROFESSIONAL EXPERIENCE
+        
+        Senior Software Engineer | TechCorp Inc. | 2021 - Present
+        • Led development of microservices architecture serving 2M+ daily active users
+        • Implemented CI/CD pipelines reducing deployment time by 60%
+        • Mentored 5 junior developers and conducted technical interviews
+        • Technologies: React, Node.js, AWS, Docker, PostgreSQL
+        
+        Software Engineer | StartupXYZ | 2019 - 2021
+        • Built real-time chat application handling 100K+ concurrent users
+        • Optimized database queries improving response time by 40%
+        • Collaborated with product team to define technical requirements
+        • Technologies: Vue.js, Python, Django, Redis, MySQL
+        
+        Junior Developer | WebSolutions Ltd. | 2017 - 2019
+        • Developed responsive web applications for 20+ clients
+        • Participated in agile development process and code reviews
+        • Fixed bugs and implemented new features based on user feedback
+        • Technologies: JavaScript, PHP, Laravel, Bootstrap
+        
+        EDUCATION
+        Bachelor of Science in Computer Science
+        University of California, Berkeley | 2013 - 2017
+        GPA: 3.8/4.0
+        
+        CERTIFICATIONS
+        • AWS Certified Solutions Architect - Professional (2022)
+        • Google Cloud Professional Developer (2021)
+        • Certified Kubernetes Administrator (2020)
+        
+        PROJECTS
+        • E-commerce Platform - Built scalable online marketplace with payment integration
+        • Task Management App - Developed cross-platform mobile app with offline sync
+        • Data Analytics Dashboard - Created real-time visualization tool for business metrics
+        • Open Source Contributor - Contributed to React, Vue.js, and Node.js projects
+        
+        ACHIEVEMENTS
+        • Increased system performance by 50% through optimization initiatives
+        • Led team that won company hackathon for innovative AI solution
+        • Speaker at 3 tech conferences on cloud architecture best practices
+        • Published 5 technical articles with 10K+ total views
+        """
+    }
+    
+    private func generateBusinessCV(name: String) -> String {
+        return """
+        \(name)
+        Senior Product Manager
+        Email: \(name.lowercased().replacingOccurrences(of: " ", with: "."))@email.com
+        Phone: +1 (555) 987-6543
+        Location: New York, NY
+        LinkedIn: linkedin.com/in/\(name.lowercased().replacingOccurrences(of: " ", with: ""))
+        
+        EXECUTIVE SUMMARY
+        Results-driven product manager with 8+ years of experience leading cross-functional 
+        teams to deliver innovative products. Expertise in product strategy, user research, 
+        and data-driven decision making.
+        
+        CORE COMPETENCIES
+        • Product Strategy & Roadmap Planning
+        • User Experience Design & Research
+        • Agile & Scrum Methodologies
+        • Data Analysis & A/B Testing
+        • Stakeholder Management
+        • Go-to-Market Strategy
+        • Team Leadership & Mentoring
+        • Business Intelligence Tools
+        
+        PROFESSIONAL EXPERIENCE
+        
+        Senior Product Manager | GlobalTech Solutions | 2020 - Present
+        • Managed product portfolio generating $50M+ annual revenue
+        • Led cross-functional team of 15 engineers, designers, and analysts
+        • Increased user engagement by 35% through data-driven feature optimization
+        • Launched 3 major product features ahead of schedule and under budget
+        
+        Product Manager | InnovateCorp | 2018 - 2020
+        • Defined product requirements for mobile application with 1M+ users
+        • Conducted user research and usability testing to inform product decisions
+        • Collaborated with engineering team to prioritize feature development
+        • Achieved 25% increase in user retention through improved onboarding
+        
+        Associate Product Manager | StartupHub | 2016 - 2018
+        • Supported senior PM in managing B2B SaaS product development
+        • Analyzed user feedback and market trends to identify opportunities
+        • Created detailed product specifications and user stories
+        • Coordinated with marketing team on product launch campaigns
+        
+        Business Analyst | ConsultingFirm LLC | 2015 - 2016
+        • Analyzed business processes and recommended efficiency improvements
+        • Created detailed reports and presentations for C-level executives
+        • Managed client relationships and project timelines
+        • Reduced operational costs by 20% through process optimization
+        
+        EDUCATION
+        Master of Business Administration (MBA)
+        Stanford Graduate School of Business | 2013 - 2015
+        Concentration: Technology Management
+        
+        Bachelor of Arts in Economics
+        Harvard University | 2009 - 2013
+        Magna Cum Laude, Phi Beta Kappa
+        
+        CERTIFICATIONS
+        • Certified Scrum Product Owner (CSPO)
+        • Google Analytics Certified
+        • Pragmatic Marketing Certified
+        
+        KEY ACHIEVEMENTS
+        • Launched product that captured 15% market share within first year
+        • Led digital transformation initiative saving company $2M annually
+        • Mentored 8 junior product managers, 6 received promotions
+        • Featured speaker at ProductCon and Mind the Product conferences
+        
+        TECHNICAL SKILLS
+        • Analytics: Google Analytics, Mixpanel, Amplitude, Tableau
+        • Design: Figma, Sketch, Adobe Creative Suite
+        • Project Management: Jira, Asana, Trello, Monday.com
+        • Databases: SQL, Excel, Google Sheets
+        """
+    }
+    
+    private func generateDesignCV(name: String) -> String {
+        return """
+        \(name)
+        Senior UX/UI Designer
+        Email: \(name.lowercased().replacingOccurrences(of: " ", with: "."))@email.com
+        Phone: +1 (555) 456-7890
+        Location: Los Angeles, CA
+        Portfolio: \(name.lowercased().replacingOccurrences(of: " ", with: "")).design
+        LinkedIn: linkedin.com/in/\(name.lowercased().replacingOccurrences(of: " ", with: ""))
+        Dribbble: dribbble.com/\(name.lowercased().replacingOccurrences(of: " ", with: ""))
+        
+        CREATIVE SUMMARY
+        Passionate UX/UI designer with 6+ years of experience creating user-centered 
+        digital experiences. Expertise in design thinking, prototyping, and translating 
+        complex problems into elegant solutions.
+        
+        DESIGN SKILLS
+        • User Experience (UX) Design
+        • User Interface (UI) Design
+        • Interaction Design
+        • Visual Design
+        • Design Systems
+        • Prototyping & Wireframing
+        • User Research & Testing
+        • Information Architecture
+        
+        TOOLS & SOFTWARE
+        • Design: Figma, Sketch, Adobe XD, Adobe Creative Suite
+        • Prototyping: InVision, Principle, Framer, Marvel
+        • Research: Miro, Mural, UsabilityHub, Hotjar
+        • Collaboration: Slack, Notion, Abstract, Zeplin
+        • Development: HTML, CSS, JavaScript (basic)
+        
+        PROFESSIONAL EXPERIENCE
+        
+        Senior UX/UI Designer | DesignStudio Pro | 2021 - Present
+        • Lead designer for mobile app with 2M+ downloads and 4.8 App Store rating
+        • Conducted user research and usability testing for 5 major product releases
+        • Created comprehensive design system adopted across 3 product lines
+        • Mentored 3 junior designers and established design review processes
+        
+        UX/UI Designer | TechStartup Inc. | 2019 - 2021
+        • Redesigned e-commerce platform resulting in 40% increase in conversions
+        • Collaborated with product and engineering teams in agile environment
+        • Created interactive prototypes for stakeholder presentations
+        • Improved user onboarding flow reducing drop-off rate by 30%
+        
+        Junior Designer | CreativeAgency | 2018 - 2019
+        • Designed websites and mobile apps for 15+ clients across various industries
+        • Participated in client meetings and design presentations
+        • Created brand identities and marketing materials
+        • Assisted senior designers with user research and testing
+        
+        EDUCATION
+        Bachelor of Fine Arts in Graphic Design
+        Art Center College of Design | 2014 - 2018
+        Summa Cum Laude
+        
+        CERTIFICATIONS
+        • Google UX Design Professional Certificate
+        • Nielsen Norman Group UX Certification
+        • Adobe Certified Expert (ACE) - Photoshop & Illustrator
+        
+        NOTABLE PROJECTS
+        • HealthTech App - Designed telemedicine platform used by 500K+ patients
+        • FinTech Dashboard - Created trading interface for cryptocurrency exchange
+        • E-learning Platform - Designed educational app for K-12 students
+        • Smart Home App - Developed IoT device control interface
+        
+        ACHIEVEMENTS
+        • Won "Best Mobile App Design" at Design Awards 2022
+        • Featured in Design Inspiration blog with 50K+ views
+        • Increased user satisfaction scores by 45% through design improvements
+        • Led design workshop at UX Week conference
+        
+        SOFT SKILLS
+        • Creative Problem Solving
+        • Cross-functional Collaboration
+        • Presentation & Communication
+        • Project Management
+        • Attention to Detail
+        • Empathy & User Advocacy
+        """
+    }
+    
+    private func generateDataScienceCV(name: String) -> String {
+        return """
+        \(name)
+        Senior Data Scientist
+        Email: \(name.lowercased().replacingOccurrences(of: " ", with: "."))@email.com
+        Phone: +1 (555) 321-9876
+        Location: Seattle, WA
+        LinkedIn: linkedin.com/in/\(name.lowercased().replacingOccurrences(of: " ", with: ""))
+        GitHub: github.com/\(name.lowercased().replacingOccurrences(of: " ", with: ""))
+        
+        PROFESSIONAL SUMMARY
+        Experienced data scientist with 5+ years of expertise in machine learning, 
+        statistical analysis, and big data processing. Proven ability to extract 
+        actionable insights from complex datasets and drive business decisions.
+        
+        TECHNICAL SKILLS
+        • Programming: Python, R, SQL, Scala, Java
+        • Machine Learning: Scikit-learn, TensorFlow, PyTorch, Keras
+        • Data Processing: Pandas, NumPy, Spark, Hadoop, Kafka
+        • Visualization: Matplotlib, Seaborn, Plotly, Tableau, Power BI
+        • Databases: PostgreSQL, MongoDB, Cassandra, Snowflake
+        • Cloud Platforms: AWS, Google Cloud, Azure
+        • MLOps: MLflow, Kubeflow, Docker, Kubernetes
+        • Statistics: Hypothesis Testing, A/B Testing, Bayesian Analysis
+        
+        PROFESSIONAL EXPERIENCE
+        
+        Senior Data Scientist | DataTech Corp | 2021 - Present
+        • Built recommendation system increasing user engagement by 25%
+        • Developed fraud detection model reducing false positives by 40%
+        • Led team of 4 data scientists on customer segmentation project
+        • Deployed ML models to production serving 10M+ daily predictions
+        
+        Data Scientist | AnalyticsPro | 2019 - 2021
+        • Created predictive models for customer churn with 85% accuracy
+        • Analyzed A/B test results for product optimization initiatives
+        • Built automated reporting dashboards for executive team
+        • Collaborated with engineering team to implement ML pipelines
+        
+        Junior Data Analyst | InsightsCorp | 2018 - 2019
+        • Performed statistical analysis on customer behavior data
+        • Created data visualizations for business stakeholders
+        • Cleaned and preprocessed large datasets for analysis
+        • Supported senior data scientists with model development
+        
+        EDUCATION
+        Master of Science in Data Science
+        University of Washington | 2016 - 2018
+        Thesis: "Deep Learning for Natural Language Processing"
+        
+        Bachelor of Science in Mathematics
+        MIT | 2012 - 2016
+        Minor in Computer Science
+        
+        CERTIFICATIONS
+        • AWS Certified Machine Learning - Specialty
+        • Google Cloud Professional Data Engineer
+        • Certified Analytics Professional (CAP)
+        • TensorFlow Developer Certificate
+        
+        KEY PROJECTS
+        • Customer Lifetime Value Prediction - Increased marketing ROI by 30%
+        • Natural Language Processing for Sentiment Analysis - 92% accuracy
+        • Computer Vision for Quality Control - Reduced defect rate by 50%
+        • Time Series Forecasting for Demand Planning - Improved accuracy by 35%
+        
+        PUBLICATIONS & PRESENTATIONS
+        • "Advanced ML Techniques for Business Applications" - Data Science Conference 2022
+        • "Scalable Data Processing with Apache Spark" - Tech Blog (5K+ views)
+        • Co-authored research paper on deep learning published in IEEE journal
+        
+        ACHIEVEMENTS
+        • Developed ML model that generated $2M+ in additional revenue
+        • Led data science team that won company innovation award
+        • Mentored 6 junior data scientists and analysts
+        • Speaker at 4 data science meetups and conferences
+        """
+    }
+    
+    private func analyzeCV(text: String) -> CVAnalysis {
         let analysis = CVAnalysis()
         
-        // Extract skills
+        // Enhanced analysis with better pattern recognition
         analysis.technicalSkills = extractTechnicalSkills(from: text)
         analysis.softSkills = extractSoftSkills(from: text)
-        
-        // Extract experience
         analysis.workExperience = extractWorkExperience(from: text)
         analysis.yearsOfExperience = extractYearsOfExperience(from: text)
-        
-        // Extract education
         analysis.education = extractEducation(from: text)
-        
-        // Extract projects
         analysis.projects = extractProjects(from: text)
+        analysis.certifications = extractCertifications(from: text)
+        analysis.achievements = extractAchievements(from: text)
         
         self.cvAnalysis = analysis
         
-        // Print analysis results
-        print("=== CV ANALYSIS RESULTS ===")
-        print("Technical Skills: \(analysis.technicalSkills)")
-        print("Soft Skills: \(analysis.softSkills)")
-        print("Years of Experience: \(analysis.yearsOfExperience)")
-        print("Work Experience: \(analysis.workExperience)")
-        print("Education: \(analysis.education)")
-        print("Projects: \(analysis.projects)")
-        print("=== END ANALYSIS ===")
+        // Enhanced console output
+        print("=== ENHANCED CV ANALYSIS RESULTS ===")
+        print("📊 Technical Skills (\(analysis.technicalSkills.count)): \(analysis.technicalSkills)")
+        print("🤝 Soft Skills (\(analysis.softSkills.count)): \(analysis.softSkills)")
+        print("⏰ Years of Experience: \(analysis.yearsOfExperience)")
+        print("💼 Work Experience (\(analysis.workExperience.count)): \(analysis.workExperience)")
+        print("🎓 Education (\(analysis.education.count)): \(analysis.education)")
+        print("🚀 Projects (\(analysis.projects.count)): \(analysis.projects)")
+        print("🏆 Certifications (\(analysis.certifications.count)): \(analysis.certifications)")
+        print("⭐ Achievements (\(analysis.achievements.count)): \(analysis.achievements)")
+        print("📝 Summary: \(analysis.summary)")
+        print("=== END ENHANCED ANALYSIS ===")
+        
+        return analysis
     }
     
     private func extractTechnicalSkills(from text: String) -> [String] {
         let skillKeywords = [
-            "Swift", "SwiftUI", "UIKit", "Objective-C", "Python", "Java", "JavaScript",
-            "React", "Vue", "Angular", "Node.js", "Express", "MongoDB", "PostgreSQL",
-            "MySQL", "Firebase", "AWS", "Docker", "Kubernetes", "Git", "Xcode",
-            "Android", "Kotlin", "Flutter", "React Native", "Core Data", "CloudKit",
-            "Combine", "RxSwift", "Alamofire", "Realm", "TestFlight", "Fastlane"
+            // Programming Languages
+            "Swift", "SwiftUI", "UIKit", "Objective-C", "Python", "Java", "JavaScript", "TypeScript",
+            "React", "Vue", "Angular", "Node.js", "Express", "Django", "Flask", "Spring Boot",
+            "Kotlin", "Flutter", "React Native", "Go", "Rust", "C++", "C#", "PHP", "Ruby",
+            
+            // Databases
+            "MongoDB", "PostgreSQL", "MySQL", "Redis", "DynamoDB", "Cassandra", "Snowflake",
+            "SQLite", "Oracle", "SQL Server", "Firebase", "Realm",
+            
+            // Cloud & DevOps
+            "AWS", "Google Cloud", "Azure", "Docker", "Kubernetes", "Jenkins", "GitLab CI/CD",
+            "Terraform", "Ansible", "Chef", "Puppet", "Nginx", "Apache",
+            
+            // Mobile & Frontend
+            "iOS", "Android", "Xcode", "Android Studio", "HTML5", "CSS3", "Sass", "SCSS",
+            "Bootstrap", "Tailwind CSS", "Material UI", "Ant Design",
+            
+            // Data Science & ML
+            "TensorFlow", "PyTorch", "Scikit-learn", "Pandas", "NumPy", "Matplotlib", "Seaborn",
+            "Jupyter", "R", "Tableau", "Power BI", "Spark", "Hadoop", "Kafka",
+            
+            // Tools & Frameworks
+            "Git", "GitHub", "GitLab", "Bitbucket", "Jira", "Confluence", "Slack", "Figma",
+            "Sketch", "Adobe XD", "Photoshop", "Illustrator", "VS Code", "IntelliJ",
+            
+            // Architecture & Patterns
+            "Microservices", "REST API", "GraphQL", "MVVM", "MVC", "Clean Architecture",
+            "Design Patterns", "Agile", "Scrum", "DevOps", "CI/CD"
         ]
         
         var foundSkills: [String] = []
@@ -159,14 +496,17 @@ class CVExtractor: ObservableObject {
             }
         }
         
-        return Array(Set(foundSkills)) // Remove duplicates
+        return Array(Set(foundSkills)).sorted()
     }
     
     private func extractSoftSkills(from text: String) -> [String] {
         let softSkillKeywords = [
-            "Leadership", "Communication", "Teamwork", "Problem Solving",
-            "Project Management", "Agile", "Scrum", "Mentoring", "Training",
-            "Collaboration", "Time Management", "Critical Thinking"
+            "Leadership", "Communication", "Teamwork", "Problem Solving", "Critical Thinking",
+            "Project Management", "Agile", "Scrum", "Mentoring", "Training", "Coaching",
+            "Collaboration", "Time Management", "Organization", "Analytical Thinking",
+            "Creative Problem Solving", "Adaptability", "Flexibility", "Innovation",
+            "Strategic Thinking", "Decision Making", "Conflict Resolution", "Negotiation",
+            "Presentation Skills", "Public Speaking", "Cross-functional Collaboration"
         ]
         
         var foundSkills: [String] = []
@@ -178,39 +518,59 @@ class CVExtractor: ObservableObject {
             }
         }
         
-        return Array(Set(foundSkills))
+        return Array(Set(foundSkills)).sorted()
     }
     
     private func extractWorkExperience(from text: String) -> [String] {
-        // Simple regex to find job titles and companies
         let experiencePatterns = [
-            "Senior iOS Developer", "iOS Developer", "Mobile Developer",
-            "Software Engineer", "Lead Developer", "Tech Lead",
-            "Frontend Developer", "Backend Developer", "Full Stack Developer"
+            "Senior iOS Developer", "iOS Developer", "Mobile Developer", "Software Engineer",
+            "Senior Software Engineer", "Lead Developer", "Tech Lead", "Engineering Manager",
+            "Frontend Developer", "Backend Developer", "Full Stack Developer", "DevOps Engineer",
+            "Data Scientist", "Senior Data Scientist", "Machine Learning Engineer",
+            "Product Manager", "Senior Product Manager", "UX Designer", "UI Designer",
+            "UX/UI Designer", "Senior Designer", "Design Lead", "Creative Director",
+            "Business Analyst", "Data Analyst", "Systems Analyst", "Solutions Architect",
+            "Cloud Architect", "Security Engineer", "QA Engineer", "Test Engineer"
         ]
         
         var experiences: [String] = []
-        let lowercasedText = text.lowercased()
+        let lines = text.components(separatedBy: .newlines)
         
-        for pattern in experiencePatterns {
-            if lowercasedText.contains(pattern.lowercased()) {
-                experiences.append(pattern)
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            for pattern in experiencePatterns {
+                if trimmedLine.localizedCaseInsensitiveContains(pattern) {
+                    experiences.append(pattern)
+                    break
+                }
             }
         }
         
-        return experiences
+        return Array(Set(experiences)).sorted()
     }
     
     private func extractYearsOfExperience(from text: String) -> Int {
-        // Look for patterns like "5+ years", "3 years", etc.
-        let regex = try? NSRegularExpression(pattern: "(\\d+)\\+?\\s*years?", options: .caseInsensitive)
-        let range = NSRange(location: 0, length: text.utf16.count)
+        // Enhanced regex patterns for years of experience
+        let patterns = [
+            "(\\d+)\\+?\\s*years?\\s*of\\s*experience",
+            "(\\d+)\\+?\\s*years?\\s*experience",
+            "(\\d+)\\+?\\s*yrs?\\s*experience",
+            "experience.*?(\\d+)\\+?\\s*years?",
+            "(\\d+)\\+?\\s*years?.*?experience"
+        ]
         
-        if let match = regex?.firstMatch(in: text, options: [], range: range) {
-            let yearRange = Range(match.range(at: 1), in: text)
-            if let yearRange = yearRange {
-                let yearString = String(text[yearRange])
-                return Int(yearString) ?? 0
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+                let range = NSRange(location: 0, length: text.utf16.count)
+                if let match = regex.firstMatch(in: text, options: [], range: range) {
+                    let yearRange = Range(match.range(at: 1), in: text)
+                    if let yearRange = yearRange {
+                        let yearString = String(text[yearRange])
+                        if let years = Int(yearString) {
+                            return years
+                        }
+                    }
+                }
             }
         }
         
@@ -219,46 +579,114 @@ class CVExtractor: ObservableObject {
     
     private func extractEducation(from text: String) -> [String] {
         let educationKeywords = [
-            "Bachelor", "Master", "PhD", "Degree", "University", "College",
+            "Bachelor", "Master", "PhD", "Doctorate", "Degree", "University", "College",
             "Computer Science", "Software Engineering", "Information Technology",
-            "Bootcamp", "Certificate", "Certification"
+            "Data Science", "Machine Learning", "Artificial Intelligence",
+            "Business Administration", "MBA", "Engineering", "Mathematics",
+            "Statistics", "Physics", "Design", "Fine Arts", "Graphic Design",
+            "Bootcamp", "Certificate", "Certification", "Diploma"
         ]
         
         var education: [String] = []
-        let lowercasedText = text.lowercased()
-        
-        for keyword in educationKeywords {
-            if lowercasedText.contains(keyword.lowercased()) {
-                education.append(keyword)
-            }
-        }
-        
-        return Array(Set(education))
-    }
-    
-    private func extractProjects(from text: String) -> [String] {
-        // Look for project names (usually capitalized words followed by descriptions)
         let lines = text.components(separatedBy: .newlines)
-        var projects: [String] = []
         
         for line in lines {
             let trimmedLine = line.trimmingCharacters(in: .whitespaces)
-            // Look for lines that might be project names (start with bullet or are short and capitalized)
-            if trimmedLine.hasPrefix("•") || trimmedLine.hasPrefix("-") || trimmedLine.hasPrefix("*") {
-                if trimmedLine.count < 100 && trimmedLine.contains(" ") {
-                    let projectName = trimmedLine.replacingOccurrences(of: "^[•\\-\\*]\\s*", with: "", options: .regularExpression)
-                    if !projectName.isEmpty {
-                        projects.append(projectName)
+            for keyword in educationKeywords {
+                if trimmedLine.localizedCaseInsensitiveContains(keyword) && trimmedLine.count < 200 {
+                    education.append(trimmedLine)
+                    break
+                }
+            }
+        }
+        
+        return Array(Set(education)).sorted()
+    }
+    
+    private func extractProjects(from text: String) -> [String] {
+        var projects: [String] = []
+        let lines = text.components(separatedBy: .newlines)
+        
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            
+            // Look for project indicators
+            if (trimmedLine.hasPrefix("•") || trimmedLine.hasPrefix("-") || trimmedLine.hasPrefix("*")) &&
+               (trimmedLine.localizedCaseInsensitiveContains("app") ||
+                trimmedLine.localizedCaseInsensitiveContains("platform") ||
+                trimmedLine.localizedCaseInsensitiveContains("system") ||
+                trimmedLine.localizedCaseInsensitiveContains("project") ||
+                trimmedLine.localizedCaseInsensitiveContains("built") ||
+                trimmedLine.localizedCaseInsensitiveContains("developed") ||
+                trimmedLine.localizedCaseInsensitiveContains("created")) {
+                
+                let projectName = trimmedLine.replacingOccurrences(of: "^[•\\-\\*]\\s*", with: "", options: .regularExpression)
+                if !projectName.isEmpty && projectName.count < 150 {
+                    projects.append(projectName)
+                }
+            }
+        }
+        
+        return Array(Set(projects)).sorted()
+    }
+    
+    private func extractCertifications(from text: String) -> [String] {
+        let certificationKeywords = [
+            "AWS Certified", "Google Cloud", "Microsoft Azure", "Certified Scrum",
+            "PMP", "Agile", "Six Sigma", "CISSP", "CompTIA", "Cisco",
+            "Oracle Certified", "Salesforce", "Adobe Certified", "Apple Certified",
+            "Kubernetes", "Docker", "TensorFlow", "Professional Certificate"
+        ]
+        
+        var certifications: [String] = []
+        let lines = text.components(separatedBy: .newlines)
+        
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            for keyword in certificationKeywords {
+                if trimmedLine.localizedCaseInsensitiveContains(keyword) && trimmedLine.count < 200 {
+                    certifications.append(trimmedLine)
+                    break
+                }
+            }
+        }
+        
+        return Array(Set(certifications)).sorted()
+    }
+    
+    private func extractAchievements(from text: String) -> [String] {
+        var achievements: [String] = []
+        let lines = text.components(separatedBy: .newlines)
+        
+        let achievementIndicators = [
+            "increased", "improved", "reduced", "achieved", "led", "won", "awarded",
+            "recognized", "featured", "published", "speaker", "mentored", "generated",
+            "saved", "optimized", "launched", "delivered"
+        ]
+        
+        for line in lines {
+            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            let lowercaseLine = trimmedLine.lowercased()
+            
+            for indicator in achievementIndicators {
+                if lowercaseLine.contains(indicator) && 
+                   (trimmedLine.hasPrefix("•") || trimmedLine.hasPrefix("-") || trimmedLine.hasPrefix("*")) &&
+                   trimmedLine.count < 200 {
+                    
+                    let achievement = trimmedLine.replacingOccurrences(of: "^[•\\-\\*]\\s*", with: "", options: .regularExpression)
+                    if !achievement.isEmpty {
+                        achievements.append(achievement)
+                        break
                     }
                 }
             }
         }
         
-        return projects
+        return Array(Set(achievements)).sorted()
     }
 }
 
-// MARK: - CV Analysis Model
+// MARK: - Enhanced CV Analysis Model
 class CVAnalysis: ObservableObject, Equatable {
     @Published var technicalSkills: [String] = []
     @Published var softSkills: [String] = []
@@ -266,6 +694,8 @@ class CVAnalysis: ObservableObject, Equatable {
     @Published var yearsOfExperience: Int = 0
     @Published var education: [String] = []
     @Published var projects: [String] = []
+    @Published var certifications: [String] = []
+    @Published var achievements: [String] = []
     
     var summary: String {
         var summaryParts: [String] = []
@@ -280,7 +710,7 @@ class CVAnalysis: ObservableObject, Equatable {
         }
         
         if !workExperience.isEmpty {
-            summaryParts.append("Experience: \(workExperience.first ?? "")")
+            summaryParts.append("Role: \(workExperience.first ?? "")")
         }
         
         return summaryParts.joined(separator: " • ")
@@ -293,6 +723,8 @@ class CVAnalysis: ObservableObject, Equatable {
                lhs.workExperience == rhs.workExperience &&
                lhs.yearsOfExperience == rhs.yearsOfExperience &&
                lhs.education == rhs.education &&
-               lhs.projects == rhs.projects
+               lhs.projects == rhs.projects &&
+               lhs.certifications == rhs.certifications &&
+               lhs.achievements == rhs.achievements
     }
 }

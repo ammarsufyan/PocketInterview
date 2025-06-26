@@ -695,35 +695,28 @@ struct SessionSetupView: View {
                                 .foregroundColor(.secondary)
                         }
                         
-                        // Duration Selection
-                        VStack(alignment: .leading, spacing: 12) {
+                        // Duration Selection - IMPROVED DESIGN
+                        VStack(alignment: .leading, spacing: 16) {
                             Text("Duration")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                             
-                            HStack(spacing: 12) {
+                            // Grid layout for consistent design
+                            LazyVGrid(columns: [
+                                GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12)
+                            ], spacing: 12) {
                                 ForEach(durations, id: \.self) { duration in
-                                    Button(action: {
+                                    DurationCard(
+                                        duration: duration,
+                                        isSelected: selectedDuration == duration,
+                                        categoryColor: categoryColor
+                                    ) {
                                         withAnimation(.easeInOut(duration: 0.2)) {
                                             selectedDuration = duration
                                         }
-                                    }) {
-                                        Text("\(duration) min")
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(selectedDuration == duration ? .white : categoryColor)
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 10)
-                                            .background(
-                                                selectedDuration == duration ? 
-                                                categoryColor : categoryColor.opacity(0.1)
-                                            )
-                                            .cornerRadius(8)
-                                            .scaleEffect(selectedDuration == duration ? 1.05 : 1.0)
                                     }
                                 }
-                                
-                                Spacer()
                             }
                             
                             Text("How long do you want to practice?")
@@ -816,6 +809,62 @@ struct SessionSetupView: View {
         
         // For now, just dismiss
         dismiss()
+    }
+}
+
+// MARK: - Duration Card Component
+struct DurationCard: View {
+    let duration: Int
+    let isSelected: Bool
+    let categoryColor: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Text("\(duration)")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(isSelected ? .white : categoryColor)
+                
+                Text("minutes")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(isSelected ? .white.opacity(0.9) : .secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 80)
+            .background(
+                Group {
+                    if isSelected {
+                        LinearGradient(
+                            gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    } else {
+                        Color(.systemBackground)
+                    }
+                }
+            )
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        isSelected ? Color.clear : categoryColor.opacity(0.3),
+                        lineWidth: 1.5
+                    )
+            )
+            .shadow(
+                color: isSelected ? categoryColor.opacity(0.3) : Color.black.opacity(0.05),
+                radius: isSelected ? 8 : 2,
+                x: 0,
+                y: isSelected ? 4 : 1
+            )
+            .scaleEffect(isSelected ? 1.05 : 1.0)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 }
 
