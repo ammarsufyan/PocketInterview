@@ -13,13 +13,53 @@ struct HistoryView: View {
     
     let filters = ["All", "Technical", "Behavioral"]
     
-    // Sample data - focused on Technical and Behavioral only
+    // Enhanced sample data with more specific timestamps and session names
     let sessions = [
-        InterviewSession(id: 1, category: "Technical", score: 78, date: Date(), duration: 45, questionsAnswered: 12),
-        InterviewSession(id: 2, category: "Behavioral", score: 92, date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, duration: 30, questionsAnswered: 8),
-        InterviewSession(id: 3, category: "Technical", score: 85, date: Calendar.current.date(byAdding: .day, value: -2, to: Date())!, duration: 35, questionsAnswered: 10),
-        InterviewSession(id: 4, category: "Behavioral", score: 88, date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!, duration: 25, questionsAnswered: 6),
-        InterviewSession(id: 5, category: "Technical", score: 74, date: Calendar.current.date(byAdding: .day, value: -5, to: Date())!, duration: 50, questionsAnswered: 15)
+        InterviewSession(
+            id: 1, 
+            category: "Technical", 
+            sessionName: "iOS Developer Practice", 
+            score: 78, 
+            date: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!, 
+            duration: 45, 
+            questionsAnswered: 12
+        ),
+        InterviewSession(
+            id: 2, 
+            category: "Technical", 
+            sessionName: "Swift Algorithms", 
+            score: 85, 
+            date: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!, 
+            duration: 35, 
+            questionsAnswered: 10
+        ),
+        InterviewSession(
+            id: 3, 
+            category: "Behavioral", 
+            sessionName: "Leadership Questions", 
+            score: 92, 
+            date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, 
+            duration: 30, 
+            questionsAnswered: 8
+        ),
+        InterviewSession(
+            id: 4, 
+            category: "Technical", 
+            sessionName: "System Design", 
+            score: 74, 
+            date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, 
+            duration: 50, 
+            questionsAnswered: 15
+        ),
+        InterviewSession(
+            id: 5, 
+            category: "Behavioral", 
+            sessionName: "Team Collaboration", 
+            score: 88, 
+            date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!, 
+            duration: 25, 
+            questionsAnswered: 6
+        )
     ]
     
     var filteredSessions: [InterviewSession] {
@@ -28,8 +68,11 @@ struct HistoryView: View {
         if searchText.isEmpty {
             return filtered.sorted { $0.date > $1.date }
         } else {
-            return filtered.filter { $0.category.localizedCaseInsensitiveContains(searchText) }
-                .sorted { $0.date > $1.date }
+            return filtered.filter { 
+                $0.category.localizedCaseInsensitiveContains(searchText) ||
+                $0.sessionName.localizedCaseInsensitiveContains(searchText)
+            }
+            .sorted { $0.date > $1.date }
         }
     }
     
@@ -101,6 +144,7 @@ struct HistoryView: View {
 struct InterviewSession: Identifiable {
     let id: Int
     let category: String
+    let sessionName: String // New field for session title
     let score: Int
     let date: Date
     let duration: Int // in minutes
@@ -212,10 +256,18 @@ struct HistorySessionCard: View {
             // Session Info
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text(session.category)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(session.sessionName)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                        
+                        Text(session.category)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(categoryColor)
+                    }
                     
                     Spacer()
                     
@@ -236,10 +288,16 @@ struct HistorySessionCard: View {
                     
                     Spacer()
                     
-                    Text(formatDate(session.date))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fontWeight(.medium)
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text(formatDate(session.date))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fontWeight(.medium)
+                        
+                        Text(formatTime(session.date))
+                            .font(.caption2)
+                            .foregroundColor(.secondary.opacity(0.8))
+                    }
                 }
             }
         }
@@ -258,8 +316,23 @@ struct HistorySessionCard: View {
     }
     
     private func formatDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        
+        if calendar.isDateInToday(date) {
+            return "Today"
+        } else if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            return formatter.string(from: date)
+        }
+    }
+    
+    private func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
+        formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
     }
 }
