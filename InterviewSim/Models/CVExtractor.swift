@@ -259,7 +259,7 @@ class CVExtractor: ObservableObject {
 }
 
 // MARK: - CV Analysis Model
-class CVAnalysis: ObservableObject {
+class CVAnalysis: ObservableObject, Equatable {
     @Published var technicalSkills: [String] = []
     @Published var softSkills: [String] = []
     @Published var workExperience: [String] = []
@@ -284,5 +284,15 @@ class CVAnalysis: ObservableObject {
         }
         
         return summaryParts.joined(separator: " • ")
+    }
+    
+    // MARK: - Equatable Conformance
+    static func == (lhs: CVAnalysis, rhs: CVAnalysis) -> Bool {
+        return lhs.technicalSkills == rhs.technicalSkills &&
+               lhs.softSkills == rhs.softSkills &&
+               lhs.workExperience == rhs.workExperience &&
+               lhs.yearsOfExperience == rhs.yearsOfExperience &&
+               lhs.education == rhs.education &&
+               lhs.projects == rhs.projects
     }
 }
