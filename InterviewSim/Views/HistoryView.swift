@@ -13,12 +13,12 @@ struct HistoryView: View {
     
     let filters = ["All", "Technical", "Behavioral"]
     
-    // Enhanced sample data with more specific timestamps and session names
+    // Enhanced sample data with auto-generated session names
     let sessions = [
         InterviewSession(
             id: 1, 
             category: "Technical", 
-            sessionName: "iOS Developer Practice", 
+            sessionName: SessionNameGenerator.generateSessionName(for: "Technical", sessionCount: 0, date: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!), 
             score: 78, 
             date: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!, 
             duration: 45, 
@@ -27,7 +27,7 @@ struct HistoryView: View {
         InterviewSession(
             id: 2, 
             category: "Technical", 
-            sessionName: "Swift Algorithms", 
+            sessionName: SessionNameGenerator.generateSessionName(for: "Technical", sessionCount: 1, date: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!), 
             score: 85, 
             date: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!, 
             duration: 35, 
@@ -36,7 +36,7 @@ struct HistoryView: View {
         InterviewSession(
             id: 3, 
             category: "Behavioral", 
-            sessionName: "Leadership Questions", 
+            sessionName: SessionNameGenerator.generateSessionName(for: "Behavioral", sessionCount: 0, date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!), 
             score: 92, 
             date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, 
             duration: 30, 
@@ -45,7 +45,7 @@ struct HistoryView: View {
         InterviewSession(
             id: 4, 
             category: "Technical", 
-            sessionName: "System Design", 
+            sessionName: SessionNameGenerator.generateSessionName(for: "Technical", sessionCount: 2, date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!), 
             score: 74, 
             date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, 
             duration: 50, 
@@ -54,7 +54,7 @@ struct HistoryView: View {
         InterviewSession(
             id: 5, 
             category: "Behavioral", 
-            sessionName: "Team Collaboration", 
+            sessionName: SessionNameGenerator.generateSessionName(for: "Behavioral", sessionCount: 1, date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!), 
             score: 88, 
             date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!, 
             duration: 25, 
@@ -144,7 +144,7 @@ struct HistoryView: View {
 struct InterviewSession: Identifiable {
     let id: Int
     let category: String
-    let sessionName: String // New field for session title
+    let sessionName: String // Auto-generated or custom session title
     let score: Int
     let date: Date
     let duration: Int // in minutes
