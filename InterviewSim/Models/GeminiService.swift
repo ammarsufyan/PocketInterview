@@ -8,17 +8,18 @@
 import Foundation
 
 class GeminiService: ObservableObject {
-    private let apiKey: String
-    private let baseURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+    private let environmentManager = EnvironmentManager.shared
     
-    init() {
-        // TODO: Add your Gemini API key here
-        // You can get it from: https://makersuite.google.com/app/apikey
-        self.apiKey = "YOUR_GEMINI_API_KEY_HERE"
+    private var apiKey: String {
+        return environmentManager.geminiAPIKey
+    }
+    
+    private var baseURL: String {
+        return "\(environmentManager.geminiBaseURL)/\(environmentManager.geminiModel):generateContent"
     }
     
     func analyzeCV(text: String) async throws -> GeminiCVAnalysis {
-        guard !apiKey.isEmpty && apiKey != "YOUR_GEMINI_API_KEY_HERE" else {
+        guard environmentManager.isGeminiConfigured else {
             throw GeminiError.missingAPIKey
         }
         
@@ -44,17 +45,64 @@ class GeminiService: ObservableObject {
           "summary": "brief professional summary"
         }
 
-        Guidelines:
-        - Extract ALL technical skills (programming languages, frameworks, tools, technologies)
-        - Extract ALL soft skills (leadership, communication, teamwork, etc.)
-        - List ALL work positions/titles mentioned
-        - Calculate total years of experience from work history
-        - Extract ALL educational qualifications (degrees, universities, GPAs, years)
-        - Extract ALL certifications with issuing organizations and years if mentioned
-        - List ALL projects mentioned
-        - Extract ALL achievements, accomplishments, and quantifiable results
-        - Extract ALL languages mentioned with proficiency levels
-        - Create a concise professional summary
+        Guidelines for extraction:
+        
+        📊 TECHNICAL SKILLS:
+        - Programming languages (Swift, Python, Java, JavaScript, etc.)
+        - Frameworks and libraries (SwiftUI, React, Django, etc.)
+        - Tools and platforms (Xcode, Git, AWS, Docker, etc.)
+        - Databases (MySQL, PostgreSQL, MongoDB, etc.)
+        - Operating systems and technologies
+        
+        🤝 SOFT SKILLS:
+        - Leadership, communication, teamwork
+        - Problem-solving, analytical thinking
+        - Project management, time management
+        - Creativity, adaptability, mentoring
+        
+        💼 WORK EXPERIENCE:
+        - Extract job titles/positions only
+        - Include seniority levels (Junior, Senior, Lead, etc.)
+        - Focus on role names, not company names
+        
+        ⏰ YEARS OF EXPERIENCE:
+        - Calculate total professional experience
+        - Look for patterns like "5+ years", "2019-2024", etc.
+        - Sum up all work periods mentioned
+        
+        🎓 EDUCATION:
+        - Degrees with full details (Bachelor of Science in Computer Science)
+        - Universities and institutions
+        - Graduation years, GPAs if mentioned
+        - Relevant coursework, thesis topics
+        - Academic honors (Magna Cum Laude, Dean's List, etc.)
+        
+        🏆 CERTIFICATIONS:
+        - Full certification names with issuing organizations
+        - Include years obtained if mentioned
+        - Professional certifications (AWS, Google Cloud, etc.)
+        - Industry certifications (PMP, Scrum Master, etc.)
+        
+        🚀 PROJECTS:
+        - Project names and brief descriptions
+        - Personal, academic, or professional projects
+        - Open source contributions
+        - Notable achievements in projects
+        
+        ⭐ ACHIEVEMENTS:
+        - Quantifiable accomplishments (increased performance by 40%)
+        - Awards and recognitions
+        - Publications, speaking engagements
+        - Leadership accomplishments
+        
+        🌍 LANGUAGES:
+        - Spoken languages with proficiency levels
+        - Programming languages should go in technical skills
+        
+        📝 SUMMARY:
+        - Create a 2-3 sentence professional summary
+        - Include years of experience, key skills, and focus area
+        - Make it compelling and accurate
 
         CV Text:
         """
@@ -79,14 +127,16 @@ class GeminiService: ObservableObject {
                 )
             ],
             generationConfig: GeminiGenerationConfig(
-                temperature: 0.1,
+                temperature: environmentManager.geminiTemperature,
                 topK: 1,
                 topP: 1,
-                maxOutputTokens: 2048
+                maxOutputTokens: environmentManager.geminiMaxTokens
             )
         )
         
         request.httpBody = try JSONEncoder().encode(requestBody)
+        
+        print("🚀 Sending request to Gemini API...")
         
         let (data, response) = try await URLSession.shared.data(for: request)
         
@@ -94,7 +144,12 @@ class GeminiService: ObservableObject {
             throw GeminiError.invalidResponse
         }
         
+        print("📡 Gemini API response status: \(httpResponse.statusCode)")
+        
         guard httpResponse.statusCode == 200 else {
+            if let errorData = try? JSONSerialization.jsonObject(with: data) {
+                print("❌ Gemini API error response: \(errorData)")
+            }
             throw GeminiError.apiError(httpResponse.statusCode)
         }
         
@@ -111,17 +166,31 @@ class GeminiService: ObservableObject {
         
         // Extract JSON from the response text
         let responseText = part.text
+        print("📝 Raw Gemini response: \(responseText)")
         
         // Find JSON object in the response
         guard let jsonStart = responseText.range(of: "{"),
               let jsonEnd = responseText.range(of: "}", options: .backwards) else {
+            print("❌ No JSON found in response: \(responseText)")
             throw GeminiError.invalidJSON
         }
         
         let jsonString = String(responseText[jsonStart.lowerBound...jsonEnd.upperBound])
-        let jsonData = jsonString.data(using: .utf8)!
+        print("🔍 Extracted JSON: \(jsonString)")
         
-        return try JSONDecoder().decode(GeminiCVAnalysis.self, from: jsonData)
+        guard let jsonData = jsonString.data(using: .utf8) else {
+            throw GeminiError.invalidJSON
+        }
+        
+        do {
+            let analysis = try JSONDecoder().decode(GeminiCVAnalysis.self, from: jsonData)
+            print("✅ Successfully parsed Gemini analysis")
+            return analysis
+        } catch {
+            print("❌ JSON parsing error: \(error)")
+            print("📄 JSON string: \(jsonString)")
+            throw GeminiError.invalidJSON
+        }
     }
 }
 
@@ -180,13 +249,13 @@ enum GeminiError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingAPIKey:
-            return "Gemini API key is missing. Please add your API key."
+            return "Gemini API key is missing or invalid. Please check your .env file."
         case .invalidURL:
             return "Invalid Gemini API URL"
         case .invalidResponse:
             return "Invalid response from Gemini API"
         case .apiError(let code):
-            return "Gemini API error: \(code)"
+            return "Gemini API error: \(code). Check your API key and quota."
         case .noContent:
             return "No content in Gemini response"
         case .invalidJSON:
