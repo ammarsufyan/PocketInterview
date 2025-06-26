@@ -21,34 +21,34 @@ class AuthenticationManager: ObservableObject {
     
     init() {
         setupAuthStateListener()
-        checkInitialAuthState()
+        Task {
+            await checkInitialAuthState()
+        }
     }
     
     // MARK: - Auth State Management
     
-    private func checkInitialAuthState() {
-        Task {
-            do {
-                let session = try await supabase.auth.session
-                self.currentUser = session.user
-                self.isAuthenticated = session.user != nil
-            } catch {
-                print("Error checking initial auth state: \(error)")
-                self.isAuthenticated = false
-                self.currentUser = nil
-            }
+    private func checkInitialAuthState() async {
+        do {
+            let session = try await supabase.auth.session
+            self.currentUser = session.user
+            self.isAuthenticated = session.user != nil
+        } catch {
+            print("Error checking initial auth state: \(error)")
+            self.isAuthenticated = false
+            self.currentUser = nil
         }
     }
     
     private func setupAuthStateListener() {
-        supabase.auth.onAuthStateChange { [weak self] event, session in
-            Task { @MainActor in
-                self?.handleAuthStateChange(event: event, session: session)
+        Task {
+            for await (event, session) in supabase.auth.authStateChanges {
+                await handleAuthStateChange(event: event, session: session)
             }
         }
     }
     
-    private func handleAuthStateChange(event: AuthChangeEvent, session: Session?) {
+    private func handleAuthStateChange(event: AuthChangeEvent, session: Session?) async {
         switch event {
         case .signedIn:
             self.currentUser = session?.user
@@ -142,22 +142,28 @@ class AuthenticationManager: ObservableObject {
     // MARK: - Error Handling
     
     private func handleAuthError(_ error: Error) -> String {
-        if let authError = error as? AuthError {
-            switch authError {
-            case .invalidCredentials:
-                return "Invalid email or password"
-            case .emailNotConfirmed:
-                return "Please check your email and confirm your account"
-            case .userNotFound:
-                return "No account found with this email"
-            case .weakPassword:
-                return "Password should be at least 6 characters"
-            case .emailAlreadyRegistered:
-                return "An account with this email already exists"
-            default:
-                return authError.localizedDescription
-            }
+        // Handle Supabase-specific errors
+        let errorDescription = error.localizedDescription.lowercased()
+        
+        if errorDescription.contains("invalid login credentials") || 
+           errorDescription.contains("invalid email or password") {
+            return "Invalid email or password"
+        } else if errorDescription.contains("email not confirmed") {
+            return "Please check your email and confirm your account"
+        } else if errorDescription.contains("user not found") {
+            return "No account found with this email"
+        } else if errorDescription.contains("password") && errorDescription.contains("weak") {
+            return "Password should be at least 6 characters"
+        } else if errorDescription.contains("already registered") || 
+                  errorDescription.contains("already exists") {
+            return "An account with this email already exists"
+        } else if errorDescription.contains("rate limit") {
+            return "Too many attempts. Please try again later"
+        } else if errorDescription.contains("network") || 
+                  errorDescription.contains("connection") {
+            return "Network error. Please check your connection"
         }
+        
         return error.localizedDescription
     }
     
