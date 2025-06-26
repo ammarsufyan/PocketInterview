@@ -6,12 +6,15 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct MockInterviewView: View {
     @State private var selectedCategory = "Technical"
     @State private var showingCVPicker = false
     @State private var cvUploaded = false
     @State private var showingSessionSetup = false
+    @State private var showingExtractionResults = false
+    @StateObject private var cvExtractor = CVExtractor()
     
     let categories = ["Technical", "Behavioral"]
     
@@ -93,8 +96,12 @@ struct MockInterviewView: View {
                         CVUploadCard(
                             category: selectedCategory,
                             isUploaded: cvUploaded,
+                            cvExtractor: cvExtractor,
                             onUpload: {
                                 showingCVPicker = true
+                            },
+                            onViewResults: {
+                                showingExtractionResults = true
                             }
                         )
                         .padding(.horizontal, 20)
@@ -136,16 +143,23 @@ struct MockInterviewView: View {
             .navigationTitle("Mock Interview")
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showingCVPicker) {
-                CVPickerView(category: selectedCategory, onUpload: { success in
-                    if success {
-                        withAnimation(.spring()) {
-                            cvUploaded = true
+                CVPickerView(
+                    category: selectedCategory,
+                    cvExtractor: cvExtractor,
+                    onUpload: { success in
+                        if success {
+                            withAnimation(.spring()) {
+                                cvUploaded = true
+                            }
                         }
                     }
-                })
+                )
             }
             .sheet(isPresented: $showingSessionSetup) {
                 SessionSetupView(category: selectedCategory)
+            }
+            .sheet(isPresented: $showingExtractionResults) {
+                CVExtractionResultView(cvExtractor: cvExtractor, category: selectedCategory)
             }
         }
     }
@@ -236,7 +250,9 @@ struct CategoryCard: View {
 struct CVUploadCard: View {
     let category: String
     let isUploaded: Bool
+    @ObservedObject var cvExtractor: CVExtractor
     let onUpload: () -> Void
+    let onViewResults: () -> Void
     
     private var uploadDescription: String {
         switch category {
@@ -254,51 +270,103 @@ struct CVUploadCard: View {
     }
     
     var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: isUploaded ? "checkmark.circle.fill" : "doc.text.fill")
-                .font(.title2)
-                .foregroundColor(isUploaded ? .green : (category == "Technical" ? .blue : .purple))
-                .frame(width: 44, height: 44)
-                .background(
-                    (isUploaded ? Color.green : (category == "Technical" ? Color.blue : Color.purple)).opacity(0.1)
-                )
-                .cornerRadius(10)
-                .symbolRenderingMode(.hierarchical)
-            
-            VStack(alignment: .leading, spacing: 6) {
-                Text(isUploaded ? "CV Uploaded Successfully" : "Upload Your CV")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(isUploaded ? .green : .primary)
+        VStack(spacing: 16) {
+            HStack(spacing: 16) {
+                Image(systemName: isUploaded ? "checkmark.circle.fill" : "doc.text.fill")
+                    .font(.title2)
+                    .foregroundColor(isUploaded ? .green : (category == "Technical" ? .blue : .purple))
+                    .frame(width: 44, height: 44)
+                    .background(
+                        (isUploaded ? Color.green : (category == "Technical" ? Color.blue : Color.purple)).opacity(0.1)
+                    )
+                    .cornerRadius(10)
+                    .symbolRenderingMode(.hierarchical)
                 
-                Text(uploadDescription)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(3)
-            }
-            
-            Spacer()
-            
-            if !isUploaded {
-                Button(action: onUpload) {
-                    Text("Upload")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(isUploaded ? "CV Uploaded Successfully" : "Upload Your CV")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(isUploaded ? .green : .primary)
+                    
+                    Text(uploadDescription)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(3)
+                }
+                
+                Spacer()
+                
+                if !isUploaded {
+                    Button(action: onUpload) {
+                        Text("Upload")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(category == "Technical" ? Color.blue : Color.purple)
+                            .cornerRadius(8)
+                    }
+                } else {
+                    Image(systemName: "checkmark")
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(category == "Technical" ? Color.blue : Color.purple)
-                        .cornerRadius(8)
+                        .foregroundColor(.green)
+                        .frame(width: 24, height: 24)
+                        .background(Color.green.opacity(0.1))
+                        .cornerRadius(6)
                 }
-            } else {
-                Image(systemName: "checkmark")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.green)
-                    .frame(width: 24, height: 24)
-                    .background(Color.green.opacity(0.1))
-                    .cornerRadius(6)
+            }
+            
+            // Show extraction results if CV is uploaded
+            if isUploaded && cvExtractor.cvAnalysis != nil {
+                VStack(spacing: 12) {
+                    Divider()
+                    
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Analysis Complete")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.green)
+                            
+                            if let analysis = cvExtractor.cvAnalysis {
+                                Text(analysis.summary)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(2)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: onViewResults) {
+                            Text("View Details")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(category == "Technical" ? .blue : .purple)
+                        }
+                    }
+                }
+            }
+            
+            // Show loading state
+            if cvExtractor.isExtracting {
+                VStack(spacing: 8) {
+                    Divider()
+                    
+                    HStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        
+                        Text("Analyzing your CV...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                    }
+                }
             }
         }
         .padding(20)
@@ -379,8 +447,10 @@ struct StartInterviewButton: View {
 
 struct CVPickerView: View {
     let category: String
+    @ObservedObject var cvExtractor: CVExtractor
     let onUpload: (Bool) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var showingDocumentPicker = false
     
     private var categoryColor: Color {
         category == "Technical" ? .blue : .purple
@@ -403,13 +473,15 @@ struct CVPickerView: View {
                 Spacer()
                 
                 VStack(spacing: 20) {
-                    Image(systemName: "doc.text.fill")
+                    Image(systemName: cvExtractor.isExtracting ? "doc.text.magnifyingglass" : "doc.text.fill")
                         .font(.system(size: 60))
                         .foregroundColor(categoryColor)
                         .symbolRenderingMode(.hierarchical)
+                        .scaleEffect(cvExtractor.isExtracting ? 1.1 : 1.0)
+                        .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: cvExtractor.isExtracting)
                     
                     VStack(spacing: 12) {
-                        Text("Upload Your CV")
+                        Text(cvExtractor.isExtracting ? "Analyzing CV..." : "Upload Your CV")
                             .font(.title2)
                             .fontWeight(.bold)
                         
@@ -427,51 +499,67 @@ struct CVPickerView: View {
                     }
                 }
                 
-                VStack(spacing: 16) {
-                    Button(action: {
-                        // Simulate upload success
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            onUpload(true)
-                            dismiss()
-                        }
-                    }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "icloud.and.arrow.up")
-                                .font(.headline)
-                            Text("Choose File")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(12)
-                        .shadow(
-                            color: categoryColor.opacity(0.3),
-                            radius: 8,
-                            x: 0,
-                            y: 4
-                        )
-                    }
-                    
-                    VStack(spacing: 4) {
-                        Text("Supported formats: PDF, DOC, DOCX")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                if cvExtractor.isExtracting {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
                         
-                        Text("Max file size: 10MB")
-                            .font(.caption)
+                        Text("Extracting text and analyzing your background...")
+                            .font(.subheadline)
                             .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
+                } else {
+                    VStack(spacing: 16) {
+                        Button(action: {
+                            showingDocumentPicker = true
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "icloud.and.arrow.up")
+                                    .font(.headline)
+                                Text("Choose File")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .shadow(
+                                color: categoryColor.opacity(0.3),
+                                radius: 8,
+                                x: 0,
+                                y: 4
+                            )
+                        }
+                        
+                        VStack(spacing: 4) {
+                            Text("Supported formats: PDF, DOC, DOCX")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Text("Max file size: 10MB")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 32)
                 }
-                .padding(.horizontal, 32)
+                
+                if let error = cvExtractor.extractionError {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
                 
                 Spacer()
             }
@@ -484,8 +572,43 @@ struct CVPickerView: View {
                         dismiss()
                     }
                     .foregroundColor(categoryColor)
+                    .disabled(cvExtractor.isExtracting)
                 }
             }
+            .fileImporter(
+                isPresented: $showingDocumentPicker,
+                allowedContentTypes: [.pdf, .plainText, UTType(filenameExtension: "doc")!, UTType(filenameExtension: "docx")!],
+                allowsMultipleSelection: false
+            ) { result in
+                handleFileSelection(result: result)
+            }
+            .onChange(of: cvExtractor.cvAnalysis) { analysis in
+                if analysis != nil && !cvExtractor.isExtracting {
+                    onUpload(true)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func handleFileSelection(result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            
+            do {
+                let data = try Data(contentsOf: url)
+                let fileName = url.lastPathComponent
+                
+                cvExtractor.extractTextFromDocument(data: data, fileName: fileName)
+            } catch {
+                cvExtractor.extractionError = "Failed to read file: \(error.localizedDescription)"
+            }
+            
+        case .failure(let error):
+            cvExtractor.extractionError = "Failed to select file: \(error.localizedDescription)"
         }
     }
 }
