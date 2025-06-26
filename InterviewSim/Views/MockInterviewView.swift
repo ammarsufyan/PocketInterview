@@ -46,14 +46,6 @@ struct MockInterviewView: View {
                     
                     // Interview Categories
                     VStack(alignment: .leading, spacing: 20) {
-                        HStack {
-                            Text("Interview Types")
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 20)
-                        
                         VStack(spacing: 16) {
                             // Technical Category
                             CategoryCard(
