@@ -11,6 +11,7 @@ struct MockInterviewView: View {
     @State private var selectedCategory = "Technical"
     @State private var showingCVPicker = false
     @State private var cvUploaded = false
+    @State private var showingSessionSetup = false
     
     let categories = ["Technical", "Behavioral"]
     
@@ -114,8 +115,7 @@ struct MockInterviewView: View {
                             category: selectedCategory,
                             isEnabled: cvUploaded
                         ) {
-                            // Start interview action
-                            print("Starting \(selectedCategory) interview")
+                            showingSessionSetup = true
                         }
                         .padding(.horizontal, 20)
                         
@@ -145,6 +145,9 @@ struct MockInterviewView: View {
                         }
                     }
                 })
+            }
+            .sheet(isPresented: $showingSessionSetup) {
+                SessionSetupView(category: selectedCategory)
             }
         }
     }
@@ -486,6 +489,248 @@ struct CVPickerView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - New Session Setup View
+struct SessionSetupView: View {
+    let category: String
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var sessionName = ""
+    @State private var focusArea = ""
+    @State private var selectedDuration = 30
+    @State private var showingSuggestions = false
+    
+    private let durations = [15, 30, 45, 60]
+    
+    private var categoryColor: Color {
+        category == "Technical" ? .blue : .purple
+    }
+    
+    private var suggestedFocusAreas: [String] {
+        switch category {
+        case "Technical":
+            return [
+                "iOS Development",
+                "Swift Programming", 
+                "Data Structures",
+                "System Design",
+                "Algorithms",
+                "Database Design",
+                "API Development",
+                "Mobile Architecture"
+            ]
+        case "Behavioral":
+            return [
+                "Leadership Experience",
+                "Team Collaboration",
+                "Problem Solving",
+                "Communication Skills",
+                "Project Management",
+                "Conflict Resolution",
+                "Career Growth",
+                "Work-Life Balance"
+            ]
+        default:
+            return []
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 32) {
+                    // Header
+                    VStack(spacing: 16) {
+                        Image(systemName: category == "Technical" ? "laptopcomputer" : "person.2.fill")
+                            .font(.system(size: 50))
+                            .foregroundColor(categoryColor)
+                            .symbolRenderingMode(.hierarchical)
+                        
+                        VStack(spacing: 8) {
+                            Text("Setup Your Session")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            Text("\(category) Interview")
+                                .font(.headline)
+                                .foregroundColor(categoryColor)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .padding(.top, 20)
+                    
+                    VStack(spacing: 24) {
+                        // Session Name Input
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Session Name")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            
+                            TextField("e.g., iOS Interview Prep", text: $sessionName)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .font(.subheadline)
+                            
+                            Text("Give your session a memorable name")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        // Focus Area Input
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Focus Area")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                Spacer()
+                                
+                                Button("Suggestions") {
+                                    showingSuggestions.toggle()
+                                }
+                                .font(.caption)
+                                .foregroundColor(categoryColor)
+                            }
+                            
+                            TextField(
+                                category == "Technical" ? 
+                                "e.g., Swift, Data Structures, System Design" : 
+                                "e.g., Leadership, Team Management, Communication",
+                                text: $focusArea
+                            )
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .font(.subheadline)
+                            
+                            Text("What specific area do you want to focus on?")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            // Suggestions
+                            if showingSuggestions {
+                                LazyVGrid(columns: [
+                                    GridItem(.flexible()),
+                                    GridItem(.flexible())
+                                ], spacing: 8) {
+                                    ForEach(suggestedFocusAreas, id: \.self) { suggestion in
+                                        Button(suggestion) {
+                                            focusArea = suggestion
+                                            showingSuggestions = false
+                                        }
+                                        .font(.caption)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(categoryColor.opacity(0.1))
+                                        .foregroundColor(categoryColor)
+                                        .cornerRadius(8)
+                                    }
+                                }
+                                .padding(.top, 8)
+                                .transition(.opacity.combined(with: .move(edge: .top)))
+                            }
+                        }
+                        
+                        // Duration Selection
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Duration")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            
+                            HStack(spacing: 12) {
+                                ForEach(durations, id: \.self) { duration in
+                                    Button(action: {
+                                        selectedDuration = duration
+                                    }) {
+                                        Text("\(duration) min")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(selectedDuration == duration ? .white : categoryColor)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 10)
+                                            .background(
+                                                selectedDuration == duration ? 
+                                                categoryColor : categoryColor.opacity(0.1)
+                                            )
+                                            .cornerRadius(8)
+                                    }
+                                }
+                                
+                                Spacer()
+                            }
+                            
+                            Text("How long do you want to practice?")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Start Button
+                    Button(action: {
+                        startInterview()
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "play.circle.fill")
+                                .font(.title2)
+                            
+                            Text("Start Interview")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(16)
+                        .shadow(
+                            color: categoryColor.opacity(0.3),
+                            radius: 8,
+                            x: 0,
+                            y: 4
+                        )
+                    }
+                    .disabled(sessionName.isEmpty || focusArea.isEmpty)
+                    .opacity(sessionName.isEmpty || focusArea.isEmpty ? 0.6 : 1.0)
+                    .padding(.horizontal, 20)
+                    
+                    Spacer(minLength: 20)
+                }
+            }
+            .navigationTitle("Session Setup")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden()
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(categoryColor)
+                }
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showingSuggestions)
+    }
+    
+    private func startInterview() {
+        // Here you would start the actual interview with:
+        // - sessionName: User's custom session name
+        // - focusArea: User's specific focus area for AI context
+        // - selectedDuration: Interview duration
+        // - category: Technical or Behavioral
+        
+        print("Starting \(category) interview:")
+        print("Session Name: \(sessionName)")
+        print("Focus Area: \(focusArea)")
+        print("Duration: \(selectedDuration) minutes")
+        
+        // For now, just dismiss
+        dismiss()
     }
 }
 

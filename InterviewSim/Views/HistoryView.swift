@@ -13,12 +13,13 @@ struct HistoryView: View {
     
     let filters = ["All", "Technical", "Behavioral"]
     
-    // Enhanced sample data with auto-generated session names
+    // Enhanced sample data with user-defined session names
     let sessions = [
         InterviewSession(
             id: 1, 
             category: "Technical", 
-            sessionName: SessionNameGenerator.generateSessionName(for: "Technical", sessionCount: 0, date: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!), 
+            sessionName: "iOS Development Practice", 
+            focusArea: "SwiftUI & Combine",
             score: 78, 
             date: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!, 
             duration: 45, 
@@ -27,7 +28,8 @@ struct HistoryView: View {
         InterviewSession(
             id: 2, 
             category: "Technical", 
-            sessionName: SessionNameGenerator.generateSessionName(for: "Technical", sessionCount: 1, date: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!), 
+            sessionName: "Data Structures Deep Dive", 
+            focusArea: "Arrays & Linked Lists",
             score: 85, 
             date: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!, 
             duration: 35, 
@@ -36,7 +38,8 @@ struct HistoryView: View {
         InterviewSession(
             id: 3, 
             category: "Behavioral", 
-            sessionName: SessionNameGenerator.generateSessionName(for: "Behavioral", sessionCount: 0, date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!), 
+            sessionName: "Leadership Experience", 
+            focusArea: "Team Management",
             score: 92, 
             date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, 
             duration: 30, 
@@ -45,7 +48,8 @@ struct HistoryView: View {
         InterviewSession(
             id: 4, 
             category: "Technical", 
-            sessionName: SessionNameGenerator.generateSessionName(for: "Technical", sessionCount: 2, date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!), 
+            sessionName: "System Design Interview", 
+            focusArea: "Scalable Architecture",
             score: 74, 
             date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, 
             duration: 50, 
@@ -54,7 +58,8 @@ struct HistoryView: View {
         InterviewSession(
             id: 5, 
             category: "Behavioral", 
-            sessionName: SessionNameGenerator.generateSessionName(for: "Behavioral", sessionCount: 1, date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!), 
+            sessionName: "Communication Skills", 
+            focusArea: "Conflict Resolution",
             score: 88, 
             date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!, 
             duration: 25, 
@@ -70,7 +75,8 @@ struct HistoryView: View {
         } else {
             return filtered.filter { 
                 $0.category.localizedCaseInsensitiveContains(searchText) ||
-                $0.sessionName.localizedCaseInsensitiveContains(searchText)
+                $0.sessionName.localizedCaseInsensitiveContains(searchText) ||
+                $0.focusArea.localizedCaseInsensitiveContains(searchText)
             }
             .sorted { $0.date > $1.date }
         }
@@ -144,7 +150,8 @@ struct HistoryView: View {
 struct InterviewSession: Identifiable {
     let id: Int
     let category: String
-    let sessionName: String // Auto-generated or custom session title
+    let sessionName: String // User-defined session name
+    let focusArea: String // User-defined focus area
     let score: Int
     let date: Date
     let duration: Int // in minutes
@@ -254,19 +261,31 @@ struct HistorySessionCard: View {
                 .symbolRenderingMode(.hierarchical)
             
             // Session Info
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Session Name and Score
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(session.sessionName)
                             .font(.headline)
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
                             .lineLimit(1)
                         
-                        Text(session.category)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(categoryColor)
+                        HStack(spacing: 8) {
+                            Text(session.category)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(categoryColor)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(categoryColor.opacity(0.1))
+                                .cornerRadius(4)
+                            
+                            Text(session.focusArea)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
                     }
                     
                     Spacer()
@@ -277,6 +296,7 @@ struct HistorySessionCard: View {
                         .foregroundColor(scoreColor(session.score))
                 }
                 
+                // Session Details
                 HStack(spacing: 16) {
                     Label("\(session.duration) min", systemImage: "clock")
                         .font(.caption)
