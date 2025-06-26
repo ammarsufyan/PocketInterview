@@ -61,7 +61,9 @@ struct MockInterviewView: View {
                             ) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedCategory = "Technical"
-                                    cvUploaded = false // Reset CV status when switching
+                                    // Reset CV status and clear previous analysis when switching
+                                    cvUploaded = false
+                                    cvExtractor.resetAnalysis()
                                 }
                             }
                             
@@ -76,7 +78,9 @@ struct MockInterviewView: View {
                             ) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedCategory = "Behavioral"
-                                    cvUploaded = false // Reset CV status when switching
+                                    // Reset CV status and clear previous analysis when switching
+                                    cvUploaded = false
+                                    cvExtractor.resetAnalysis()
                                 }
                             }
                         }
@@ -582,7 +586,8 @@ struct CVPickerView: View {
             ) { result in
                 handleFileSelection(result: result)
             }
-            .onChange(of: cvExtractor.cvAnalysis) { analysis in
+            // Fixed: Updated onChange to use new iOS 17+ syntax
+            .onChange(of: cvExtractor.cvAnalysis) { _, analysis in
                 if analysis != nil && !cvExtractor.isExtracting {
                     onUpload(true)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {

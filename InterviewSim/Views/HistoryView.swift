@@ -325,7 +325,7 @@ struct HistorySessionCard: View {
     
     private func formatDate(_ date: Date) -> String {
         let calendar = Calendar.current
-        let now = Date()
+        // Fixed: Removed unused 'now' variable
         
         if calendar.isDateInToday(date) {
             return "Today"

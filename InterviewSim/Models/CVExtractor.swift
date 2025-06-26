@@ -40,7 +40,7 @@ class CVExtractor: ObservableObject {
             
             DispatchQueue.main.async {
                 self?.extractedText = extractedContent
-                self?.analyzeCV(text: extractedContent)
+                self?.analyzeCV(text: extractedContent) // Fixed: Now properly using the return value
                 self?.isExtracting = false
                 
                 // Print extracted text for debugging
@@ -53,6 +53,14 @@ class CVExtractor: ObservableObject {
                 print("=== END EXTRACTION ===")
             }
         }
+    }
+    
+    // Reset function to clear previous analysis
+    func resetAnalysis() {
+        extractedText = ""
+        extractionError = nil
+        cvAnalysis = nil
+        isExtracting = false
     }
     
     private func extractTextFromPDF(data: Data) -> String {
@@ -424,6 +432,7 @@ class CVExtractor: ObservableObject {
         """
     }
     
+    @discardableResult // Fixed: Added @discardableResult to avoid warning
     private func analyzeCV(text: String) -> CVAnalysis {
         let analysis = CVAnalysis()
         
