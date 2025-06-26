@@ -20,7 +20,7 @@ struct CVExtractionResultView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Header with Analysis Method Indicator
+                    // Header
                     VStack(spacing: 16) {
                         Image(systemName: "doc.text.magnifyingglass")
                             .font(.system(size: 50))
@@ -32,20 +32,15 @@ struct CVExtractionResultView: View {
                                 .font(.title2)
                                 .fontWeight(.bold)
                             
-                            // Show which analysis method was used
-                            if !cvExtractor.analysisMethod.isEmpty {
-                                Text("Analyzed using \(cvExtractor.analysisMethod)")
-                                    .font(.subheadline)
-                                    .foregroundColor(cvExtractor.analysisMethod.contains("Gemini") ? .green : .orange)
-                                    .fontWeight(.medium)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        (cvExtractor.analysisMethod.contains("Gemini") ? Color.green : Color.orange)
-                                            .opacity(0.1)
-                                    )
-                                    .cornerRadius(8)
-                            }
+                            // Show local analysis indicator
+                            Text("Analyzed using Enhanced Local Analysis")
+                                .font(.subheadline)
+                                .foregroundColor(.orange)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
+                                .background(Color.orange.opacity(0.1))
+                                .cornerRadius(8)
                             
                             Text("Here's what we extracted from your CV")
                                 .font(.subheadline)
@@ -429,7 +424,6 @@ struct RawTextCard: View {
 #Preview {
     let extractor = CVExtractor()
     extractor.extractedText = "Sample extracted text from CV..."
-    extractor.analysisMethod = "🤖 Gemini AI"
     
     let analysis = CVAnalysis()
     analysis.technicalSkills = ["Swift", "SwiftUI", "iOS", "Xcode", "Python", "JavaScript"]

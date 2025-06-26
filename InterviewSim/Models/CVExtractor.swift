@@ -15,14 +15,10 @@ class CVExtractor: ObservableObject {
     @Published var isExtracting: Bool = false
     @Published var extractionError: String?
     @Published var cvAnalysis: CVAnalysis?
-    @Published var analysisMethod: String = "" // Track which method was used
-    
-    private let geminiService = GeminiService()
     
     func extractTextFromDocument(data: Data, fileName: String) {
         isExtracting = true
         extractionError = nil
-        analysisMethod = ""
         
         Task {
             var extractedContent = ""
@@ -57,7 +53,7 @@ class CVExtractor: ObservableObject {
                 print("=== END EXTRACTION ===")
             }
             
-            // Start analysis after extraction
+            // Start local analysis after extraction
             await analyzeCV(text: extractedContent)
         }
     }
@@ -68,7 +64,6 @@ class CVExtractor: ObservableObject {
         extractionError = nil
         cvAnalysis = nil
         isExtracting = false
-        analysisMethod = ""
     }
     
     private func extractTextFromPDF(data: Data) async -> String {
@@ -482,46 +477,9 @@ class CVExtractor: ObservableObject {
     private func analyzeCV(text: String) async {
         let analysis = CVAnalysis()
         
-        // 🚀 HYBRID APPROACH: Try Gemini API first, fallback to local analysis
-        do {
-            print("🤖 Attempting Gemini API analysis...")
-            let geminiResult = try await geminiService.analyzeCV(text: text)
-            
-            // Convert Gemini result to CVAnalysis
-            await MainActor.run {
-                analysis.technicalSkills = geminiResult.technicalSkills
-                analysis.softSkills = geminiResult.softSkills
-                analysis.workExperience = geminiResult.workExperience
-                analysis.yearsOfExperience = geminiResult.yearsOfExperience
-                analysis.education = geminiResult.education
-                analysis.projects = geminiResult.projects
-                analysis.certifications = geminiResult.certifications
-                analysis.achievements = geminiResult.achievements
-                
-                self.cvAnalysis = analysis
-                self.analysisMethod = "🤖 Gemini AI"
-                
-                print("=== 🤖 GEMINI AI ANALYSIS RESULTS ===")
-                print("📊 Technical Skills (\(analysis.technicalSkills.count)): \(analysis.technicalSkills)")
-                print("🤝 Soft Skills (\(analysis.softSkills.count)): \(analysis.softSkills)")
-                print("⏰ Years of Experience: \(analysis.yearsOfExperience)")
-                print("💼 Work Experience (\(analysis.workExperience.count)): \(analysis.workExperience)")
-                print("🎓 Education (\(analysis.education.count)): \(analysis.education)")
-                print("🚀 Projects (\(analysis.projects.count)): \(analysis.projects)")
-                print("🏆 Certifications (\(analysis.certifications.count)): \(analysis.certifications)")
-                print("⭐ Achievements (\(analysis.achievements.count)): \(analysis.achievements)")
-                print("📝 Summary: \(geminiResult.summary)")
-                print("=== END GEMINI ANALYSIS ===")
-            }
-            
-        } catch {
-            print("⚠️ Gemini API failed, using enhanced local analysis: \(error)")
-            
-            // Fallback to enhanced local analysis
-            await MainActor.run {
-                self.performLocalAnalysis(analysis: analysis, text: text)
-                self.analysisMethod = "🔧 Enhanced Local Analysis"
-            }
+        // Enhanced local analysis
+        await MainActor.run {
+            self.performLocalAnalysis(analysis: analysis, text: text)
         }
     }
     
