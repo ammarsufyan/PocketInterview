@@ -15,6 +15,8 @@ class CVExtractor: ObservableObject {
     @Published var extractionError: String?
     @Published var cvAnalysis: CVAnalysis?
     
+    private let geminiService = GeminiService()
+    
     func extractTextFromDocument(data: Data, fileName: String) {
         isExtracting = true
         extractionError = nil
@@ -470,6 +472,51 @@ class CVExtractor: ObservableObject {
     private func analyzeCV(text: String) -> CVAnalysis {
         let analysis = CVAnalysis()
         
+        // 🚀 HYBRID APPROACH: Try Gemini API first, fallback to local analysis
+        Task {
+            do {
+                let geminiResult = try await geminiService.analyzeCV(text: text)
+                
+                // Convert Gemini result to CVAnalysis
+                DispatchQueue.main.async {
+                    analysis.technicalSkills = geminiResult.technicalSkills
+                    analysis.softSkills = geminiResult.softSkills
+                    analysis.workExperience = geminiResult.workExperience
+                    analysis.yearsOfExperience = geminiResult.yearsOfExperience
+                    analysis.education = geminiResult.education
+                    analysis.projects = geminiResult.projects
+                    analysis.certifications = geminiResult.certifications
+                    analysis.achievements = geminiResult.achievements
+                    
+                    self.cvAnalysis = analysis
+                    
+                    print("=== 🤖 GEMINI AI ANALYSIS RESULTS ===")
+                    print("📊 Technical Skills (\(analysis.technicalSkills.count)): \(analysis.technicalSkills)")
+                    print("🤝 Soft Skills (\(analysis.softSkills.count)): \(analysis.softSkills)")
+                    print("⏰ Years of Experience: \(analysis.yearsOfExperience)")
+                    print("💼 Work Experience (\(analysis.workExperience.count)): \(analysis.workExperience)")
+                    print("🎓 Education (\(analysis.education.count)): \(analysis.education)")
+                    print("🚀 Projects (\(analysis.projects.count)): \(analysis.projects)")
+                    print("🏆 Certifications (\(analysis.certifications.count)): \(analysis.certifications)")
+                    print("⭐ Achievements (\(analysis.achievements.count)): \(analysis.achievements)")
+                    print("📝 Summary: \(geminiResult.summary)")
+                    print("=== END GEMINI ANALYSIS ===")
+                }
+                
+            } catch {
+                print("⚠️ Gemini API failed, using local analysis: \(error)")
+                
+                // Fallback to enhanced local analysis
+                DispatchQueue.main.async {
+                    self.performLocalAnalysis(analysis: analysis, text: text)
+                }
+            }
+        }
+        
+        return analysis
+    }
+    
+    private func performLocalAnalysis(analysis: CVAnalysis, text: String) {
         // Enhanced analysis with better pattern recognition
         analysis.technicalSkills = extractTechnicalSkills(from: text)
         analysis.softSkills = extractSoftSkills(from: text)
@@ -483,7 +530,7 @@ class CVExtractor: ObservableObject {
         self.cvAnalysis = analysis
         
         // Enhanced console output
-        print("=== ENHANCED CV ANALYSIS RESULTS ===")
+        print("=== 🔧 LOCAL ANALYSIS RESULTS ===")
         print("📊 Technical Skills (\(analysis.technicalSkills.count)): \(analysis.technicalSkills)")
         print("🤝 Soft Skills (\(analysis.softSkills.count)): \(analysis.softSkills)")
         print("⏰ Years of Experience: \(analysis.yearsOfExperience)")
@@ -493,9 +540,7 @@ class CVExtractor: ObservableObject {
         print("🏆 Certifications (\(analysis.certifications.count)): \(analysis.certifications)")
         print("⭐ Achievements (\(analysis.achievements.count)): \(analysis.achievements)")
         print("📝 Summary: \(analysis.summary)")
-        print("=== END ENHANCED ANALYSIS ===")
-        
-        return analysis
+        print("=== END LOCAL ANALYSIS ===")
     }
     
     private func extractTechnicalSkills(from text: String) -> [String] {
