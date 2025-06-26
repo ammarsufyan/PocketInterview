@@ -492,49 +492,18 @@ struct CVPickerView: View {
     }
 }
 
-// MARK: - New Session Setup View
+// MARK: - Session Setup View
 struct SessionSetupView: View {
     let category: String
     @Environment(\.dismiss) private var dismiss
     
     @State private var sessionName = ""
-    @State private var focusArea = ""
     @State private var selectedDuration = 30
-    @State private var showingSuggestions = false
     
     private let durations = [15, 30, 45, 60]
     
     private var categoryColor: Color {
         category == "Technical" ? .blue : .purple
-    }
-    
-    private var suggestedFocusAreas: [String] {
-        switch category {
-        case "Technical":
-            return [
-                "iOS Development",
-                "Swift Programming", 
-                "Data Structures",
-                "System Design",
-                "Algorithms",
-                "Database Design",
-                "API Development",
-                "Mobile Architecture"
-            ]
-        case "Behavioral":
-            return [
-                "Leadership Experience",
-                "Team Collaboration",
-                "Problem Solving",
-                "Communication Skills",
-                "Project Management",
-                "Conflict Resolution",
-                "Career Growth",
-                "Work-Life Balance"
-            ]
-        default:
-            return []
-        }
     }
     
     var body: some View {
@@ -568,66 +537,18 @@ struct SessionSetupView: View {
                                 .font(.headline)
                                 .fontWeight(.semibold)
                             
-                            TextField("e.g., iOS Interview Prep", text: $sessionName)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .font(.subheadline)
-                            
-                            Text("Give your session a memorable name")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        // Focus Area Input
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text("Focus Area")
-                                    .font(.headline)
-                                    .fontWeight(.semibold)
-                                
-                                Spacer()
-                                
-                                Button("Suggestions") {
-                                    showingSuggestions.toggle()
-                                }
-                                .font(.caption)
-                                .foregroundColor(categoryColor)
-                            }
-                            
                             TextField(
                                 category == "Technical" ? 
-                                "e.g., Swift, Data Structures, System Design" : 
-                                "e.g., Leadership, Team Management, Communication",
-                                text: $focusArea
+                                "e.g., iOS Interview Prep" : 
+                                "e.g., Leadership Experience",
+                                text: $sessionName
                             )
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .font(.subheadline)
                             
-                            Text("What specific area do you want to focus on?")
+                            Text("Give your session a memorable name")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            
-                            // Suggestions
-                            if showingSuggestions {
-                                LazyVGrid(columns: [
-                                    GridItem(.flexible()),
-                                    GridItem(.flexible())
-                                ], spacing: 8) {
-                                    ForEach(suggestedFocusAreas, id: \.self) { suggestion in
-                                        Button(suggestion) {
-                                            focusArea = suggestion
-                                            showingSuggestions = false
-                                        }
-                                        .font(.caption)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(categoryColor.opacity(0.1))
-                                        .foregroundColor(categoryColor)
-                                        .cornerRadius(8)
-                                    }
-                                }
-                                .padding(.top, 8)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                            }
                         }
                         
                         // Duration Selection
@@ -695,8 +616,8 @@ struct SessionSetupView: View {
                             y: 4
                         )
                     }
-                    .disabled(sessionName.isEmpty || focusArea.isEmpty)
-                    .opacity(sessionName.isEmpty || focusArea.isEmpty ? 0.6 : 1.0)
+                    .disabled(sessionName.isEmpty)
+                    .opacity(sessionName.isEmpty ? 0.6 : 1.0)
                     .padding(.horizontal, 20)
                     
                     Spacer(minLength: 20)
@@ -714,19 +635,16 @@ struct SessionSetupView: View {
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: showingSuggestions)
     }
     
     private func startInterview() {
         // Here you would start the actual interview with:
         // - sessionName: User's custom session name
-        // - focusArea: User's specific focus area for AI context
         // - selectedDuration: Interview duration
         // - category: Technical or Behavioral
         
         print("Starting \(category) interview:")
         print("Session Name: \(sessionName)")
-        print("Focus Area: \(focusArea)")
         print("Duration: \(selectedDuration) minutes")
         
         // For now, just dismiss

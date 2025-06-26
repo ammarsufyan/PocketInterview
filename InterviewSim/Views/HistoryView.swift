@@ -13,13 +13,12 @@ struct HistoryView: View {
     
     let filters = ["All", "Technical", "Behavioral"]
     
-    // Enhanced sample data with user-defined session names
+    // Sample data with user-defined session names only
     let sessions = [
         InterviewSession(
             id: 1, 
             category: "Technical", 
             sessionName: "iOS Development Practice", 
-            focusArea: "SwiftUI & Combine",
             score: 78, 
             date: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!, 
             duration: 45, 
@@ -29,7 +28,6 @@ struct HistoryView: View {
             id: 2, 
             category: "Technical", 
             sessionName: "Data Structures Deep Dive", 
-            focusArea: "Arrays & Linked Lists",
             score: 85, 
             date: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!, 
             duration: 35, 
@@ -39,7 +37,6 @@ struct HistoryView: View {
             id: 3, 
             category: "Behavioral", 
             sessionName: "Leadership Experience", 
-            focusArea: "Team Management",
             score: 92, 
             date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, 
             duration: 30, 
@@ -49,7 +46,6 @@ struct HistoryView: View {
             id: 4, 
             category: "Technical", 
             sessionName: "System Design Interview", 
-            focusArea: "Scalable Architecture",
             score: 74, 
             date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, 
             duration: 50, 
@@ -59,7 +55,6 @@ struct HistoryView: View {
             id: 5, 
             category: "Behavioral", 
             sessionName: "Communication Skills", 
-            focusArea: "Conflict Resolution",
             score: 88, 
             date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!, 
             duration: 25, 
@@ -75,8 +70,7 @@ struct HistoryView: View {
         } else {
             return filtered.filter { 
                 $0.category.localizedCaseInsensitiveContains(searchText) ||
-                $0.sessionName.localizedCaseInsensitiveContains(searchText) ||
-                $0.focusArea.localizedCaseInsensitiveContains(searchText)
+                $0.sessionName.localizedCaseInsensitiveContains(searchText)
             }
             .sorted { $0.date > $1.date }
         }
@@ -85,46 +79,48 @@ struct HistoryView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Search Bar
-                HStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 16))
+                // Header with Statistics Summary
+                VStack(spacing: 20) {
+                    // Statistics Overview - Moved below title
+                    if !filteredSessions.isEmpty {
+                        HistoryStatsView(sessions: filteredSessions)
+                            .padding(.horizontal, 20)
+                    }
                     
-                    TextField("Search sessions...", text: $searchText)
-                        .textFieldStyle(PlainTextFieldStyle())
-                        .font(.subheadline)
-                }
-                .padding(16)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                
-                // Filter Tabs
-                ScrollView(.horizontal, showsIndicators: false) {
+                    // Search Bar
                     HStack(spacing: 12) {
-                        ForEach(filters, id: \.self) { filter in
-                            FilterTab(
-                                title: filter,
-                                isSelected: selectedFilter == filter
-                            ) {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    selectedFilter = filter
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 16))
+                        
+                        TextField("Search sessions...", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                            .font(.subheadline)
+                    }
+                    .padding(16)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    .padding(.horizontal, 20)
+                    
+                    // Filter Tabs
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(filters, id: \.self) { filter in
+                                FilterTab(
+                                    title: filter,
+                                    isSelected: selectedFilter == filter
+                                ) {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        selectedFilter = filter
+                                    }
                                 }
                             }
                         }
-                    }
-                    .padding(.horizontal, 20)
-                }
-                .padding(.vertical, 20)
-                
-                // Statistics Overview
-                if !filteredSessions.isEmpty {
-                    HistoryStatsView(sessions: filteredSessions)
                         .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
+                    }
                 }
+                .padding(.top, 16)
+                .padding(.bottom, 20)
                 
                 // Sessions List
                 if filteredSessions.isEmpty {
@@ -150,8 +146,7 @@ struct HistoryView: View {
 struct InterviewSession: Identifiable {
     let id: Int
     let category: String
-    let sessionName: String // User-defined session name
-    let focusArea: String // User-defined focus area
+    let sessionName: String // User-defined session name only
     let score: Int
     let date: Date
     let duration: Int // in minutes
@@ -271,21 +266,14 @@ struct HistorySessionCard: View {
                             .foregroundColor(.primary)
                             .lineLimit(1)
                         
-                        HStack(spacing: 8) {
-                            Text(session.category)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(categoryColor)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(categoryColor.opacity(0.1))
-                                .cornerRadius(4)
-                            
-                            Text(session.focusArea)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
+                        Text(session.category)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(categoryColor)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(categoryColor.opacity(0.1))
+                            .cornerRadius(4)
                     }
                     
                     Spacer()
