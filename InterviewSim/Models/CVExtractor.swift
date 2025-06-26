@@ -9,19 +9,22 @@ import Foundation
 import PDFKit
 import UniformTypeIdentifiers
 
+@MainActor
 class CVExtractor: ObservableObject {
     @Published var extractedText: String = ""
     @Published var isExtracting: Bool = false
     @Published var extractionError: String?
     @Published var cvAnalysis: CVAnalysis?
+    @Published var analysisMethod: String = "" // Track which method was used
     
     private let geminiService = GeminiService()
     
     func extractTextFromDocument(data: Data, fileName: String) {
         isExtracting = true
         extractionError = nil
+        analysisMethod = ""
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        Task {
             var extractedContent = ""
             
             // Determine file type based on file extension
@@ -29,21 +32,20 @@ class CVExtractor: ObservableObject {
             
             switch fileExtension {
             case "pdf":
-                extractedContent = self?.extractTextFromPDF(data: data) ?? ""
+                extractedContent = await extractTextFromPDF(data: data)
             case "doc", "docx":
-                extractedContent = self?.extractTextFromWord(data: data, fileName: fileName) ?? ""
+                extractedContent = await extractTextFromWord(data: data, fileName: fileName)
             default:
-                DispatchQueue.main.async {
-                    self?.extractionError = "Unsupported file format. Please use PDF, DOC, or DOCX."
-                    self?.isExtracting = false
+                await MainActor.run {
+                    self.extractionError = "Unsupported file format. Please use PDF, DOC, or DOCX."
+                    self.isExtracting = false
                 }
                 return
             }
             
-            DispatchQueue.main.async {
-                self?.extractedText = extractedContent
-                self?.analyzeCV(text: extractedContent) // Fixed: Now properly using the return value
-                self?.isExtracting = false
+            await MainActor.run {
+                self.extractedText = extractedContent
+                self.isExtracting = false
                 
                 // Print extracted text for debugging
                 print("=== CV EXTRACTION RESULTS ===")
@@ -54,6 +56,9 @@ class CVExtractor: ObservableObject {
                 print(extractedContent)
                 print("=== END EXTRACTION ===")
             }
+            
+            // Start analysis after extraction
+            await analyzeCV(text: extractedContent)
         }
     }
     
@@ -63,31 +68,37 @@ class CVExtractor: ObservableObject {
         extractionError = nil
         cvAnalysis = nil
         isExtracting = false
+        analysisMethod = ""
     }
     
-    private func extractTextFromPDF(data: Data) -> String {
-        guard let pdfDocument = PDFDocument(data: data) else {
-            DispatchQueue.main.async {
-                self.extractionError = "Failed to read PDF file"
-            }
-            return ""
-        }
-        
-        var extractedText = ""
-        let pageCount = pdfDocument.pageCount
-        
-        for pageIndex in 0..<pageCount {
-            if let page = pdfDocument.page(at: pageIndex) {
-                if let pageText = page.string {
-                    extractedText += pageText + "\n"
+    private func extractTextFromPDF(data: Data) async -> String {
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                guard let pdfDocument = PDFDocument(data: data) else {
+                    DispatchQueue.main.async {
+                        self.extractionError = "Failed to read PDF file"
+                    }
+                    continuation.resume(returning: "")
+                    return
                 }
+                
+                var extractedText = ""
+                let pageCount = pdfDocument.pageCount
+                
+                for pageIndex in 0..<pageCount {
+                    if let page = pdfDocument.page(at: pageIndex) {
+                        if let pageText = page.string {
+                            extractedText += pageText + "\n"
+                        }
+                    }
+                }
+                
+                continuation.resume(returning: extractedText.trimmingCharacters(in: .whitespacesAndNewlines))
             }
         }
-        
-        return extractedText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
-    private func extractTextFromWord(data: Data, fileName: String) -> String {
+    private func extractTextFromWord(data: Data, fileName: String) async -> String {
         // Enhanced Word document simulation with more realistic content
         // In a real app, you'd use a third-party library or server-side extraction
         
@@ -468,52 +479,50 @@ class CVExtractor: ObservableObject {
         """
     }
     
-    @discardableResult // Fixed: Added @discardableResult to avoid warning
-    private func analyzeCV(text: String) -> CVAnalysis {
+    private func analyzeCV(text: String) async {
         let analysis = CVAnalysis()
         
         // 🚀 HYBRID APPROACH: Try Gemini API first, fallback to local analysis
-        Task {
-            do {
-                let geminiResult = try await geminiService.analyzeCV(text: text)
+        do {
+            print("🤖 Attempting Gemini API analysis...")
+            let geminiResult = try await geminiService.analyzeCV(text: text)
+            
+            // Convert Gemini result to CVAnalysis
+            await MainActor.run {
+                analysis.technicalSkills = geminiResult.technicalSkills
+                analysis.softSkills = geminiResult.softSkills
+                analysis.workExperience = geminiResult.workExperience
+                analysis.yearsOfExperience = geminiResult.yearsOfExperience
+                analysis.education = geminiResult.education
+                analysis.projects = geminiResult.projects
+                analysis.certifications = geminiResult.certifications
+                analysis.achievements = geminiResult.achievements
                 
-                // Convert Gemini result to CVAnalysis
-                DispatchQueue.main.async {
-                    analysis.technicalSkills = geminiResult.technicalSkills
-                    analysis.softSkills = geminiResult.softSkills
-                    analysis.workExperience = geminiResult.workExperience
-                    analysis.yearsOfExperience = geminiResult.yearsOfExperience
-                    analysis.education = geminiResult.education
-                    analysis.projects = geminiResult.projects
-                    analysis.certifications = geminiResult.certifications
-                    analysis.achievements = geminiResult.achievements
-                    
-                    self.cvAnalysis = analysis
-                    
-                    print("=== 🤖 GEMINI AI ANALYSIS RESULTS ===")
-                    print("📊 Technical Skills (\(analysis.technicalSkills.count)): \(analysis.technicalSkills)")
-                    print("🤝 Soft Skills (\(analysis.softSkills.count)): \(analysis.softSkills)")
-                    print("⏰ Years of Experience: \(analysis.yearsOfExperience)")
-                    print("💼 Work Experience (\(analysis.workExperience.count)): \(analysis.workExperience)")
-                    print("🎓 Education (\(analysis.education.count)): \(analysis.education)")
-                    print("🚀 Projects (\(analysis.projects.count)): \(analysis.projects)")
-                    print("🏆 Certifications (\(analysis.certifications.count)): \(analysis.certifications)")
-                    print("⭐ Achievements (\(analysis.achievements.count)): \(analysis.achievements)")
-                    print("📝 Summary: \(geminiResult.summary)")
-                    print("=== END GEMINI ANALYSIS ===")
-                }
+                self.cvAnalysis = analysis
+                self.analysisMethod = "🤖 Gemini AI"
                 
-            } catch {
-                print("⚠️ Gemini API failed, using local analysis: \(error)")
-                
-                // Fallback to enhanced local analysis
-                DispatchQueue.main.async {
-                    self.performLocalAnalysis(analysis: analysis, text: text)
-                }
+                print("=== 🤖 GEMINI AI ANALYSIS RESULTS ===")
+                print("📊 Technical Skills (\(analysis.technicalSkills.count)): \(analysis.technicalSkills)")
+                print("🤝 Soft Skills (\(analysis.softSkills.count)): \(analysis.softSkills)")
+                print("⏰ Years of Experience: \(analysis.yearsOfExperience)")
+                print("💼 Work Experience (\(analysis.workExperience.count)): \(analysis.workExperience)")
+                print("🎓 Education (\(analysis.education.count)): \(analysis.education)")
+                print("🚀 Projects (\(analysis.projects.count)): \(analysis.projects)")
+                print("🏆 Certifications (\(analysis.certifications.count)): \(analysis.certifications)")
+                print("⭐ Achievements (\(analysis.achievements.count)): \(analysis.achievements)")
+                print("📝 Summary: \(geminiResult.summary)")
+                print("=== END GEMINI ANALYSIS ===")
+            }
+            
+        } catch {
+            print("⚠️ Gemini API failed, using enhanced local analysis: \(error)")
+            
+            // Fallback to enhanced local analysis
+            await MainActor.run {
+                self.performLocalAnalysis(analysis: analysis, text: text)
+                self.analysisMethod = "🔧 Enhanced Local Analysis"
             }
         }
-        
-        return analysis
     }
     
     private func performLocalAnalysis(analysis: CVAnalysis, text: String) {
@@ -530,7 +539,7 @@ class CVExtractor: ObservableObject {
         self.cvAnalysis = analysis
         
         // Enhanced console output
-        print("=== 🔧 LOCAL ANALYSIS RESULTS ===")
+        print("=== 🔧 ENHANCED LOCAL ANALYSIS RESULTS ===")
         print("📊 Technical Skills (\(analysis.technicalSkills.count)): \(analysis.technicalSkills)")
         print("🤝 Soft Skills (\(analysis.softSkills.count)): \(analysis.softSkills)")
         print("⏰ Years of Experience: \(analysis.yearsOfExperience)")
@@ -540,7 +549,7 @@ class CVExtractor: ObservableObject {
         print("🏆 Certifications (\(analysis.certifications.count)): \(analysis.certifications)")
         print("⭐ Achievements (\(analysis.achievements.count)): \(analysis.achievements)")
         print("📝 Summary: \(analysis.summary)")
-        print("=== END LOCAL ANALYSIS ===")
+        print("=== END ENHANCED LOCAL ANALYSIS ===")
     }
     
     private func extractTechnicalSkills(from text: String) -> [String] {
@@ -905,7 +914,8 @@ class CVExtractor: ObservableObject {
 }
 
 // MARK: - Enhanced CV Analysis Model
-class CVAnalysis: ObservableObject, Equatable {
+@MainActor
+class CVAnalysis: ObservableObject, Equatable, Sendable {
     @Published var technicalSkills: [String] = []
     @Published var softSkills: [String] = []
     @Published var workExperience: [String] = []

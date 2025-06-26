@@ -7,43 +7,51 @@
 
 import Foundation
 
-class EnvironmentManager {
+class EnvironmentManager: Sendable {
     static let shared = EnvironmentManager()
     
-    private var environmentVariables: [String: String] = [:]
+    private let environmentVariables: [String: String]
     
     private init() {
-        loadEnvironmentVariables()
+        self.environmentVariables = Self.loadEnvironmentVariables()
     }
     
-    private func loadEnvironmentVariables() {
-        guard let path = Bundle.main.path(forResource: ".env", ofType: nil),
-              let content = try? String(contentsOfFile: path) else {
+    private static func loadEnvironmentVariables() -> [String: String] {
+        var variables: [String: String] = [:]
+        
+        guard let path = Bundle.main.path(forResource: ".env", ofType: nil) else {
             print("⚠️ .env file not found. Using default configuration.")
-            return
+            return variables
         }
         
-        let lines = content.components(separatedBy: .newlines)
-        
-        for line in lines {
-            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            let content = try String(contentsOfFile: path, encoding: .utf8)
+            let lines = content.components(separatedBy: .newlines)
             
-            // Skip empty lines and comments
-            guard !trimmedLine.isEmpty && !trimmedLine.hasPrefix("#") else {
-                continue
+            for line in lines {
+                let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                // Skip empty lines and comments
+                guard !trimmedLine.isEmpty && !trimmedLine.hasPrefix("#") else {
+                    continue
+                }
+                
+                // Parse key=value pairs
+                let components = trimmedLine.components(separatedBy: "=")
+                guard components.count >= 2 else { continue }
+                
+                let key = components[0].trimmingCharacters(in: .whitespacesAndNewlines)
+                let value = components.dropFirst().joined(separator: "=").trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                variables[key] = value
             }
             
-            // Parse key=value pairs
-            let components = trimmedLine.components(separatedBy: "=")
-            guard components.count >= 2 else { continue }
-            
-            let key = components[0].trimmingCharacters(in: .whitespacesAndNewlines)
-            let value = components.dropFirst().joined(separator: "=").trimmingCharacters(in: .whitespacesAndNewlines)
-            
-            environmentVariables[key] = value
+            print("✅ Loaded \(variables.count) environment variables")
+        } catch {
+            print("❌ Error loading .env file: \(error)")
         }
         
-        print("✅ Loaded \(environmentVariables.count) environment variables")
+        return variables
     }
     
     func getValue(for key: String) -> String? {
@@ -79,6 +87,7 @@ class EnvironmentManager {
     
     // MARK: - Validation
     var isGeminiConfigured: Bool {
-        return !geminiAPIKey.isEmpty && geminiAPIKey != "YOUR_GEMINI_API_KEY_HERE"
+        let key = geminiAPIKey
+        return !key.isEmpty && key != "YOUR_GEMINI_API_KEY_HERE"
     }
 }
