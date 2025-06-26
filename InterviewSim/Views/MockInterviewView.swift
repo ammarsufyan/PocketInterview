@@ -124,6 +124,12 @@ struct MockInterviewView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
+                        } else {
+                            Text("Next: Set session name and duration")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                                .multilineTextAlignment(.center)
+                                .fontWeight(.medium)
                         }
                     }
                     
@@ -492,18 +498,30 @@ struct CVPickerView: View {
     }
 }
 
-// MARK: - Session Setup View
+// MARK: - Session Setup View (WHERE USER INPUTS SESSION NAME)
 struct SessionSetupView: View {
     let category: String
     @Environment(\.dismiss) private var dismiss
     
     @State private var sessionName = ""
     @State private var selectedDuration = 30
+    @FocusState private var isTextFieldFocused: Bool
     
     private let durations = [15, 30, 45, 60]
     
     private var categoryColor: Color {
         category == "Technical" ? .blue : .purple
+    }
+    
+    private var placeholderText: String {
+        switch category {
+        case "Technical":
+            return "e.g., iOS Development Practice, Data Structures Deep Dive, System Design Interview"
+        case "Behavioral":
+            return "e.g., Leadership Experience, Communication Skills, Team Management"
+        default:
+            return "e.g., Interview Practice Session"
+        }
     }
     
     var body: some View {
@@ -531,22 +549,33 @@ struct SessionSetupView: View {
                     .padding(.top, 20)
                     
                     VStack(spacing: 24) {
-                        // Session Name Input
+                        // Session Name Input - MAIN INPUT FIELD
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Session Name")
-                                .font(.headline)
-                                .fontWeight(.semibold)
+                            HStack {
+                                Text("Session Name")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                Text("*")
+                                    .font(.headline)
+                                    .foregroundColor(.red)
+                                    .fontWeight(.semibold)
+                            }
                             
-                            TextField(
-                                category == "Technical" ? 
-                                "e.g., iOS Interview Prep" : 
-                                "e.g., Leadership Experience",
-                                text: $sessionName
-                            )
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .font(.subheadline)
+                            VStack(alignment: .leading, spacing: 8) {
+                                TextField("Enter session name...", text: $sessionName)
+                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                                    .font(.subheadline)
+                                    .focused($isTextFieldFocused)
+                                    .submitLabel(.done)
+                                
+                                Text(placeholderText)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .italic()
+                            }
                             
-                            Text("Give your session a memorable name")
+                            Text("This name will appear in your interview history")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -560,7 +589,9 @@ struct SessionSetupView: View {
                             HStack(spacing: 12) {
                                 ForEach(durations, id: \.self) { duration in
                                     Button(action: {
-                                        selectedDuration = duration
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            selectedDuration = duration
+                                        }
                                     }) {
                                         Text("\(duration) min")
                                             .font(.subheadline)
@@ -573,6 +604,7 @@ struct SessionSetupView: View {
                                                 categoryColor : categoryColor.opacity(0.1)
                                             )
                                             .cornerRadius(8)
+                                            .scaleEffect(selectedDuration == duration ? 1.05 : 1.0)
                                     }
                                 }
                                 
@@ -598,27 +630,41 @@ struct SessionSetupView: View {
                                 .font(.headline)
                                 .fontWeight(.semibold)
                         }
-                        .foregroundColor(.white)
+                        .foregroundColor(sessionName.isEmpty ? .secondary : .white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
                         .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+                            Group {
+                                if sessionName.isEmpty {
+                                    Color(.systemGray4)
+                                } else {
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                }
+                            }
                         )
                         .cornerRadius(16)
                         .shadow(
-                            color: categoryColor.opacity(0.3),
-                            radius: 8,
+                            color: sessionName.isEmpty ? Color.clear : categoryColor.opacity(0.3),
+                            radius: sessionName.isEmpty ? 0 : 8,
                             x: 0,
                             y: 4
                         )
+                        .scaleEffect(sessionName.isEmpty ? 0.98 : 1.0)
                     }
                     .disabled(sessionName.isEmpty)
-                    .opacity(sessionName.isEmpty ? 0.6 : 1.0)
+                    .animation(.easeInOut(duration: 0.2), value: sessionName.isEmpty)
                     .padding(.horizontal, 20)
+                    
+                    if sessionName.isEmpty {
+                        Text("Please enter a session name to continue")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                    }
                     
                     Spacer(minLength: 20)
                 }
@@ -632,6 +678,12 @@ struct SessionSetupView: View {
                         dismiss()
                     }
                     .foregroundColor(categoryColor)
+                }
+            }
+            .onAppear {
+                // Auto-focus on text field when view appears
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isTextFieldFocused = true
                 }
             }
         }
