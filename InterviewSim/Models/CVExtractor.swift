@@ -170,11 +170,20 @@ class CVExtractor: ObservableObject {
         Bachelor of Science in Computer Science
         University of California, Berkeley | 2013 - 2017
         GPA: 3.8/4.0
+        Relevant Coursework: Data Structures, Algorithms, Software Engineering, Database Systems
+        
+        Master of Science in Software Engineering
+        Stanford University | 2017 - 2019
+        Thesis: "Scalable Microservices Architecture for Cloud Applications"
+        GPA: 3.9/4.0
         
         CERTIFICATIONS
         • AWS Certified Solutions Architect - Professional (2022)
         • Google Cloud Professional Developer (2021)
-        • Certified Kubernetes Administrator (2020)
+        • Certified Kubernetes Administrator (CKA) (2020)
+        • Oracle Certified Professional, Java SE 11 Developer (2019)
+        • Microsoft Azure Developer Associate (2021)
+        • Certified ScrumMaster (CSM) (2020)
         
         PROJECTS
         • E-commerce Platform - Built scalable online marketplace with payment integration
@@ -187,6 +196,11 @@ class CVExtractor: ObservableObject {
         • Led team that won company hackathon for innovative AI solution
         • Speaker at 3 tech conferences on cloud architecture best practices
         • Published 5 technical articles with 10K+ total views
+        
+        LANGUAGES
+        • English (Native)
+        • Spanish (Conversational)
+        • Mandarin (Basic)
         """
     }
     
@@ -244,15 +258,22 @@ class CVExtractor: ObservableObject {
         Master of Business Administration (MBA)
         Stanford Graduate School of Business | 2013 - 2015
         Concentration: Technology Management
+        GPA: 3.7/4.0
         
         Bachelor of Arts in Economics
         Harvard University | 2009 - 2013
         Magna Cum Laude, Phi Beta Kappa
+        GPA: 3.8/4.0
+        
+        Certificate in Digital Marketing
+        Google Digital Marketing Institute | 2020
         
         CERTIFICATIONS
-        • Certified Scrum Product Owner (CSPO)
-        • Google Analytics Certified
-        • Pragmatic Marketing Certified
+        • Certified Scrum Product Owner (CSPO) - Scrum Alliance (2021)
+        • Google Analytics Individual Qualification (IQ) - Google (2020)
+        • Pragmatic Marketing Certified (PMC) - Pragmatic Institute (2019)
+        • Product Management Certificate - UC Berkeley Extension (2018)
+        • Lean Six Sigma Green Belt - ASQ (2017)
         
         KEY ACHIEVEMENTS
         • Launched product that captured 15% market share within first year
@@ -325,11 +346,17 @@ class CVExtractor: ObservableObject {
         Bachelor of Fine Arts in Graphic Design
         Art Center College of Design | 2014 - 2018
         Summa Cum Laude
+        GPA: 3.9/4.0
+        
+        Certificate in UX Design
+        General Assembly | 2018
         
         CERTIFICATIONS
-        • Google UX Design Professional Certificate
-        • Nielsen Norman Group UX Certification
-        • Adobe Certified Expert (ACE) - Photoshop & Illustrator
+        • Google UX Design Professional Certificate - Google (2021)
+        • Nielsen Norman Group UX Certification - NN/g (2020)
+        • Adobe Certified Expert (ACE) - Photoshop & Illustrator (2019)
+        • Certified Usability Analyst (CUA) - Human Factors International (2020)
+        • Design Thinking Certificate - IDEO U (2019)
         
         NOTABLE PROJECTS
         • HealthTech App - Designed telemedicine platform used by 500K+ patients
@@ -402,16 +429,23 @@ class CVExtractor: ObservableObject {
         Master of Science in Data Science
         University of Washington | 2016 - 2018
         Thesis: "Deep Learning for Natural Language Processing"
+        GPA: 3.8/4.0
         
         Bachelor of Science in Mathematics
         MIT | 2012 - 2016
         Minor in Computer Science
+        GPA: 3.7/4.0
+        
+        Certificate in Machine Learning
+        Stanford Online | 2017
         
         CERTIFICATIONS
-        • AWS Certified Machine Learning - Specialty
-        • Google Cloud Professional Data Engineer
-        • Certified Analytics Professional (CAP)
-        • TensorFlow Developer Certificate
+        • AWS Certified Machine Learning - Specialty (2022)
+        • Google Cloud Professional Data Engineer (2021)
+        • Certified Analytics Professional (CAP) - INFORMS (2020)
+        • TensorFlow Developer Certificate - Google (2021)
+        • Microsoft Azure Data Scientist Associate (2020)
+        • Databricks Certified Associate Developer for Apache Spark (2019)
         
         KEY PROJECTS
         • Customer Lifetime Value Prediction - Increased marketing ROI by 30%
@@ -586,26 +620,83 @@ class CVExtractor: ObservableObject {
         return 0
     }
     
+    // 🔥 ENHANCED EDUCATION EXTRACTION
     private func extractEducation(from text: String) -> [String] {
-        let educationKeywords = [
-            "Bachelor", "Master", "PhD", "Doctorate", "Degree", "University", "College",
-            "Computer Science", "Software Engineering", "Information Technology",
-            "Data Science", "Machine Learning", "Artificial Intelligence",
-            "Business Administration", "MBA", "Engineering", "Mathematics",
-            "Statistics", "Physics", "Design", "Fine Arts", "Graphic Design",
-            "Bootcamp", "Certificate", "Certification", "Diploma"
-        ]
-        
         var education: [String] = []
         let lines = text.components(separatedBy: .newlines)
         
+        // Enhanced patterns for education detection
+        let educationPatterns = [
+            // Degree patterns
+            "bachelor.*?of.*?(science|arts|engineering|business|fine arts)",
+            "master.*?of.*?(science|arts|business|engineering)",
+            "phd.*?in.*?",
+            "doctorate.*?in.*?",
+            "doctor.*?of.*?",
+            "associate.*?degree",
+            "diploma.*?in.*?",
+            "certificate.*?in.*?",
+            
+            // University patterns
+            "university.*?\\|.*?\\d{4}",
+            "college.*?\\|.*?\\d{4}",
+            "institute.*?\\|.*?\\d{4}",
+            "school.*?\\|.*?\\d{4}",
+            
+            // GPA patterns
+            "gpa.*?\\d\\.\\d",
+            "grade.*?point.*?average",
+            
+            // Graduation patterns
+            "graduated.*?\\d{4}",
+            "graduation.*?\\d{4}",
+            "class.*?of.*?\\d{4}",
+            
+            // Honor patterns
+            "magna cum laude",
+            "summa cum laude",
+            "cum laude",
+            "with distinction",
+            "with honors",
+            "dean's list",
+            "honor roll"
+        ]
+        
         for line in lines {
             let trimmedLine = line.trimmingCharacters(in: .whitespaces)
-            for keyword in educationKeywords {
-                if trimmedLine.localizedCaseInsensitiveContains(keyword) && trimmedLine.count < 200 {
-                    education.append(trimmedLine)
-                    break
+            let lowercaseLine = trimmedLine.lowercased()
+            
+            // Skip if line is too short or too long
+            guard trimmedLine.count > 10 && trimmedLine.count < 300 else { continue }
+            
+            // Check for education patterns
+            for pattern in educationPatterns {
+                if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+                    let range = NSRange(location: 0, length: lowercaseLine.utf16.count)
+                    if regex.firstMatch(in: lowercaseLine, options: [], range: range) != nil {
+                        education.append(trimmedLine)
+                        break
+                    }
                 }
+            }
+            
+            // Additional keyword-based detection
+            let educationKeywords = [
+                "bachelor", "master", "phd", "doctorate", "degree", "university", "college",
+                "institute", "school", "gpa", "graduated", "graduation", "thesis",
+                "coursework", "major", "minor", "concentration", "specialization"
+            ]
+            
+            var keywordCount = 0
+            for keyword in educationKeywords {
+                if lowercaseLine.contains(keyword) {
+                    keywordCount += 1
+                }
+            }
+            
+            // If line contains multiple education keywords, likely education-related
+            if keywordCount >= 2 && !education.contains(trimmedLine) {
+                education.append(trimmedLine)
             }
         }
         
@@ -639,24 +730,97 @@ class CVExtractor: ObservableObject {
         return Array(Set(projects)).sorted()
     }
     
+    // 🔥 ENHANCED CERTIFICATIONS EXTRACTION
     private func extractCertifications(from text: String) -> [String] {
-        let certificationKeywords = [
-            "AWS Certified", "Google Cloud", "Microsoft Azure", "Certified Scrum",
-            "PMP", "Agile", "Six Sigma", "CISSP", "CompTIA", "Cisco",
-            "Oracle Certified", "Salesforce", "Adobe Certified", "Apple Certified",
-            "Kubernetes", "Docker", "TensorFlow", "Professional Certificate"
-        ]
-        
         var certifications: [String] = []
         let lines = text.components(separatedBy: .newlines)
         
+        // Enhanced certification patterns
+        let certificationPatterns = [
+            // AWS Certifications
+            "aws certified.*?(solutions architect|developer|sysops|devops|security|machine learning|data analytics|database|network|advanced networking)",
+            "amazon web services.*?certified",
+            
+            // Google Cloud Certifications
+            "google cloud.*?(professional|associate).*?(cloud architect|data engineer|cloud developer|cloud security engineer|cloud network engineer)",
+            "gcp.*?certified",
+            
+            // Microsoft Azure Certifications
+            "microsoft azure.*?(fundamentals|associate|expert).*?(administrator|developer|solutions architect|security engineer|data engineer)",
+            "azure.*?certified",
+            
+            // Programming & Development
+            "oracle certified.*?(professional|associate).*?(java|database|mysql)",
+            "certified.*?(scrum master|product owner|agile)",
+            "pmp.*?certified",
+            "cissp.*?certified",
+            "comptia.*?(security\\+|network\\+|a\\+|linux\\+)",
+            
+            // Design & UX
+            "adobe certified.*?(expert|associate).*?(photoshop|illustrator|indesign|after effects)",
+            "google ux design.*?certificate",
+            "nielsen norman group.*?certification",
+            
+            // Data Science & Analytics
+            "tensorflow.*?developer.*?certificate",
+            "certified analytics professional",
+            "tableau.*?certified",
+            "databricks.*?certified",
+            
+            // General patterns
+            "certified.*?\\w+.*?\\(\\d{4}\\)",
+            "certificate.*?in.*?\\w+",
+            "certification.*?\\-.*?\\w+.*?\\(\\d{4}\\)",
+            "professional.*?certificate.*?\\-.*?\\w+"
+        ]
+        
         for line in lines {
             let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+            let lowercaseLine = trimmedLine.lowercased()
+            
+            // Skip if line is too short or too long
+            guard trimmedLine.count > 5 && trimmedLine.count < 200 else { continue }
+            
+            // Check for certification patterns
+            for pattern in certificationPatterns {
+                if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+                    let range = NSRange(location: 0, length: lowercaseLine.utf16.count)
+                    if regex.firstMatch(in: lowercaseLine, options: [], range: range) != nil {
+                        certifications.append(trimmedLine)
+                        break
+                    }
+                }
+            }
+            
+            // Enhanced keyword-based detection
+            let certificationKeywords = [
+                "certified", "certificate", "certification", "professional", "associate",
+                "expert", "specialist", "aws", "google cloud", "azure", "oracle",
+                "microsoft", "adobe", "cisco", "comptia", "pmp", "scrum", "agile",
+                "tensorflow", "tableau", "databricks", "salesforce"
+            ]
+            
+            var hasKeyword = false
+            var hasYear = false
+            
             for keyword in certificationKeywords {
-                if trimmedLine.localizedCaseInsensitiveContains(keyword) && trimmedLine.count < 200 {
-                    certifications.append(trimmedLine)
+                if lowercaseLine.contains(keyword) {
+                    hasKeyword = true
                     break
                 }
+            }
+            
+            // Check for year pattern (2019-2024)
+            if let regex = try? NSRegularExpression(pattern: "\\b(20[1-2][0-9])\\b", options: []) {
+                let range = NSRange(location: 0, length: lowercaseLine.utf16.count)
+                if regex.firstMatch(in: lowercaseLine, options: [], range: range) != nil {
+                    hasYear = true
+                }
+            }
+            
+            // If line has certification keyword and year, likely a certification
+            if hasKeyword && hasYear && !certifications.contains(trimmedLine) {
+                certifications.append(trimmedLine)
             }
         }
         
