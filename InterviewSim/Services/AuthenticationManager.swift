@@ -84,13 +84,13 @@ class AuthenticationManager: ObservableObject {
             print("Sign up response - User: \(response.user?.id.uuidString ?? "nil"), Session: \(response.session != nil)")
             
             // Check if user needs email confirmation
-            if let user = response.user, response.session == nil {
+            if response.user != nil && response.session == nil {
                 // User created but needs email confirmation
                 self.errorMessage = "Please check your email and confirm your account before signing in."
-            } else if let user = response.user, response.session != nil {
+            } else if response.user != nil && response.session != nil {
                 // User is automatically signed in
                 print("User signed up successfully with display name: \(fullName)")
-                self.currentUser = user
+                self.currentUser = response.user
                 self.isAuthenticated = true
             }
         } catch {
