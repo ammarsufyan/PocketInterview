@@ -73,12 +73,15 @@ class TavusService: ObservableObject {
     // MARK: - API Calls
     
     private func createTavusConversation(data: TavusConversationRequest) async throws -> TavusConversationResponse {
-        let baseURL = envConfig.tavusBaseURL
-        guard let url = URL(string: "\(baseURL)/conversations") else {
-            throw TavusError.invalidURL
-        }
+        // UPDATED: Try multiple endpoint variations
+        let possibleEndpoints = [
+            "https://tavusapi.com/v2/conversations",
+            "https://api.tavus.io/v2/conversations", 
+            "https://platform.tavus.io/api/v2/conversations",
+            "https://tavusapi.com/conversations",
+            "https://api.tavus.io/conversations"
+        ]
         
-        // Get API key from environment with detailed debugging
         let apiKey = try TavusConfig.getApiKey()
         
         print("🔑 DEBUG: API Key Detailed Analysis")
@@ -88,7 +91,34 @@ class TavusService: ObservableObject {
         print("  - Contains underscore: \(apiKey.contains("_"))")
         print("  - Contains dash: \(apiKey.contains("-"))")
         print("  - Is alphanumeric: \(apiKey.allSatisfy { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" })")
-        print("🌐 DEBUG: Request URL: \(url)")
+        
+        // Try each endpoint until one works
+        for (index, endpoint) in possibleEndpoints.enumerated() {
+            print("🌐 DEBUG: Trying endpoint \(index + 1)/\(possibleEndpoints.count): \(endpoint)")
+            
+            do {
+                let response = try await makeAPIRequest(to: endpoint, with: apiKey, data: data)
+                print("✅ SUCCESS: Endpoint \(endpoint) worked!")
+                return response
+            } catch let error as TavusError {
+                print("❌ Endpoint \(endpoint) failed: \(error)")
+                
+                // If this is the last endpoint, throw the error
+                if index == possibleEndpoints.count - 1 {
+                    throw error
+                }
+                // Otherwise, continue to next endpoint
+                continue
+            }
+        }
+        
+        throw TavusError.invalidURL
+    }
+    
+    private func makeAPIRequest(to endpoint: String, with apiKey: String, data: TavusConversationRequest) async throws -> TavusConversationResponse {
+        guard let url = URL(string: endpoint) else {
+            throw TavusError.invalidURL
+        }
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -96,71 +126,126 @@ class TavusService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
         
-        // UPDATED: Use correct Tavus API payload structure
-        let payload = TavusAPIPayload(
-            conversationName: data.sessionName,
-            conversationProperties: TavusConversationProperties(
-                category: data.category,
+        // UPDATED: Try different payload structures
+        let payloads = [
+            // Structure 1: Standard Tavus format
+            TavusAPIPayload(
+                conversationName: data.sessionName,
+                conversationProperties: TavusConversationProperties(
+                    category: data.category,
+                    duration: data.duration,
+                    cvContext: data.cvContext,
+                    instructions: generateInstructions(for: data.category, cvContext: data.cvContext),
+                    conversationType: "interview",
+                    language: "en"
+                )
+            ),
+            // Structure 2: Simplified format
+            SimpleTavusPayload(
+                name: data.sessionName,
+                type: "interview",
                 duration: data.duration,
-                cvContext: data.cvContext,
-                instructions: generateInstructions(for: data.category, cvContext: data.cvContext),
-                conversationType: "interview",
-                language: "en"
+                instructions: generateInstructions(for: data.category, cvContext: data.cvContext)
             )
-        )
+        ]
         
-        let jsonData = try JSONEncoder().encode(payload)
-        request.httpBody = jsonData
-        
-        // Debug: Print request details
-        print("📤 DEBUG: Request Details")
-        print("  - Method: \(request.httpMethod ?? "Unknown")")
-        print("  - Headers: \(request.allHTTPHeaderFields ?? [:])")
-        if let bodyString = String(data: jsonData, encoding: .utf8) {
-            print("  - Body: \(bodyString)")
-        }
-        
-        let (responseData, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw TavusError.invalidResponse
-        }
-        
-        print("📥 DEBUG: Response Details")
-        print("  - Status Code: \(httpResponse.statusCode)")
-        print("  - Headers: \(httpResponse.allHeaderFields)")
-        
-        if let responseString = String(data: responseData, encoding: .utf8) {
-            print("  - Body: \(responseString)")
-        }
-        
-        // ENHANCED: Better error handling for 401
-        if httpResponse.statusCode == 401 {
-            print("🚨 401 UNAUTHORIZED - API Key Issues:")
-            print("  - Check if API key is complete and valid")
-            print("  - Verify API key format matches Tavus requirements")
-            print("  - Ensure no extra spaces or characters in .env file")
-            print("  - Current API key preview: \(String(apiKey.prefix(15)))...")
-            
-            throw TavusError.apiErrorWithMessage(401, "Invalid API key. Please check your TAVUS_API_KEY in .env file.")
-        }
-        
-        guard httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
-            // Try to parse error response
-            if let errorData = try? JSONDecoder().decode(TavusErrorResponse.self, from: responseData) {
-                throw TavusError.apiErrorWithMessage(httpResponse.statusCode, errorData.message)
-            } else {
-                let responseString = String(data: responseData, encoding: .utf8) ?? "Unknown error"
-                throw TavusError.apiErrorWithMessage(httpResponse.statusCode, responseString)
+        for (payloadIndex, payload) in payloads.enumerated() {
+            do {
+                let jsonData = try JSONEncoder().encode(payload)
+                request.httpBody = jsonData
+                
+                // Debug: Print request details
+                print("📤 DEBUG: Request Details (Payload \(payloadIndex + 1))")
+                print("  - Method: \(request.httpMethod ?? "Unknown")")
+                print("  - Headers: \(request.allHTTPHeaderFields ?? [:])")
+                if let bodyString = String(data: jsonData, encoding: .utf8) {
+                    print("  - Body: \(bodyString)")
+                }
+                
+                let (responseData, response) = try await URLSession.shared.data(for: request)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw TavusError.invalidResponse
+                }
+                
+                print("📥 DEBUG: Response Details")
+                print("  - Status Code: \(httpResponse.statusCode)")
+                print("  - Headers: \(httpResponse.allHeaderFields)")
+                
+                if let responseString = String(data: responseData, encoding: .utf8) {
+                    print("  - Body: \(responseString)")
+                }
+                
+                // Handle different status codes
+                switch httpResponse.statusCode {
+                case 200, 201:
+                    // Success - try to parse response
+                    return try parseSuccessResponse(responseData)
+                    
+                case 401:
+                    print("🚨 401 UNAUTHORIZED - API Key Issues:")
+                    print("  - Check if API key is complete and valid")
+                    print("  - Verify API key format matches Tavus requirements")
+                    print("  - Current API key preview: \(String(apiKey.prefix(15)))...")
+                    throw TavusError.apiErrorWithMessage(401, "Invalid API key")
+                    
+                case 404:
+                    print("🚨 404 NOT FOUND - Endpoint Issues:")
+                    print("  - Endpoint: \(endpoint)")
+                    print("  - This endpoint might not exist")
+                    throw TavusError.apiErrorWithMessage(404, "Endpoint not found")
+                    
+                case 400:
+                    print("🚨 400 BAD REQUEST - Payload Issues:")
+                    if let errorData = try? JSONDecoder().decode(TavusErrorResponse.self, from: responseData) {
+                        throw TavusError.apiErrorWithMessage(400, errorData.message)
+                    } else {
+                        throw TavusError.apiErrorWithMessage(400, "Invalid request payload")
+                    }
+                    
+                default:
+                    // Try to parse error response
+                    if let errorData = try? JSONDecoder().decode(TavusErrorResponse.self, from: responseData) {
+                        throw TavusError.apiErrorWithMessage(httpResponse.statusCode, errorData.message)
+                    } else {
+                        let responseString = String(data: responseData, encoding: .utf8) ?? "Unknown error"
+                        throw TavusError.apiErrorWithMessage(httpResponse.statusCode, responseString)
+                    }
+                }
+                
+            } catch {
+                print("❌ Payload \(payloadIndex + 1) failed: \(error)")
+                if payloadIndex == payloads.count - 1 {
+                    throw error
+                }
+                continue
             }
         }
         
-        let tavusResponse = try JSONDecoder().decode(TavusAPIResponse.self, from: responseData)
-        
-        return TavusConversationResponse(
-            conversationUrl: tavusResponse.conversationUrl,
-            sessionId: tavusResponse.conversationId
-        )
+        throw TavusError.invalidResponse
+    }
+    
+    private func parseSuccessResponse(_ data: Data) throws -> TavusConversationResponse {
+        // Try different response structures
+        do {
+            let tavusResponse = try JSONDecoder().decode(TavusAPIResponse.self, from: data)
+            return TavusConversationResponse(
+                conversationUrl: tavusResponse.conversationUrl,
+                sessionId: tavusResponse.conversationId
+            )
+        } catch {
+            // Try alternative response structure
+            do {
+                let altResponse = try JSONDecoder().decode(AlternativeTavusResponse.self, from: data)
+                return TavusConversationResponse(
+                    conversationUrl: altResponse.url ?? altResponse.conversationUrl ?? "",
+                    sessionId: altResponse.id ?? altResponse.sessionId ?? ""
+                )
+            } catch {
+                print("❌ Failed to parse response with any known structure")
+                throw TavusError.decodingError
+            }
+        }
     }
     
     // MARK: - Helper Methods
@@ -189,32 +274,63 @@ class TavusService: ObservableObject {
         return TavusConfig.validateConfiguration()
     }
     
-    // MARK: - Test API Key Function
+    // MARK: - Test API Key Function (ENHANCED)
     
     func testApiKey() async -> Bool {
         do {
             let apiKey = try TavusConfig.getApiKey()
-            let baseURL = envConfig.tavusBaseURL
             
-            // Test with a simple API call (like getting account info)
-            guard let url = URL(string: "\(baseURL)/account") else {
-                print("❌ Invalid test URL")
-                return false
+            // Test multiple endpoints for API key validation
+            let testEndpoints = [
+                "https://tavusapi.com/v2/account",
+                "https://api.tavus.io/v2/account",
+                "https://platform.tavus.io/api/v2/account",
+                "https://tavusapi.com/account",
+                "https://api.tavus.io/account"
+            ]
+            
+            print("🧪 Testing Tavus API Key...")
+            print("🔑 Current API key preview: \(String(apiKey.prefix(15)))...")
+            
+            for (index, endpoint) in testEndpoints.enumerated() {
+                print("🌐 Testing endpoint \(index + 1)/\(testEndpoints.count): \(endpoint)")
+                
+                guard let url = URL(string: endpoint) else {
+                    print("❌ Invalid test URL: \(endpoint)")
+                    continue
+                }
+                
+                var request = URLRequest(url: url)
+                request.httpMethod = "GET"
+                request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                
+                do {
+                    let (_, response) = try await URLSession.shared.data(for: request)
+                    
+                    if let httpResponse = response as? HTTPURLResponse {
+                        print("📊 Endpoint \(endpoint) - Status: \(httpResponse.statusCode)")
+                        
+                        switch httpResponse.statusCode {
+                        case 200, 201:
+                            print("✅ API Key is valid! Endpoint: \(endpoint)")
+                            return true
+                        case 401:
+                            print("❌ API Key invalid for endpoint: \(endpoint)")
+                        case 404:
+                            print("⚠️ Endpoint not found: \(endpoint)")
+                        default:
+                            print("⚠️ Unexpected status \(httpResponse.statusCode) for: \(endpoint)")
+                        }
+                    }
+                } catch {
+                    print("❌ Network error for \(endpoint): \(error)")
+                }
             }
             
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            
-            let (_, response) = try await URLSession.shared.data(for: request)
-            
-            if let httpResponse = response as? HTTPURLResponse {
-                print("🧪 API Key Test Result: Status \(httpResponse.statusCode)")
-                return httpResponse.statusCode != 401
-            }
-            
+            print("❌ API Key test failed for all endpoints")
             return false
+            
         } catch {
             print("❌ API Key test failed: \(error)")
             return false
@@ -236,7 +352,7 @@ struct TavusConversationResponse {
     let sessionId: String
 }
 
-// MARK: - API Models (UPDATED FOR TAVUS API STRUCTURE)
+// MARK: - API Models (MULTIPLE STRUCTURES TO TRY)
 
 struct TavusAPIPayload: Codable {
     let conversationName: String
@@ -246,6 +362,13 @@ struct TavusAPIPayload: Codable {
         case conversationName = "conversation_name"
         case conversationProperties = "properties"
     }
+}
+
+struct SimpleTavusPayload: Codable {
+    let name: String
+    let type: String
+    let duration: Int
+    let instructions: String
 }
 
 struct TavusConversationProperties: Codable {
@@ -278,9 +401,26 @@ struct TavusAPIResponse: Codable {
     }
 }
 
+struct AlternativeTavusResponse: Codable {
+    let id: String?
+    let sessionId: String?
+    let url: String?
+    let conversationUrl: String?
+    let status: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case sessionId = "session_id"
+        case url
+        case conversationUrl = "conversation_url"
+        case status
+    }
+}
+
 struct TavusErrorResponse: Codable {
     let message: String
     let code: String?
+    let error: String?
 }
 
 // MARK: - Error Types
