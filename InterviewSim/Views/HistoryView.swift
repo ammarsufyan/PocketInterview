@@ -116,7 +116,7 @@ struct HistoryView: View {
                             }
                         }
                         
-                        if let errorMessage = historyManager.errorMessage {
+                        if historyManager.errorMessage != nil {
                             Button("Clear Error", systemImage: "xmark.circle") {
                                 historyManager.clearError()
                             }

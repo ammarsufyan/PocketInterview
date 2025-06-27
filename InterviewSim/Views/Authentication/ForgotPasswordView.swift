@@ -53,7 +53,7 @@ struct ForgotPasswordView: View {
                             .keyboardType(.emailAddress)
                             .textContentType(.emailAddress)
                             .autocapitalization(.none)
-                            .onChange(of: email) { _ in
+                            .onChange(of: email) {
                                 validateEmail()
                                 authManager.clearError()
                             }

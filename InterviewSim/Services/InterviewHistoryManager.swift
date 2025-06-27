@@ -59,9 +59,7 @@ class InterviewHistoryManager: ObservableObject {
                 .value
             
             self.sessions = response
-            print("✅ Loaded \(response.count) sessions from Supabase")
         } catch {
-            print("❌ Error loading sessions: \(error)")
             self.errorMessage = "Failed to load interview history"
             
             // Fallback to sample data for development
@@ -71,6 +69,7 @@ class InterviewHistoryManager: ObservableObject {
         isLoading = false
     }
     
+    @discardableResult
     func createSession(
         category: String,
         sessionName: String,
@@ -106,11 +105,9 @@ class InterviewHistoryManager: ObservableObject {
             // Add to local array
             self.sessions.insert(response, at: 0)
             
-            print("✅ Created session: \(response.sessionName)")
             return response
             
         } catch {
-            print("❌ Error creating session: \(error)")
             self.errorMessage = "Failed to save interview session"
             return nil
         }
@@ -124,7 +121,6 @@ class InterviewHistoryManager: ObservableObject {
     ) async -> Bool {
         
         do {
-            // FIXED: Create a proper Codable struct for updates
             let updateData = SessionUpdateData(
                 score: score,
                 questionsAnswered: questionsAnswered,
@@ -145,11 +141,9 @@ class InterviewHistoryManager: ObservableObject {
                 sessions[index] = response
             }
             
-            print("✅ Updated session: \(response.sessionName)")
             return true
             
         } catch {
-            print("❌ Error updating session: \(error)")
             self.errorMessage = "Failed to update session"
             return false
         }
@@ -166,11 +160,9 @@ class InterviewHistoryManager: ObservableObject {
             // Remove from local array
             sessions.removeAll { $0.id == session.id }
             
-            print("✅ Deleted session: \(session.sessionName)")
             return true
             
         } catch {
-            print("❌ Error deleting session: \(error)")
             self.errorMessage = "Failed to delete session"
             return false
         }
@@ -198,7 +190,7 @@ class InterviewHistoryManager: ObservableObject {
         ]
         
         for (category, name, score, duration, questions) in sampleSessions {
-            await createSession(
+            _ = await createSession(
                 category: category,
                 sessionName: name,
                 score: score,
@@ -295,7 +287,6 @@ struct InterviewSessionInsert: Codable {
     }
 }
 
-// FIXED: New struct specifically for updates that avoids encoding issues
 struct SessionUpdateData: Codable {
     let score: Int?
     let questionsAnswered: Int?

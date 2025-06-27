@@ -59,7 +59,7 @@ struct SignUpView: View {
                                 .textFieldStyle(AuthTextFieldStyle(isValid: isNameValid))
                                 .textContentType(.name)
                                 .autocapitalization(.words)
-                                .onChange(of: fullName) { _ in
+                                .onChange(of: fullName) {
                                     validateName()
                                     authManager.clearError()
                                 }
@@ -83,7 +83,7 @@ struct SignUpView: View {
                                 .keyboardType(.emailAddress)
                                 .textContentType(.emailAddress)
                                 .autocapitalization(.none)
-                                .onChange(of: email) { _ in
+                                .onChange(of: email) {
                                     validateEmail()
                                     authManager.clearError()
                                 }
@@ -105,7 +105,7 @@ struct SignUpView: View {
                             SecureField("Create a password", text: $password)
                                 .textFieldStyle(AuthTextFieldStyle(isValid: isPasswordValid))
                                 .textContentType(.newPassword)
-                                .onChange(of: password) { _ in
+                                .onChange(of: password) {
                                     validatePassword()
                                     validateConfirmPassword()
                                     authManager.clearError()
@@ -128,7 +128,7 @@ struct SignUpView: View {
                             SecureField("Confirm your password", text: $confirmPassword)
                                 .textFieldStyle(AuthTextFieldStyle(isValid: isConfirmPasswordValid))
                                 .textContentType(.newPassword)
-                                .onChange(of: confirmPassword) { _ in
+                                .onChange(of: confirmPassword) {
                                     validateConfirmPassword()
                                     authManager.clearError()
                                 }

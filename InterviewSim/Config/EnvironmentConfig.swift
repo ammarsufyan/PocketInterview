@@ -22,8 +22,6 @@ class EnvironmentConfig {
         // Try to load from .env file first
         if let envPath = Bundle.main.path(forResource: ".env", ofType: nil) {
             loadFromFile(path: envPath)
-        } else {
-            print("⚠️ .env file not found in bundle")
         }
         
         // Also load from Info.plist for production builds
@@ -31,15 +29,12 @@ class EnvironmentConfig {
         
         // Fallback to system environment variables
         loadFromSystemEnvironment()
-        
-        // Debug: Print what we loaded
-        print("🔧 Environment Variables Loaded:")
-        printLoadedVariables()
     }
     
     private func loadFromFile(path: String) {
         do {
-            let content = try String(contentsOfFile: path)
+            // FIXED: Use new iOS 18+ API
+            let content = try String(contentsOfFile: path, encoding: .utf8)
             let lines = content.components(separatedBy: .newlines)
             
             for line in lines {
@@ -59,13 +54,10 @@ class EnvironmentConfig {
                         .trimmingCharacters(in: CharacterSet(charactersIn: "\"'")) // Remove quotes
                     
                     envVariables[key] = value
-                    print("✅ Loaded \(key) from .env file")
                 }
             }
-            
-            print("✅ Loaded environment variables from .env file")
         } catch {
-            print("⚠️ Could not load .env file: \(error)")
+            // Silently handle file loading errors
         }
     }
     
@@ -83,7 +75,6 @@ class EnvironmentConfig {
         for key in envKeys {
             if let value = infoPlist[key] as? String, !value.isEmpty {
                 envVariables[key] = value
-                print("✅ Loaded \(key) from Info.plist")
             }
         }
     }
@@ -99,7 +90,6 @@ class EnvironmentConfig {
         for key in envKeys {
             if let value = ProcessInfo.processInfo.environment[key], !value.isEmpty {
                 envVariables[key] = value
-                print("✅ Loaded \(key) from system environment")
             }
         }
     }
@@ -128,13 +118,7 @@ class EnvironmentConfig {
     // MARK: - Tavus Configuration
     
     var tavusApiKey: String? {
-        let key = getValue(for: "TAVUS_API_KEY")
-        if let key = key {
-            print("🔑 Tavus API Key found: \(String(key.prefix(10)))... (length: \(key.count))")
-        } else {
-            print("❌ Tavus API Key not found")
-        }
-        return key
+        return getValue(for: "TAVUS_API_KEY")
     }
     
     var tavusBaseURL: String {
@@ -155,49 +139,20 @@ class EnvironmentConfig {
     
     func validateTavusConfiguration() -> Bool {
         guard let apiKey = tavusApiKey, !apiKey.isEmpty else {
-            print("❌ TAVUS_API_KEY not found in environment")
             return false
         }
-        
-        // Additional validation for Tavus API key format
-        if apiKey.count < 10 {
-            print("⚠️ Warning: Tavus API key seems too short")
-        }
-        
-        print("✅ Tavus configuration is valid")
-        print("  - API Key: \(String(apiKey.prefix(10)))... (length: \(apiKey.count))")
-        print("  - Base URL: \(tavusBaseURL)")
         return true
     }
     
     func validateSupabaseConfiguration() -> Bool {
         guard let url = supabaseURL, !url.isEmpty else {
-            print("❌ SUPABASE_URL not found in environment")
             return false
         }
         
         guard let key = supabaseAnonKey, !key.isEmpty else {
-            print("❌ SUPABASE_ANON_KEY not found in environment")
             return false
         }
         
-        print("✅ Supabase configuration is valid")
         return true
-    }
-    
-    // MARK: - Debug Information
-    
-    func printLoadedVariables() {
-        print("🔧 Loaded Environment Variables:")
-        for (key, value) in envVariables {
-            // Mask sensitive values
-            let maskedValue = key.contains("KEY") || key.contains("SECRET") ? 
-                "\(String(value.prefix(10)))..." : value
-            print("  \(key): \(maskedValue)")
-        }
-        
-        if envVariables.isEmpty {
-            print("  ⚠️ No environment variables loaded!")
-        }
     }
 }

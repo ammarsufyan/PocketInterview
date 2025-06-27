@@ -57,7 +57,7 @@ struct SignInView: View {
                                 .keyboardType(.emailAddress)
                                 .textContentType(.emailAddress)
                                 .autocapitalization(.none)
-                                .onChange(of: email) { _ in
+                                .onChange(of: email) {
                                     validateEmail()
                                     authManager.clearError()
                                 }
@@ -79,7 +79,7 @@ struct SignInView: View {
                             SecureField("Enter your password", text: $password)
                                 .textFieldStyle(AuthTextFieldStyle(isValid: isPasswordValid))
                                 .textContentType(.password)
-                                .onChange(of: password) { _ in
+                                .onChange(of: password) {
                                     validatePassword()
                                     authManager.clearError()
                                 }

@@ -17,7 +17,6 @@ struct MockInterviewView: View {
     @State private var showingTavusInterview = false
     @StateObject private var cvExtractor = CVExtractor()
     
-    // FIXED: Use ObservableObject for session data to ensure proper state management
     @StateObject private var sessionData = SessionData()
     
     let categories = ["Technical", "Behavioral"]
@@ -118,7 +117,6 @@ struct MockInterviewView: View {
                             category: selectedCategory,
                             isEnabled: cvUploaded
                         ) {
-                            // FIXED: Set category in session data before showing setup
                             sessionData.category = selectedCategory
                             showingSessionSetup = true
                         }
@@ -165,15 +163,8 @@ struct MockInterviewView: View {
                 SessionSetupView(
                     sessionData: sessionData,
                     onSessionStart: {
-                        // FIXED: Direct transition to interview with validated data
-                        print("🚀 DEBUG: Session setup completed")
-                        print("  - Category: '\(sessionData.category)'")
-                        print("  - Name: '\(sessionData.sessionName)'")
-                        print("  - Duration: \(sessionData.duration)")
-                        
                         showingSessionSetup = false
                         
-                        // Small delay to ensure sheet dismissal
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             showingTavusInterview = true
                         }
@@ -205,12 +196,10 @@ struct MockInterviewView: View {
         cvUploaded = false
         cvExtractor.resetAnalysis()
         sessionData.reset()
-        
-        print("🔧 DEBUG: Reset session data for category: \(selectedCategory)")
     }
 }
 
-// MARK: - SessionData ObservableObject (NEW)
+// MARK: - SessionData ObservableObject
 
 class SessionData: ObservableObject {
     @Published var category: String = ""
@@ -221,38 +210,20 @@ class SessionData: ObservableObject {
         category = ""
         sessionName = ""
         duration = 30
-        
-        print("🔧 DEBUG: SessionData reset")
-        print("  - category: '\(category)'")
-        print("  - sessionName: '\(sessionName)'")
-        print("  - duration: \(duration)")
     }
     
     func updateSession(name: String, duration: Int) {
         self.sessionName = name
         self.duration = duration
-        
-        print("🔧 DEBUG: SessionData updated")
-        print("  - category: '\(category)'")
-        print("  - sessionName: '\(sessionName)'")
-        print("  - duration: \(self.duration)")
     }
     
     var isValid: Bool {
         let trimmedName = sessionName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let isValid = !category.isEmpty && !trimmedName.isEmpty && trimmedName.count >= 3
-        
-        print("🔧 DEBUG: SessionData validation")
-        print("  - category: '\(category)' (empty: \(category.isEmpty))")
-        print("  - sessionName: '\(sessionName)' (trimmed: '\(trimmedName)', length: \(trimmedName.count))")
-        print("  - duration: \(duration)")
-        print("  - isValid: \(isValid)")
-        
-        return isValid
+        return !category.isEmpty && !trimmedName.isEmpty && trimmedName.count >= 3
     }
 }
 
-// MARK: - Updated CategoryCard, CVUploadCard, StartInterviewButton (unchanged)
+// MARK: - Supporting Views
 
 struct CategoryCard: View {
     let title: String
@@ -532,8 +503,6 @@ struct StartInterviewButton: View {
     }
 }
 
-// MARK: - Updated SessionSetupView
-
 struct SessionSetupView: View {
     @ObservedObject var sessionData: SessionData
     let onSessionStart: () -> Void
@@ -628,8 +597,8 @@ struct SessionSetupView: View {
                                             isTextFieldFocused = true
                                         }
                                     }
-                                    .onChange(of: localSessionName) { newValue in
-                                        print("🔧 DEBUG: Local session name changed: '\(newValue)'")
+                                    .onChange(of: localSessionName) { _ in
+                                        // Validation happens automatically through computed property
                                     }
                                 
                                 Text(placeholderText)
@@ -667,7 +636,6 @@ struct SessionSetupView: View {
                                     ) {
                                         withAnimation(.easeInOut(duration: 0.2)) {
                                             localSelectedDuration = duration
-                                            print("🔧 DEBUG: Local duration selected: \(duration)")
                                         }
                                     }
                                 }
@@ -756,7 +724,6 @@ struct SessionSetupView: View {
                 }
             }
             .onAppear {
-                // Initialize local values from session data
                 localSessionName = sessionData.sessionName
                 localSelectedDuration = sessionData.duration
                 
@@ -769,27 +736,12 @@ struct SessionSetupView: View {
     
     private func startTavusInterview() {
         guard isSessionNameValid else { 
-            print("❌ Invalid session name: '\(localSessionName)'")
             return 
         }
         
-        print("🚀 DEBUG: Updating SessionData from SessionSetupView")
-        print("  - Local name: '\(localSessionName)'")
-        print("  - Local duration: \(localSelectedDuration)")
-        print("  - Trimmed name: '\(trimmedSessionName)'")
-        
-        // CRITICAL: Update the session data object
         sessionData.updateSession(name: trimmedSessionName, duration: localSelectedDuration)
         
-        print("🔧 DEBUG: SessionData after update")
-        print("  - sessionData.sessionName: '\(sessionData.sessionName)'")
-        print("  - sessionData.duration: \(sessionData.duration)")
-        print("  - sessionData.isValid: \(sessionData.isValid)")
-        
-        // Call the completion callback
         onSessionStart()
-        
-        // Dismiss the view
         dismiss()
     }
 }
@@ -848,8 +800,6 @@ struct DurationCard: View {
         .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 }
-
-// MARK: - CVPickerView (unchanged)
 
 struct CVPickerView: View {
     let category: String
@@ -1011,8 +961,6 @@ struct CVPickerView: View {
                 cvExtractor.extractionError = "No file selected"
                 return 
             }
-            
-            print("📁 Selected file: \(url.lastPathComponent)")
             
             guard url.startAccessingSecurityScopedResource() else {
                 cvExtractor.extractionError = "Cannot access the selected file. Please try selecting the file again."
