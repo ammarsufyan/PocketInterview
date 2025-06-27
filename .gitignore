@@ -75,7 +75,7 @@ Dependencies/
 # It is recommended to not store the screenshots in the git repo.
 # Instead, use fastlane to re-generate the screenshots whenever they are needed.
 # For more information about the fastlane concept, see https://docs.fastlane.tools
-#
+# and https://docs.fastlane.tools/best-practices/source-control/#source-control
 
 fastlane/report.xml
 fastlane/Preview.html
@@ -89,31 +89,17 @@ fastlane/test_output
 
 iOSInjectionProject/
 
-# 🔑 ENVIRONMENT VARIABLES
+# Environment Variables
 .env
 .env.local
 .env.development
 .env.production
 
-# 📱 iOS Specific
-*.xcuserstate
-*.xcworkspace/xcuserdata/
-*.xcodeproj/xcuserdata/
-
-# 🔒 API Keys and Secrets
-config.plist
+# API Keys and Secrets
 secrets.plist
-GoogleService-Info.plist
+config.plist
 
-# 📊 Analytics and Crash Reports
-*.crash
-*.symbolicated
-
-# 🗂️ Temporary Files
-.DS_Store
-Thumbs.db
+# Temporary files
 *.tmp
 *.temp
-
-# 📝 Documentation
-docs/build/
+.DS_Store

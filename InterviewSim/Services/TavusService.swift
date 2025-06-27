@@ -15,8 +15,7 @@ class TavusService: ObservableObject {
     @Published var conversationUrl: String?
     @Published var sessionId: String?
     
-    private let apiKey = "YOUR_TAVUS_API_KEY" // Replace with your actual API key
-    private let baseURL = "https://tavusapi.com/v2"
+    private let envConfig = EnvironmentConfig.shared
     
     // MARK: - Create Conversation Session
     
@@ -30,6 +29,11 @@ class TavusService: ObservableObject {
         errorMessage = nil
         
         do {
+            // Validate configuration first
+            guard TavusConfig.validateConfiguration() else {
+                throw TavusConfigError.invalidConfiguration
+            }
+            
             let conversationData = TavusConversationRequest(
                 category: category,
                 sessionName: sessionName,
@@ -48,6 +52,10 @@ class TavusService: ObservableObject {
             
             return true
             
+        } catch let error as TavusConfigError {
+            print("❌ Tavus configuration error: \(error)")
+            self.errorMessage = error.localizedDescription
+            return false
         } catch {
             print("❌ Error creating Tavus conversation: \(error)")
             self.errorMessage = "Failed to create interview session: \(error.localizedDescription)"
@@ -60,9 +68,14 @@ class TavusService: ObservableObject {
     // MARK: - API Calls
     
     private func createTavusConversation(data: TavusConversationRequest) async throws -> TavusConversationResponse {
+        let baseURL = envConfig.tavusBaseURL
         guard let url = URL(string: "\(baseURL)/conversations") else {
             throw TavusError.invalidURL
         }
+        
+        // Get API key and replica ID from environment
+        let apiKey = try TavusConfig.getApiKey()
+        let replicaId = try TavusConfig.getReplicaId()
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -72,7 +85,7 @@ class TavusService: ObservableObject {
         // Create the conversation payload
         let payload = TavusAPIPayload(
             conversationName: data.sessionName,
-            replicaId: "r1234567890", // Replace with your replica ID
+            replicaId: replicaId,
             conversationProperties: TavusConversationProperties(
                 category: data.category,
                 duration: data.duration,
@@ -90,7 +103,12 @@ class TavusService: ObservableObject {
         }
         
         guard httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
-            throw TavusError.apiError(httpResponse.statusCode)
+            // Try to parse error response
+            if let errorData = try? JSONDecoder().decode(TavusErrorResponse.self, from: responseData) {
+                throw TavusError.apiErrorWithMessage(httpResponse.statusCode, errorData.message)
+            } else {
+                throw TavusError.apiError(httpResponse.statusCode)
+            }
         }
         
         let tavusResponse = try JSONDecoder().decode(TavusAPIResponse.self, from: responseData)
@@ -104,61 +122,27 @@ class TavusService: ObservableObject {
     // MARK: - Helper Methods
     
     private func generateInstructions(for category: String, cvContext: String?) -> String {
-        let baseInstructions = """
-        You are an expert interviewer conducting a \(category.lowercased()) interview. 
-        Be professional, encouraging, and provide constructive feedback.
-        """
+        let basePrompt = category == "Technical" ? 
+            TavusConfig.technicalInterviewPrompt : 
+            TavusConfig.behavioralInterviewPrompt
         
-        let categorySpecificInstructions: String
-        
-        switch category {
-        case "Technical":
-            categorySpecificInstructions = """
-            
-            Focus on:
-            - Technical skills and problem-solving abilities
-            - Coding challenges appropriate to their experience level
-            - System design questions
-            - Best practices and architecture patterns
-            - Ask follow-up questions to dive deeper into their technical knowledge
-            """
-        case "Behavioral":
-            categorySpecificInstructions = """
-            
-            Focus on:
-            - Past work experiences and achievements
-            - Leadership and teamwork situations
-            - Problem-solving in workplace scenarios
-            - Use the STAR method (Situation, Task, Action, Result)
-            - Ask for specific examples and details
-            """
-        default:
-            categorySpecificInstructions = """
-            
-            Conduct a general interview focusing on the candidate's background and experience.
-            """
-        }
-        
-        let cvInstructions = if let cvContext = cvContext, !cvContext.isEmpty {
-            """
-            
-            CANDIDATE BACKGROUND:
-            \(cvContext)
-            
-            Use this information to ask personalized questions based on their experience, skills, and background.
-            Reference specific items from their CV when appropriate.
-            """
-        } else {
-            ""
-        }
-        
-        return baseInstructions + categorySpecificInstructions + cvInstructions
+        return TavusConfig.createPersonalizedPrompt(
+            basePrompt: basePrompt,
+            category: category,
+            cvContext: cvContext
+        )
     }
     
     func clearSession() {
         conversationUrl = nil
         sessionId = nil
         errorMessage = nil
+    }
+    
+    // MARK: - Configuration Check
+    
+    func checkConfiguration() -> Bool {
+        return TavusConfig.validateConfiguration()
     }
 }
 
@@ -216,12 +200,18 @@ struct TavusAPIResponse: Codable {
     }
 }
 
+struct TavusErrorResponse: Codable {
+    let message: String
+    let code: String?
+}
+
 // MARK: - Error Types
 
 enum TavusError: Error, LocalizedError {
     case invalidURL
     case invalidResponse
     case apiError(Int)
+    case apiErrorWithMessage(Int, String)
     case decodingError
     
     var errorDescription: String? {
@@ -232,6 +222,8 @@ enum TavusError: Error, LocalizedError {
             return "Invalid response from server"
         case .apiError(let code):
             return "API Error: \(code)"
+        case .apiErrorWithMessage(let code, let message):
+            return "API Error \(code): \(message)"
         case .decodingError:
             return "Failed to decode response"
         }

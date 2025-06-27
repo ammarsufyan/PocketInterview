@@ -8,18 +8,22 @@
 import Foundation
 
 struct TavusConfig {
-    // MARK: - API Configuration
+    // MARK: - API Configuration (Using Environment Variables)
     
-    /// Replace with your actual Tavus API key
-    /// Get it from: https://platform.tavus.io/api-keys
-    static let apiKey = "YOUR_TAVUS_API_KEY"
+    /// Tavus API key from environment variables
+    static var apiKey: String? {
+        return EnvironmentConfig.shared.tavusApiKey
+    }
     
-    /// Tavus API base URL
-    static let baseURL = "https://tavusapi.com/v2"
+    /// Tavus API base URL from environment variables
+    static var baseURL: String {
+        return EnvironmentConfig.shared.tavusBaseURL
+    }
     
-    /// Replace with your actual Replica ID
-    /// Create a replica at: https://platform.tavus.io/replicas
-    static let defaultReplicaId = "r1234567890"
+    /// Tavus Replica ID from environment variables
+    static var defaultReplicaId: String? {
+        return EnvironmentConfig.shared.tavusReplicaId
+    }
     
     // MARK: - Conversation Settings
     
@@ -118,47 +122,78 @@ struct TavusConfig {
     }
     
     static func validateConfiguration() -> Bool {
-        guard !apiKey.isEmpty && apiKey != "YOUR_TAVUS_API_KEY" else {
-            print("❌ Tavus API key not configured")
-            return false
+        return EnvironmentConfig.shared.validateTavusConfiguration()
+    }
+    
+    // MARK: - Safe Configuration Access
+    
+    static func getApiKey() throws -> String {
+        guard let apiKey = apiKey, !apiKey.isEmpty else {
+            throw TavusConfigError.missingApiKey
         }
-        
-        guard !defaultReplicaId.isEmpty && defaultReplicaId != "r1234567890" else {
-            print("❌ Tavus Replica ID not configured")
-            return false
+        return apiKey
+    }
+    
+    static func getReplicaId() throws -> String {
+        guard let replicaId = defaultReplicaId, !replicaId.isEmpty else {
+            throw TavusConfigError.missingReplicaId
         }
-        
-        return true
+        return replicaId
     }
 }
 
-// MARK: - Configuration Instructions
+// MARK: - Configuration Errors
+
+enum TavusConfigError: Error, LocalizedError {
+    case missingApiKey
+    case missingReplicaId
+    case invalidConfiguration
+    
+    var errorDescription: String? {
+        switch self {
+        case .missingApiKey:
+            return "Tavus API key not found. Please add TAVUS_API_KEY to your .env file."
+        case .missingReplicaId:
+            return "Tavus Replica ID not found. Please add TAVUS_REPLICA_ID to your .env file."
+        case .invalidConfiguration:
+            return "Invalid Tavus configuration. Please check your environment variables."
+        }
+    }
+}
+
+// MARK: - Setup Instructions
 
 /*
- TAVUS SETUP INSTRUCTIONS:
+ TAVUS ENVIRONMENT SETUP INSTRUCTIONS:
  
- 1. Get your Tavus API Key:
+ 1. Create a .env file in your project root with:
+    TAVUS_API_KEY=your_actual_api_key_here
+    TAVUS_REPLICA_ID=your_actual_replica_id_here
+    TAVUS_BASE_URL=https://tavusapi.com/v2
+ 
+ 2. Get your Tavus API Key:
     - Go to https://platform.tavus.io/api-keys
     - Create a new API key
-    - Replace "YOUR_TAVUS_API_KEY" with your actual key
+    - Add it to your .env file
  
- 2. Create a Replica:
+ 3. Create a Replica:
     - Go to https://platform.tavus.io/replicas
     - Create a new replica (AI interviewer persona)
     - Copy the Replica ID
-    - Replace "r1234567890" with your actual replica ID
+    - Add it to your .env file
  
- 3. Test the Configuration:
-    - Run TavusConfig.validateConfiguration() to check setup
-    - Test with a simple conversation creation
+ 4. For production builds, add these keys to Info.plist:
+    <key>TAVUS_API_KEY</key>
+    <string>$(TAVUS_API_KEY)</string>
+    <key>TAVUS_REPLICA_ID</key>
+    <string>$(TAVUS_REPLICA_ID)</string>
  
- 4. Customize Interview Prompts:
-    - Modify technicalInterviewPrompt for your technical interview style
-    - Modify behavioralInterviewPrompt for your behavioral interview approach
-    - Add company-specific questions or requirements
+ 5. Test the configuration:
+    TavusConfig.validateConfiguration()
  
- SECURITY NOTE:
- - Never commit your actual API keys to version control
- - Consider using environment variables or secure storage
- - For production apps, store keys securely in Keychain
+ SECURITY NOTES:
+ - Never commit .env file to version control
+ - Add .env to your .gitignore file
+ - Use different keys for development and production
+ - Consider using Xcode build configurations for different environments
  */
