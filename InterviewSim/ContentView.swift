@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var authManager = AuthenticationManager()
+    @StateObject private var historyManager = InterviewHistoryManager()
     
     var body: some View {
         TabView {
@@ -17,6 +18,7 @@ struct ContentView: View {
                     Image(systemName: "mic.circle.fill")
                     Text("Mock Interview")
                 }
+                .environmentObject(historyManager)
             
             HistoryView()
                 .tabItem {
