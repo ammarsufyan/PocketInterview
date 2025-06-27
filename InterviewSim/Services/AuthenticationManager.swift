@@ -242,9 +242,9 @@ class AuthenticationManager: ObservableObject {
         errorMessage = nil
         
         do {
-            // Use the correct method for updating user metadata
-            let response = try await supabase.auth.updateUser(
-                attributes: UserAttributes(
+            // Use the correct method for updating user metadata in Supabase Swift SDK
+            let response = try await supabase.auth.update(
+                user: UserAttributes(
                     data: [
                         "display_name": .string(displayName)
                     ]
