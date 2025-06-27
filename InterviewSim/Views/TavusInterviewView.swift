@@ -9,11 +9,9 @@ import SwiftUI
 import WebKit
 
 struct TavusInterviewView: View {
-    let category: String
-    let sessionName: String
-    let duration: Int
+    @ObservedObject var sessionData: SessionData
     let cvContext: String?
-    let onBackToSetup: () -> Void // NEW: Back to setup callback
+    let onBackToSetup: () -> Void
     
     @StateObject private var tavusService = TavusService()
     @EnvironmentObject private var historyManager: InterviewHistoryManager
@@ -28,14 +26,14 @@ struct TavusInterviewView: View {
     @State private var isShowingAlert = false
     
     private var categoryColor: Color {
-        category == "Technical" ? .blue : .purple
+        sessionData.category == "Technical" ? .blue : .purple
     }
     
     var body: some View {
         NavigationView {
             ZStack {
                 if tavusService.isLoading {
-                    TavusLoadingView(category: category)
+                    TavusLoadingView(category: sessionData.category)
                 } else if let conversationUrl = tavusService.conversationUrl {
                     TavusWebView(
                         url: conversationUrl,
@@ -66,9 +64,9 @@ struct TavusInterviewView: View {
                     )
                 } else {
                     TavusPreparationView(
-                        category: category,
-                        sessionName: sessionName,
-                        duration: duration,
+                        category: sessionData.category,
+                        sessionName: sessionData.sessionName,
+                        duration: sessionData.duration,
                         categoryColor: categoryColor,
                         onStart: {
                             Task {
@@ -105,9 +103,7 @@ struct TavusInterviewView: View {
             .navigationBarBackButtonHidden()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    // ENHANCED: Different buttons based on state
                     if tavusService.conversationUrl != nil {
-                        // Show End Interview when webview is loaded
                         Button("End Interview") {
                             if !isShowingAlert && !isEndingSession {
                                 sessionEndReason = "manual"
@@ -118,7 +114,6 @@ struct TavusInterviewView: View {
                         .foregroundColor(.red)
                         .disabled(isEndingSession || isShowingAlert)
                     } else {
-                        // ENHANCED: Show Back to Setup instead of Cancel
                         Button("Back to Setup") {
                             onBackToSetup()
                         }
@@ -156,19 +151,19 @@ struct TavusInterviewView: View {
             }
         }
         .onAppear {
-            // ENHANCED: Debug session data on appear
             print("🔧 DEBUG: TavusInterviewView appeared")
-            print("  - Category: '\(category)'")
-            print("  - Session Name: '\(sessionName)'")
-            print("  - Duration: \(duration)")
+            print("  - Category: '\(sessionData.category)'")
+            print("  - Session Name: '\(sessionData.sessionName)'")
+            print("  - Duration: \(sessionData.duration)")
             print("  - CV Context: \(cvContext != nil ? "Provided" : "None")")
+            print("  - SessionData Valid: \(sessionData.isValid)")
             
-            if !sessionName.isEmpty {
+            if sessionData.isValid {
                 Task {
                     await startTavusSession()
                 }
             } else {
-                print("❌ Session name is empty, not starting session")
+                print("❌ SessionData is invalid, not starting session")
             }
         }
     }
@@ -217,9 +212,9 @@ struct TavusInterviewView: View {
     
     private func startTavusSession() async {
         let success = await tavusService.createConversationSession(
-            category: category,
-            sessionName: sessionName,
-            duration: duration,
+            category: sessionData.category,
+            sessionName: sessionData.sessionName,
+            duration: sessionData.duration,
             cvContext: cvContext
         )
         
@@ -262,8 +257,8 @@ struct TavusInterviewView: View {
         
         // Step 3: Save to history
         await historyManager.createSession(
-            category: category,
-            sessionName: sessionName,
+            category: sessionData.category,
+            sessionName: sessionData.sessionName,
             score: nil,
             durationMinutes: max(actualDuration, 1),
             questionsAnswered: 0,
@@ -615,10 +610,13 @@ struct TipsCard: View {
 }
 
 #Preview {
-    TavusInterviewView(
-        category: "Technical",
-        sessionName: "iOS Development Practice",
-        duration: 30,
+    let sessionData = SessionData()
+    sessionData.category = "Technical"
+    sessionData.sessionName = "iOS Development Practice"
+    sessionData.duration = 30
+    
+    return TavusInterviewView(
+        sessionData: sessionData,
         cvContext: "Senior iOS Developer with 5+ years experience",
         onBackToSetup: {
             print("Back to setup")

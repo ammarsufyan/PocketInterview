@@ -17,9 +17,8 @@ struct MockInterviewView: View {
     @State private var showingTavusInterview = false
     @StateObject private var cvExtractor = CVExtractor()
     
-    // FIXED: Simple direct values - exactly like duration logic
-    @State private var sessionName = ""
-    @State private var sessionDuration = 30
+    // FIXED: Use ObservableObject for session data to ensure proper state management
+    @StateObject private var sessionData = SessionData()
     
     let categories = ["Technical", "Behavioral"]
     
@@ -66,15 +65,7 @@ struct MockInterviewView: View {
                             ) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedCategory = "Technical"
-                                    // FIXED: Clear session data when switching categories
-                                    cvUploaded = false
-                                    cvExtractor.resetAnalysis()
-                                    sessionName = ""
-                                    sessionDuration = 30
-                                    
-                                    print("🔧 DEBUG: Switched to Technical")
-                                    print("  - sessionName reset to: '\(sessionName)'")
-                                    print("  - sessionDuration reset to: \(sessionDuration)")
+                                    resetSessionData()
                                 }
                             }
                             
@@ -89,22 +80,14 @@ struct MockInterviewView: View {
                             ) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedCategory = "Behavioral"
-                                    // FIXED: Clear session data when switching categories
-                                    cvUploaded = false
-                                    cvExtractor.resetAnalysis()
-                                    sessionName = ""
-                                    sessionDuration = 30
-                                    
-                                    print("🔧 DEBUG: Switched to Behavioral")
-                                    print("  - sessionName reset to: '\(sessionName)'")
-                                    print("  - sessionDuration reset to: \(sessionDuration)")
+                                    resetSessionData()
                                 }
                             }
                         }
                         .padding(.horizontal, 20)
                     }
                     
-                    // CV Upload Section (for both Technical and Behavioral)
+                    // CV Upload Section
                     VStack(alignment: .leading, spacing: 20) {
                         HStack {
                             Text("Personalize Your Interview")
@@ -135,6 +118,8 @@ struct MockInterviewView: View {
                             category: selectedCategory,
                             isEnabled: cvUploaded
                         ) {
+                            // FIXED: Set category in session data before showing setup
+                            sessionData.category = selectedCategory
                             showingSessionSetup = true
                         }
                         .padding(.horizontal, 20)
@@ -153,7 +138,7 @@ struct MockInterviewView: View {
                         }
                     }
                     
-                    // Built by Bolt.new Badge - Using Asset Image
+                    // Built by Bolt.new Badge
                     BoltBadgeImageView()
                         .padding(.top, 20)
                     
@@ -178,28 +163,18 @@ struct MockInterviewView: View {
             }
             .sheet(isPresented: $showingSessionSetup) {
                 SessionSetupView(
-                    category: selectedCategory,
-                    onSessionStart: { name, duration in
-                        // CRITICAL: Follow exact same pattern as duration
-                        print("🔧 DEBUG: SessionSetupView callback triggered")
-                        print("  - Received name: '\(name)'")
-                        print("  - Received duration: \(duration)")
-                        print("  - Current sessionName before: '\(sessionName)'")
-                        print("  - Current sessionDuration before: \(sessionDuration)")
+                    sessionData: sessionData,
+                    onSessionStart: {
+                        // FIXED: Direct transition to interview with validated data
+                        print("🚀 DEBUG: Session setup completed")
+                        print("  - Category: '\(sessionData.category)'")
+                        print("  - Name: '\(sessionData.sessionName)'")
+                        print("  - Duration: \(sessionData.duration)")
                         
-                        // FIXED: Direct assignment like duration
-                        sessionName = name
-                        sessionDuration = duration
+                        showingSessionSetup = false
                         
-                        print("🔧 DEBUG: After assignment")
-                        print("  - sessionName now: '\(sessionName)'")
-                        print("  - sessionDuration now: \(sessionDuration)")
-                        
-                        // Small delay to ensure state is properly set
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                            print("🔧 DEBUG: About to show TavusInterviewView")
-                            print("  - Final sessionName: '\(sessionName)'")
-                            print("  - Final sessionDuration: \(sessionDuration)")
+                        // Small delay to ensure sheet dismissal
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             showingTavusInterview = true
                         }
                     }
@@ -208,19 +183,9 @@ struct MockInterviewView: View {
             .sheet(isPresented: $showingExtractionResults) {
                 CVExtractionResultView(cvExtractor: cvExtractor, category: selectedCategory)
             }
-            // FIXED: Sheet with direct value passing - exactly like duration
             .sheet(isPresented: $showingTavusInterview) {
-                let _ = print("🔧 DEBUG: Creating TavusInterviewView")
-                let _ = print("  - category: '\(selectedCategory)'")
-                let _ = print("  - sessionName: '\(sessionName)'")
-                let _ = print("  - duration: \(sessionDuration)")
-                let _ = print("  - sessionName.isEmpty: \(sessionName.isEmpty)")
-                let _ = print("  - sessionName.count: \(sessionName.count)")
-                
                 TavusInterviewView(
-                    category: selectedCategory,
-                    sessionName: sessionName,  // CRITICAL: Direct value like duration
-                    duration: sessionDuration, // This works, so sessionName should too
+                    sessionData: sessionData,
                     cvContext: cvExtractor.extractedText.isEmpty ? nil : cvExtractor.extractedText,
                     onBackToSetup: {
                         showingTavusInterview = false
@@ -233,7 +198,61 @@ struct MockInterviewView: View {
             }
         }
     }
+    
+    // MARK: - Helper Methods
+    
+    private func resetSessionData() {
+        cvUploaded = false
+        cvExtractor.resetAnalysis()
+        sessionData.reset()
+        
+        print("🔧 DEBUG: Reset session data for category: \(selectedCategory)")
+    }
 }
+
+// MARK: - SessionData ObservableObject (NEW)
+
+class SessionData: ObservableObject {
+    @Published var category: String = ""
+    @Published var sessionName: String = ""
+    @Published var duration: Int = 30
+    
+    func reset() {
+        category = ""
+        sessionName = ""
+        duration = 30
+        
+        print("🔧 DEBUG: SessionData reset")
+        print("  - category: '\(category)'")
+        print("  - sessionName: '\(sessionName)'")
+        print("  - duration: \(duration)")
+    }
+    
+    func updateSession(name: String, duration: Int) {
+        self.sessionName = name
+        self.duration = duration
+        
+        print("🔧 DEBUG: SessionData updated")
+        print("  - category: '\(category)'")
+        print("  - sessionName: '\(sessionName)'")
+        print("  - duration: \(self.duration)")
+    }
+    
+    var isValid: Bool {
+        let trimmedName = sessionName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isValid = !category.isEmpty && !trimmedName.isEmpty && trimmedName.count >= 3
+        
+        print("🔧 DEBUG: SessionData validation")
+        print("  - category: '\(category)' (empty: \(category.isEmpty))")
+        print("  - sessionName: '\(sessionName)' (trimmed: '\(trimmedName)', length: \(trimmedName.count))")
+        print("  - duration: \(duration)")
+        print("  - isValid: \(isValid)")
+        
+        return isValid
+    }
+}
+
+// MARK: - Updated CategoryCard, CVUploadCard, StartInterviewButton (unchanged)
 
 struct CategoryCard: View {
     let title: String
@@ -389,7 +408,6 @@ struct CVUploadCard: View {
                 }
             }
             
-            // Show extraction results if CV is uploaded
             if isUploaded && cvExtractor.cvAnalysis != nil {
                 VStack(spacing: 12) {
                     Divider()
@@ -421,7 +439,6 @@ struct CVUploadCard: View {
                 }
             }
             
-            // Show loading state
             if cvExtractor.isExtracting {
                 VStack(spacing: 8) {
                     Divider()
@@ -514,6 +531,325 @@ struct StartInterviewButton: View {
         .animation(.easeInOut(duration: 0.2), value: isEnabled)
     }
 }
+
+// MARK: - Updated SessionSetupView
+
+struct SessionSetupView: View {
+    @ObservedObject var sessionData: SessionData
+    let onSessionStart: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var localSessionName = ""
+    @State private var localSelectedDuration = 30
+    @FocusState private var isTextFieldFocused: Bool
+    
+    private let durations = [15, 30, 45, 60]
+    
+    private var categoryColor: Color {
+        sessionData.category == "Technical" ? .blue : .purple
+    }
+    
+    private var placeholderText: String {
+        switch sessionData.category {
+        case "Technical":
+            return "e.g., iOS Development Practice, Data Structures Deep Dive"
+        case "Behavioral":
+            return "e.g., Leadership Experience, Communication Skills"
+        default:
+            return "e.g., Interview Practice Session"
+        }
+    }
+    
+    private var trimmedSessionName: String {
+        localSessionName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private var isSessionNameValid: Bool {
+        !trimmedSessionName.isEmpty && trimmedSessionName.count >= 3
+    }
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 32) {
+                    // Header
+                    VStack(spacing: 16) {
+                        Image(systemName: sessionData.category == "Technical" ? "laptopcomputer" : "person.2.fill")
+                            .font(.system(size: 50))
+                            .foregroundColor(categoryColor)
+                            .symbolRenderingMode(.hierarchical)
+                        
+                        VStack(spacing: 8) {
+                            Text("Setup Your Session")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            Text("\(sessionData.category) Interview")
+                                .font(.headline)
+                                .foregroundColor(categoryColor)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .padding(.top, 20)
+                    
+                    VStack(spacing: 24) {
+                        // Session Name Input
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Session Name")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                Text("*")
+                                    .font(.headline)
+                                    .foregroundColor(.red)
+                                    .fontWeight(.semibold)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                TextField("Enter session name...", text: $localSessionName)
+                                    .font(.subheadline)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(
+                                                isSessionNameValid ? categoryColor.opacity(0.5) : 
+                                                (localSessionName.isEmpty ? Color.clear : Color.red.opacity(0.5)),
+                                                lineWidth: 1
+                                            )
+                                    )
+                                    .focused($isTextFieldFocused)
+                                    .submitLabel(.done)
+                                    .onSubmit {
+                                        if !isSessionNameValid {
+                                            isTextFieldFocused = true
+                                        }
+                                    }
+                                    .onChange(of: localSessionName) { newValue in
+                                        print("🔧 DEBUG: Local session name changed: '\(newValue)'")
+                                    }
+                                
+                                Text(placeholderText)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .italic()
+                                
+                                if !localSessionName.isEmpty && !isSessionNameValid {
+                                    Text("Session name must be at least 3 characters")
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                }
+                            }
+                            
+                            Text("This name will appear in your interview history")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        // Duration Selection
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Duration")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            
+                            LazyVGrid(columns: [
+                                GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12)
+                            ], spacing: 12) {
+                                ForEach(durations, id: \.self) { duration in
+                                    DurationCard(
+                                        duration: duration,
+                                        isSelected: localSelectedDuration == duration,
+                                        categoryColor: categoryColor
+                                    ) {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            localSelectedDuration = duration
+                                            print("🔧 DEBUG: Local duration selected: \(duration)")
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            Text("How long do you want to practice?")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Start Button
+                    Button(action: {
+                        startTavusInterview()
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "person.wave.2.fill")
+                                .font(.title2)
+                            
+                            Text("Start AI Interview")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(isSessionNameValid ? .white : .secondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(
+                            Group {
+                                if isSessionNameValid {
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                } else {
+                                    Color(.systemGray4)
+                                }
+                            }
+                        )
+                        .cornerRadius(16)
+                        .shadow(
+                            color: isSessionNameValid ? categoryColor.opacity(0.3) : Color.clear,
+                            radius: isSessionNameValid ? 8 : 0,
+                            x: 0,
+                            y: 4
+                        )
+                        .scaleEffect(isSessionNameValid ? 1.0 : 0.98)
+                    }
+                    .disabled(!isSessionNameValid)
+                    .animation(.easeInOut(duration: 0.2), value: isSessionNameValid)
+                    .padding(.horizontal, 20)
+                    
+                    if !isSessionNameValid {
+                        if localSessionName.isEmpty {
+                            Text("Please enter a session name to continue")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                        } else {
+                            Text("Session name must be at least 3 characters")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                        }
+                    } else {
+                        Text("Ready to start your personalized AI interview!")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                            .multilineTextAlignment(.center)
+                            .fontWeight(.medium)
+                    }
+                    
+                    Spacer(minLength: 20)
+                }
+            }
+            .navigationTitle("Session Setup")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden()
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(categoryColor)
+                }
+            }
+            .onAppear {
+                // Initialize local values from session data
+                localSessionName = sessionData.sessionName
+                localSelectedDuration = sessionData.duration
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isTextFieldFocused = true
+                }
+            }
+        }
+    }
+    
+    private func startTavusInterview() {
+        guard isSessionNameValid else { 
+            print("❌ Invalid session name: '\(localSessionName)'")
+            return 
+        }
+        
+        print("🚀 DEBUG: Updating SessionData from SessionSetupView")
+        print("  - Local name: '\(localSessionName)'")
+        print("  - Local duration: \(localSelectedDuration)")
+        print("  - Trimmed name: '\(trimmedSessionName)'")
+        
+        // CRITICAL: Update the session data object
+        sessionData.updateSession(name: trimmedSessionName, duration: localSelectedDuration)
+        
+        print("🔧 DEBUG: SessionData after update")
+        print("  - sessionData.sessionName: '\(sessionData.sessionName)'")
+        print("  - sessionData.duration: \(sessionData.duration)")
+        print("  - sessionData.isValid: \(sessionData.isValid)")
+        
+        // Call the completion callback
+        onSessionStart()
+        
+        // Dismiss the view
+        dismiss()
+    }
+}
+
+struct DurationCard: View {
+    let duration: Int
+    let isSelected: Bool
+    let categoryColor: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Text("\(duration)")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(isSelected ? .white : categoryColor)
+                
+                Text("minutes")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(isSelected ? .white.opacity(0.9) : .secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 80)
+            .background(
+                Group {
+                    if isSelected {
+                        LinearGradient(
+                            gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    } else {
+                        Color(.systemBackground)
+                    }
+                }
+            )
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        isSelected ? Color.clear : categoryColor.opacity(0.3),
+                        lineWidth: 1.5
+                    )
+            )
+            .shadow(
+                color: isSelected ? categoryColor.opacity(0.3) : Color.black.opacity(0.05),
+                radius: isSelected ? 8 : 2,
+                x: 0,
+                y: isSelected ? 4 : 1
+            )
+            .scaleEffect(isSelected ? 1.05 : 1.0)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
+}
+
+// MARK: - CVPickerView (unchanged)
 
 struct CVPickerView: View {
     let category: String
@@ -677,28 +1013,23 @@ struct CVPickerView: View {
             }
             
             print("📁 Selected file: \(url.lastPathComponent)")
-            print("📁 File URL: \(url)")
             
             guard url.startAccessingSecurityScopedResource() else {
                 cvExtractor.extractionError = "Cannot access the selected file. Please try selecting the file again."
-                print("❌ Failed to start accessing security scoped resource")
                 return
             }
             
             defer {
                 url.stopAccessingSecurityScopedResource()
-                print("✅ Stopped accessing security scoped resource")
             }
             
             do {
                 guard FileManager.default.fileExists(atPath: url.path) else {
-                    throw NSError(domain: "FileError", code: 404, userInfo: [NSLocalizedDescriptionKey: "File not found at path: \(url.path)"])
+                    throw NSError(domain: "FileError", code: 404, userInfo: [NSLocalizedDescriptionKey: "File not found"])
                 }
                 
                 let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
                 let fileSize = attributes[.size] as? Int64 ?? 0
-                
-                print("📊 File size: \(fileSize) bytes")
                 
                 let maxSize: Int64 = 10 * 1024 * 1024 // 10MB
                 guard fileSize <= maxSize else {
@@ -708,8 +1039,6 @@ struct CVPickerView: View {
                 let data = try Data(contentsOf: url)
                 let fileName = url.lastPathComponent
                 
-                print("✅ Successfully read file: \(fileName) (\(data.count) bytes)")
-                
                 DispatchQueue.main.async {
                     self.cvExtractor.extractionError = nil
                 }
@@ -717,8 +1046,6 @@ struct CVPickerView: View {
                 cvExtractor.extractTextFromDocument(data: data, fileName: fileName)
                 
             } catch {
-                print("❌ Error reading file: \(error)")
-                
                 let errorMessage: String
                 if let nsError = error as NSError? {
                     switch nsError.code {
@@ -741,326 +1068,8 @@ struct CVPickerView: View {
             }
             
         case .failure(let error):
-            print("❌ File selection failed: \(error)")
             cvExtractor.extractionError = "Failed to select file: \(error.localizedDescription)"
         }
-    }
-}
-
-// MARK: - Session Setup View (ENHANCED: Better debugging and validation)
-struct SessionSetupView: View {
-    let category: String
-    let onSessionStart: (String, Int) -> Void
-    @Environment(\.dismiss) private var dismiss
-    
-    @State private var sessionName = ""
-    @State private var selectedDuration = 30
-    @FocusState private var isTextFieldFocused: Bool
-    
-    private let durations = [15, 30, 45, 60]
-    
-    private var categoryColor: Color {
-        category == "Technical" ? .blue : .purple
-    }
-    
-    private var placeholderText: String {
-        switch category {
-        case "Technical":
-            return "e.g., iOS Development Practice, Data Structures Deep Dive, System Design Interview"
-        case "Behavioral":
-            return "e.g., Leadership Experience, Communication Skills, Team Management"
-        default:
-            return "e.g., Interview Practice Session"
-        }
-    }
-    
-    private var trimmedSessionName: String {
-        sessionName.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-    
-    private var isSessionNameValid: Bool {
-        !trimmedSessionName.isEmpty && trimmedSessionName.count >= 3
-    }
-    
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 32) {
-                    // Header
-                    VStack(spacing: 16) {
-                        Image(systemName: category == "Technical" ? "laptopcomputer" : "person.2.fill")
-                            .font(.system(size: 50))
-                            .foregroundColor(categoryColor)
-                            .symbolRenderingMode(.hierarchical)
-                        
-                        VStack(spacing: 8) {
-                            Text("Setup Your Session")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                            
-                            Text("\(category) Interview")
-                                .font(.headline)
-                                .foregroundColor(categoryColor)
-                                .fontWeight(.semibold)
-                        }
-                    }
-                    .padding(.top, 20)
-                    
-                    VStack(spacing: 24) {
-                        // ENHANCED: Session Name Input with extensive debugging
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text("Session Name")
-                                    .font(.headline)
-                                    .fontWeight(.semibold)
-                                
-                                Text("*")
-                                    .font(.headline)
-                                    .foregroundColor(.red)
-                                    .fontWeight(.semibold)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 8) {
-                                TextField("Enter session name...", text: $sessionName)
-                                    .font(.subheadline)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 14)
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(12)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(
-                                                isSessionNameValid ? categoryColor.opacity(0.5) : 
-                                                (sessionName.isEmpty ? Color.clear : Color.red.opacity(0.5)),
-                                                lineWidth: 1
-                                            )
-                                    )
-                                    .focused($isTextFieldFocused)
-                                    .submitLabel(.done)
-                                    .onSubmit {
-                                        if !isSessionNameValid {
-                                            isTextFieldFocused = true
-                                        }
-                                    }
-                                    .onChange(of: sessionName) { newValue in
-                                        // CRITICAL: Extensive debugging for session name
-                                        print("🔧 DEBUG: Session name input changed")
-                                        print("  - Raw input: '\(newValue)'")
-                                        print("  - Trimmed: '\(trimmedSessionName)'")
-                                        print("  - Valid: \(isSessionNameValid)")
-                                        print("  - Length: \(newValue.count)")
-                                        print("  - Trimmed Length: \(trimmedSessionName.count)")
-                                    }
-                                
-                                Text(placeholderText)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                    .italic()
-                                
-                                if !sessionName.isEmpty && !isSessionNameValid {
-                                    Text("Session name must be at least 3 characters")
-                                        .font(.caption)
-                                        .foregroundColor(.red)
-                                }
-                            }
-                            
-                            Text("This name will appear in your interview history and Tavus dashboard")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        // Duration Selection
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Duration")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                            
-                            LazyVGrid(columns: [
-                                GridItem(.flexible(), spacing: 12),
-                                GridItem(.flexible(), spacing: 12)
-                            ], spacing: 12) {
-                                ForEach(durations, id: \.self) { duration in
-                                    DurationCard(
-                                        duration: duration,
-                                        isSelected: selectedDuration == duration,
-                                        categoryColor: categoryColor
-                                    ) {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            selectedDuration = duration
-                                            print("🔧 DEBUG: Duration selected: \(duration)")
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            Text("How long do you want to practice?")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    
-                    // ENHANCED: Start Button with extensive debugging
-                    Button(action: {
-                        startTavusInterview()
-                    }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "person.wave.2.fill")
-                                .font(.title2)
-                            
-                            Text("Start AI Interview")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundColor(isSessionNameValid ? .white : .secondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(
-                            Group {
-                                if isSessionNameValid {
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                } else {
-                                    Color(.systemGray4)
-                                }
-                            }
-                        )
-                        .cornerRadius(16)
-                        .shadow(
-                            color: isSessionNameValid ? categoryColor.opacity(0.3) : Color.clear,
-                            radius: isSessionNameValid ? 8 : 0,
-                            x: 0,
-                            y: 4
-                        )
-                        .scaleEffect(isSessionNameValid ? 1.0 : 0.98)
-                    }
-                    .disabled(!isSessionNameValid)
-                    .animation(.easeInOut(duration: 0.2), value: isSessionNameValid)
-                    .padding(.horizontal, 20)
-                    
-                    // ENHANCED: Better validation feedback
-                    if !isSessionNameValid {
-                        if sessionName.isEmpty {
-                            Text("Please enter a session name to continue")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .multilineTextAlignment(.center)
-                        } else {
-                            Text("Session name must be at least 3 characters")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .multilineTextAlignment(.center)
-                        }
-                    } else {
-                        Text("Ready to start your personalized AI interview!")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                            .multilineTextAlignment(.center)
-                            .fontWeight(.medium)
-                    }
-                    
-                    Spacer(minLength: 20)
-                }
-            }
-            .navigationTitle("Session Setup")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(categoryColor)
-                }
-            }
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    isTextFieldFocused = true
-                }
-            }
-        }
-    }
-    
-    private func startTavusInterview() {
-        guard isSessionNameValid else { 
-            print("❌ Invalid session name: '\(sessionName)'")
-            return 
-        }
-        
-        // CRITICAL: Extensive debugging before callback
-        print("🚀 DEBUG: Starting Tavus Interview from SessionSetupView")
-        print("  - Category: \(category)")
-        print("  - Raw Session Name: '\(sessionName)'")
-        print("  - Trimmed Session Name: '\(trimmedSessionName)'")
-        print("  - Selected Duration: \(selectedDuration)")
-        print("  - Name Length: \(trimmedSessionName.count)")
-        print("  - Is Valid: \(isSessionNameValid)")
-        
-        // CRITICAL: Call the callback with exact same pattern as duration
-        print("🔧 DEBUG: About to call onSessionStart callback")
-        onSessionStart(trimmedSessionName, selectedDuration)
-        
-        print("🔧 DEBUG: Callback completed, dismissing SessionSetupView")
-        dismiss()
-    }
-}
-
-// MARK: - Duration Card Component
-struct DurationCard: View {
-    let duration: Int
-    let isSelected: Bool
-    let categoryColor: Color
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Text("\(duration)")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(isSelected ? .white : categoryColor)
-                
-                Text("minutes")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(isSelected ? .white.opacity(0.9) : .secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 80)
-            .background(
-                Group {
-                    if isSelected {
-                        LinearGradient(
-                            gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    } else {
-                        Color(.systemBackground)
-                    }
-                }
-            )
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                        isSelected ? Color.clear : categoryColor.opacity(0.3),
-                        lineWidth: 1.5
-                    )
-            )
-            .shadow(
-                color: isSelected ? categoryColor.opacity(0.3) : Color.black.opacity(0.05),
-                radius: isSelected ? 8 : 2,
-                x: 0,
-                y: isSelected ? 4 : 1
-            )
-            .scaleEffect(isSelected ? 1.05 : 1.0)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 }
 
