@@ -17,7 +17,7 @@ struct MockInterviewView: View {
     @State private var showingTavusInterview = false
     @StateObject private var cvExtractor = CVExtractor()
     
-    // Session data for Tavus
+    // FIXED: Session data for Tavus with proper initialization
     @State private var sessionName = ""
     @State private var sessionDuration = 30
     
@@ -168,8 +168,19 @@ struct MockInterviewView: View {
                 SessionSetupView(
                     category: selectedCategory,
                     onSessionStart: { name, duration in
+                        // FIXED: Debug session name flow
+                        print("🔧 DEBUG: Session Setup Completed")
+                        print("  - Name: '\(name)'")
+                        print("  - Duration: \(duration)")
+                        print("  - Category: \(selectedCategory)")
+                        
                         sessionName = name
                         sessionDuration = duration
+                        
+                        print("🔧 DEBUG: State Updated")
+                        print("  - sessionName: '\(sessionName)'")
+                        print("  - sessionDuration: \(sessionDuration)")
+                        
                         showingTavusInterview = true
                     }
                 )
@@ -178,6 +189,13 @@ struct MockInterviewView: View {
                 CVExtractionResultView(cvExtractor: cvExtractor, category: selectedCategory)
             }
             .fullScreenCover(isPresented: $showingTavusInterview) {
+                // FIXED: Debug data being passed to TavusInterviewView
+                let _ = print("🔧 DEBUG: Opening TavusInterviewView")
+                let _ = print("  - category: '\(selectedCategory)'")
+                let _ = print("  - sessionName: '\(sessionName)'")
+                let _ = print("  - duration: \(sessionDuration)")
+                let _ = print("  - cvContext: \(cvExtractor.extractedText.isEmpty ? "None" : "Provided (\(cvExtractor.extractedText.count) chars)")")
+                
                 TavusInterviewView(
                     category: selectedCategory,
                     sessionName: sessionName,
@@ -713,7 +731,7 @@ struct CVPickerView: View {
     }
 }
 
-// MARK: - Session Setup View (FIXED: Session Name Input Persistence)
+// MARK: - Session Setup View (ENHANCED: Better session name validation and debugging)
 struct SessionSetupView: View {
     let category: String
     let onSessionStart: (String, Int) -> Void
@@ -738,6 +756,15 @@ struct SessionSetupView: View {
         default:
             return "e.g., Interview Practice Session"
         }
+    }
+    
+    // ENHANCED: Better session name validation
+    private var trimmedSessionName: String {
+        sessionName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    private var isSessionNameValid: Bool {
+        !trimmedSessionName.isEmpty && trimmedSessionName.count >= 3
     }
     
     var body: some View {
@@ -765,7 +792,7 @@ struct SessionSetupView: View {
                     .padding(.top, 20)
                     
                     VStack(spacing: 24) {
-                        // Session Name Input - FIXED: Better text field styling and persistence
+                        // ENHANCED: Session Name Input with better validation
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Text("Session Name")
@@ -788,26 +815,39 @@ struct SessionSetupView: View {
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
                                             .stroke(
-                                                sessionName.isEmpty ? Color.clear : categoryColor.opacity(0.5),
+                                                isSessionNameValid ? categoryColor.opacity(0.5) : 
+                                                (sessionName.isEmpty ? Color.clear : Color.red.opacity(0.5)),
                                                 lineWidth: 1
                                             )
                                     )
                                     .focused($isTextFieldFocused)
                                     .submitLabel(.done)
                                     .onSubmit {
-                                        // Keep focus if name is empty
-                                        if sessionName.isEmpty {
+                                        if !isSessionNameValid {
                                             isTextFieldFocused = true
                                         }
+                                    }
+                                    .onChange(of: sessionName) { newValue in
+                                        // ENHANCED: Real-time validation feedback
+                                        print("🔧 DEBUG: Session name changed to: '\(newValue)'")
+                                        print("  - Trimmed: '\(trimmedSessionName)'")
+                                        print("  - Valid: \(isSessionNameValid)")
                                     }
                                 
                                 Text(placeholderText)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                     .italic()
+                                
+                                // ENHANCED: Validation feedback
+                                if !sessionName.isEmpty && !isSessionNameValid {
+                                    Text("Session name must be at least 3 characters")
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                }
                             }
                             
-                            Text("This name will appear in your interview history")
+                            Text("This name will appear in your interview history and Tavus dashboard")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -843,7 +883,7 @@ struct SessionSetupView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // Start Button
+                    // ENHANCED: Start Button with better validation
                     Button(action: {
                         startTavusInterview()
                     }) {
@@ -855,42 +895,50 @@ struct SessionSetupView: View {
                                 .font(.headline)
                                 .fontWeight(.semibold)
                         }
-                        .foregroundColor(sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .secondary : .white)
+                        .foregroundColor(isSessionNameValid ? .white : .secondary)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
                         .background(
                             Group {
-                                if sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                    Color(.systemGray4)
-                                } else {
+                                if isSessionNameValid {
                                     LinearGradient(
                                         gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     )
+                                } else {
+                                    Color(.systemGray4)
                                 }
                             }
                         )
                         .cornerRadius(16)
                         .shadow(
-                            color: sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.clear : categoryColor.opacity(0.3),
-                            radius: sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 8,
+                            color: isSessionNameValid ? categoryColor.opacity(0.3) : Color.clear,
+                            radius: isSessionNameValid ? 8 : 0,
                             x: 0,
                             y: 4
                         )
-                        .scaleEffect(sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.98 : 1.0)
+                        .scaleEffect(isSessionNameValid ? 1.0 : 0.98)
                     }
-                    .disabled(sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .animation(.easeInOut(duration: 0.2), value: sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(!isSessionNameValid)
+                    .animation(.easeInOut(duration: 0.2), value: isSessionNameValid)
                     .padding(.horizontal, 20)
                     
-                    if sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text("Please enter a session name to continue")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .multilineTextAlignment(.center)
+                    // ENHANCED: Better validation feedback
+                    if !isSessionNameValid {
+                        if sessionName.isEmpty {
+                            Text("Please enter a session name to continue")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                        } else {
+                            Text("Session name must be at least 3 characters")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                        }
                     } else {
-                        Text("Your AI interviewer will be personalized based on your CV")
+                        Text("Ready to start your personalized AI interview!")
                             .font(.caption)
                             .foregroundColor(.green)
                             .multilineTextAlignment(.center)
@@ -921,11 +969,20 @@ struct SessionSetupView: View {
     }
     
     private func startTavusInterview() {
-        let trimmedName = sessionName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return }
+        guard isSessionNameValid else { 
+            print("❌ Invalid session name: '\(sessionName)'")
+            return 
+        }
         
-        // Pass session data to parent and start Tavus interview
-        onSessionStart(trimmedName, selectedDuration)
+        // ENHANCED: Debug session start
+        print("🚀 DEBUG: Starting Tavus Interview")
+        print("  - Category: \(category)")
+        print("  - Session Name: '\(trimmedSessionName)'")
+        print("  - Duration: \(selectedDuration)")
+        print("  - Name Length: \(trimmedSessionName.count)")
+        
+        // Pass validated session data to parent
+        onSessionStart(trimmedSessionName, selectedDuration)
         dismiss()
     }
 }
