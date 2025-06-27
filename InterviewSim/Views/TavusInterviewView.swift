@@ -190,6 +190,11 @@ struct TavusInterviewView: View {
                 }
             }
         }
+        // FIXED: Reset all state when view disappears (modal closed)
+        .onDisappear {
+            print("🧹 TavusInterviewView disappeared - resetting all state")
+            resetAllState()
+        }
     }
     
     // MARK: - Computed Properties
@@ -283,7 +288,7 @@ struct TavusInterviewView: View {
         print("🧪 Result: \(isValid ? "✅ Valid" : "❌ Invalid")")
     }
     
-    // MARK: - End Interview with API Call
+    // MARK: - End Interview with API Call (ENHANCED with proper API end call)
     
     private func endInterviewWithAPI(reason: String = "manual") async {
         guard hasSessionStarted && !isEndingSession else {
@@ -299,19 +304,26 @@ struct TavusInterviewView: View {
         
         isEndingSession = true
         
-        print("🔚 Ending interview...")
+        print("🔚 Starting interview end process...")
         print("  - Reason: \(reason)")
         print("  - Session ID: \(tavusService.sessionId ?? "None")")
         
-        // Step 1: End Tavus conversation
+        // Step 1: CRITICAL - Call Tavus API to end the conversation
+        print("📞 Calling Tavus API to end conversation...")
         let apiSuccess = await tavusService.endConversationSession()
+        
+        if apiSuccess {
+            print("✅ Tavus conversation ended successfully via API")
+        } else {
+            print("⚠️ Tavus API end call failed, but continuing with local cleanup")
+        }
         
         // Step 2: Calculate duration
         let actualDuration = Int(Date().timeIntervalSince(sessionStartTime) / 60)
         
         print("📊 Interview ended:")
         print("  - Duration: \(actualDuration) minutes")
-        print("  - API Success: \(apiSuccess)")
+        print("  - API End Success: \(apiSuccess)")
         
         // Step 3: Save to history
         await historyManager.createSession(
@@ -330,20 +342,38 @@ struct TavusInterviewView: View {
         )
         
         // Step 4: Reset state
+        resetAllState()
+        
+        print("✅ Interview end process completed")
+        
+        // Step 5: Dismiss
+        dismiss()
+    }
+    
+    // MARK: - State Reset (NEW - CRITICAL for fixing state issues)
+    
+    private func resetAllState() {
+        print("🧹 Resetting all TavusInterviewView state")
+        
+        // Reset session state
         isSessionActive = false
         hasSessionStarted = false
         isEndingSession = false
         isShowingAlert = false
-        showPreparationView = true // Reset for next time
-        hasAttemptedStart = false
         
-        // Step 5: Clear service
+        // Reset UI state
+        showPreparationView = true
+        hasAttemptedStart = false
+        showingEndConfirmation = false
+        
+        // Reset session timing
+        sessionStartTime = Date()
+        sessionEndReason = "manual"
+        
+        // Clear Tavus service
         tavusService.clearSession()
         
-        print("✅ Interview end process completed")
-        
-        // Step 6: Dismiss
-        dismiss()
+        print("✅ All state reset completed")
     }
 }
 

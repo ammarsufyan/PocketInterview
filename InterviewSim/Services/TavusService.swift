@@ -101,7 +101,7 @@ class TavusService: ObservableObject {
         }
     }
     
-    // MARK: - End Conversation Session
+    // MARK: - End Conversation Session (ENHANCED with proper API call)
     
     func endConversationSession() async -> Bool {
         guard let sessionId = sessionId else {
@@ -115,7 +115,7 @@ class TavusService: ObservableObject {
             let success = try await endTavusConversation(conversationId: sessionId)
             
             if success {
-                print("✅ Tavus conversation ended successfully")
+                print("✅ Tavus conversation ended successfully via API")
                 // Clear session data after successful end
                 self.conversationUrl = nil
                 self.sessionId = nil
@@ -280,9 +280,10 @@ class TavusService: ObservableObject {
         }
     }
     
-    // MARK: - End Conversation API Call
+    // MARK: - End Conversation API Call (ENHANCED with proper Tavus API)
     
     private func endTavusConversation(conversationId: String) async throws -> Bool {
+        // FIXED: Use correct Tavus API endpoint for ending conversations
         let endpoint = "https://tavusapi.com/v2/conversations/\(conversationId)/end"
         
         let apiKey = try TavusConfig.getApiKey()
@@ -302,10 +303,20 @@ class TavusService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
         
-        // End conversation API typically doesn't require a body, but let's add empty JSON
-        request.httpBody = "{}".data(using: .utf8)
+        // FIXED: Add proper JSON body for end conversation request
+        let endPayload = [
+            "reason": "interview_completed"
+        ]
         
         do {
+            let jsonData = try JSONSerialization.data(withJSONObject: endPayload)
+            request.httpBody = jsonData
+            
+            print("📤 DEBUG: End Conversation Payload")
+            if let bodyString = String(data: jsonData, encoding: .utf8) {
+                print("  - Body: \(bodyString)")
+            }
+            
             let (responseData, response) = try await URLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
@@ -324,7 +335,7 @@ class TavusService: ObservableObject {
             switch httpResponse.statusCode {
             case 200, 201, 204:
                 // Success - conversation ended
-                print("✅ Conversation ended successfully")
+                print("✅ Conversation ended successfully via API")
                 return true
                 
             case 404:
@@ -333,7 +344,7 @@ class TavusService: ObservableObject {
                 return true // Consider this a success since conversation is not active
                 
             case 401:
-                print("🚨 401 UNAUTHORIZED - API Key Issues")
+                print("🚨 401 UNAUTHORIZED - API Key Issues for end conversation")
                 throw TavusError.apiErrorWithMessage(401, "Invalid API key for ending conversation")
                 
             case 400:
@@ -421,6 +432,8 @@ class TavusService: ObservableObject {
         return generateShortInstructions(for: category, cvContext: cvContext)
     }
     
+    // MARK: - Clear Session (ENHANCED with complete reset)
+    
     func clearSession() {
         conversationUrl = nil
         sessionId = nil
@@ -428,7 +441,7 @@ class TavusService: ObservableObject {
         isLoading = false
         isCreatingSession = false // FIXED: Reset creation flag
         
-        print("🧹 TavusService session cleared")
+        print("🧹 TavusService session cleared completely")
     }
     
     // MARK: - Configuration Check
