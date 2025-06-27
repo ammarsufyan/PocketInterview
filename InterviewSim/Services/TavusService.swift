@@ -14,6 +14,7 @@ class TavusService: ObservableObject {
     @Published var errorMessage: String?
     @Published var conversationUrl: String?
     @Published var sessionId: String?
+    @Published var createdSessionId: UUID? // Track the created Supabase session
     
     private let envConfig = EnvironmentConfig.shared
     private var isCreatingSession = false
@@ -24,7 +25,8 @@ class TavusService: ObservableObject {
         category: String,
         sessionName: String,
         duration: Int,
-        cvContext: String? = nil
+        cvContext: String? = nil,
+        historyManager: InterviewHistoryManager
     ) async -> Bool {
         guard !isCreatingSession else {
             return false
@@ -59,10 +61,36 @@ class TavusService: ObservableObject {
                 cvContext: cvContext
             )
             
+            // Create Tavus conversation
             let response = try await createTavusConversation(data: conversationData)
             
             self.conversationUrl = response.conversationUrl
             self.sessionId = response.sessionId
+            
+            // Immediately create Supabase session record with conversation_id
+            let supabaseSession = await historyManager.createSession(
+                category: category,
+                sessionName: trimmedSessionName,
+                score: nil, // Will be updated later
+                durationMinutes: duration, // Planned duration
+                questionsAnswered: 0, // Will be updated later
+                sessionData: [
+                    "tavus_conversation_url": response.conversationUrl,
+                    "planned_duration_minutes": duration,
+                    "cv_context_provided": cvContext != nil,
+                    "session_status": "created",
+                    "created_timestamp": Date().timeIntervalSince1970
+                ],
+                conversationId: response.sessionId
+            )
+            
+            // Store the created session ID for later updates
+            if let session = supabaseSession {
+                self.createdSessionId = session.id
+                print("✅ Created Supabase session record: \(session.id)")
+            } else {
+                print("⚠️ Failed to create Supabase session record")
+            }
             
             isLoading = false
             return true
@@ -100,6 +128,43 @@ class TavusService: ObservableObject {
             self.sessionId = nil
             return false
         }
+    }
+    
+    // MARK: - Update Session with Final Data
+    
+    func updateSessionWithFinalData(
+        historyManager: InterviewHistoryManager,
+        actualDurationMinutes: Int,
+        questionsAnswered: Int = 0,
+        score: Int? = nil,
+        endReason: String = "completed"
+    ) async -> Bool {
+        guard let sessionId = createdSessionId else {
+            print("⚠️ No session ID to update")
+            return false
+        }
+        
+        let success = await historyManager.updateSession(
+            sessionId: sessionId,
+            score: score,
+            questionsAnswered: questionsAnswered,
+            sessionData: [
+                "session_status": "completed",
+                "end_reason": endReason,
+                "actual_duration_minutes": actualDurationMinutes,
+                "completed_timestamp": Date().timeIntervalSince1970,
+                "tavus_session_id": self.sessionId ?? "",
+                "conversation_url": self.conversationUrl ?? ""
+            ]
+        )
+        
+        if success {
+            print("✅ Updated session with final data")
+        } else {
+            print("❌ Failed to update session with final data")
+        }
+        
+        return success
     }
     
     // MARK: - API Calls
@@ -289,6 +354,7 @@ class TavusService: ObservableObject {
     func clearSession() {
         conversationUrl = nil
         sessionId = nil
+        createdSessionId = nil
         errorMessage = nil
         isLoading = false
         isCreatingSession = false

@@ -218,11 +218,13 @@ struct TavusInterviewView: View {
             return
         }
         
+        // Pass historyManager to create session immediately
         let success = await tavusService.createConversationSession(
             category: sessionData.category,
             sessionName: sessionData.sessionName,
             duration: sessionData.duration,
-            cvContext: cvContext
+            cvContext: cvContext,
+            historyManager: historyManager
         )
         
         if !success {
@@ -246,25 +248,18 @@ struct TavusInterviewView: View {
         
         isEndingSession = true
         
+        // End the Tavus conversation
         let apiSuccess = await tavusService.endConversationSession()
         
         let actualDuration = Int(Date().timeIntervalSince(sessionStartTime) / 60)
         
-        // Create session record with conversation_id
-        _ = await historyManager.createSession(
-            category: sessionData.category,
-            sessionName: sessionData.sessionName,
-            score: nil,
-            durationMinutes: max(actualDuration, 1),
-            questionsAnswered: 0,
-            sessionData: [
-                "tavus_session_id": tavusService.sessionId ?? "",
-                "conversation_url": tavusService.conversationUrl ?? "",
-                "end_reason": reason,
-                "api_end_success": apiSuccess,
-                "actual_duration_seconds": Int(Date().timeIntervalSince(sessionStartTime))
-            ],
-            conversationId: tavusService.sessionId // Pass the conversation ID here
+        // Update the existing session record with final data
+        _ = await tavusService.updateSessionWithFinalData(
+            historyManager: historyManager,
+            actualDurationMinutes: max(actualDuration, 1),
+            questionsAnswered: 0, // Could be updated with actual count
+            score: nil, // Could be calculated based on performance
+            endReason: reason
         )
         
         resetAllState()
