@@ -17,7 +17,7 @@ struct MockInterviewView: View {
     @State private var showingTavusInterview = false
     @StateObject private var cvExtractor = CVExtractor()
     
-    // FIXED: Simple direct values instead of complex SessionData
+    // FIXED: Simple direct values - exactly like duration logic
     @State private var sessionName = ""
     @State private var sessionDuration = 30
     
@@ -66,12 +66,15 @@ struct MockInterviewView: View {
                             ) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedCategory = "Technical"
-                                    // Reset CV status and clear previous analysis when switching
+                                    // FIXED: Clear session data when switching categories
                                     cvUploaded = false
                                     cvExtractor.resetAnalysis()
-                                    // FIXED: Clear session data when switching categories
                                     sessionName = ""
                                     sessionDuration = 30
+                                    
+                                    print("🔧 DEBUG: Switched to Technical")
+                                    print("  - sessionName reset to: '\(sessionName)'")
+                                    print("  - sessionDuration reset to: \(sessionDuration)")
                                 }
                             }
                             
@@ -86,12 +89,15 @@ struct MockInterviewView: View {
                             ) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedCategory = "Behavioral"
-                                    // Reset CV status and clear previous analysis when switching
+                                    // FIXED: Clear session data when switching categories
                                     cvUploaded = false
                                     cvExtractor.resetAnalysis()
-                                    // FIXED: Clear session data when switching categories
                                     sessionName = ""
                                     sessionDuration = 30
+                                    
+                                    print("🔧 DEBUG: Switched to Behavioral")
+                                    print("  - sessionName reset to: '\(sessionName)'")
+                                    print("  - sessionDuration reset to: \(sessionDuration)")
                                 }
                             }
                         }
@@ -174,17 +180,26 @@ struct MockInterviewView: View {
                 SessionSetupView(
                     category: selectedCategory,
                     onSessionStart: { name, duration in
-                        // FIXED: Simple direct assignment
+                        // CRITICAL: Follow exact same pattern as duration
+                        print("🔧 DEBUG: SessionSetupView callback triggered")
+                        print("  - Received name: '\(name)'")
+                        print("  - Received duration: \(duration)")
+                        print("  - Current sessionName before: '\(sessionName)'")
+                        print("  - Current sessionDuration before: \(sessionDuration)")
+                        
+                        // FIXED: Direct assignment like duration
                         sessionName = name
                         sessionDuration = duration
                         
-                        print("🔧 DEBUG: Session Setup Completed")
-                        print("  - Name: '\(sessionName)'")
-                        print("  - Duration: \(sessionDuration)")
-                        print("  - Category: \(selectedCategory)")
+                        print("🔧 DEBUG: After assignment")
+                        print("  - sessionName now: '\(sessionName)'")
+                        print("  - sessionDuration now: \(sessionDuration)")
                         
-                        // Small delay to ensure state is set
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        // Small delay to ensure state is properly set
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            print("🔧 DEBUG: About to show TavusInterviewView")
+                            print("  - Final sessionName: '\(sessionName)'")
+                            print("  - Final sessionDuration: \(sessionDuration)")
                             showingTavusInterview = true
                         }
                     }
@@ -193,21 +208,21 @@ struct MockInterviewView: View {
             .sheet(isPresented: $showingExtractionResults) {
                 CVExtractionResultView(cvExtractor: cvExtractor, category: selectedCategory)
             }
-            // FIXED: Simple sheet with direct values
+            // FIXED: Sheet with direct value passing - exactly like duration
             .sheet(isPresented: $showingTavusInterview) {
-                let _ = print("🔧 DEBUG: Opening TavusInterviewView")
+                let _ = print("🔧 DEBUG: Creating TavusInterviewView")
                 let _ = print("  - category: '\(selectedCategory)'")
                 let _ = print("  - sessionName: '\(sessionName)'")
                 let _ = print("  - duration: \(sessionDuration)")
-                let _ = print("  - cvContext: \(cvExtractor.extractedText.isEmpty ? "None" : "Provided (\(cvExtractor.extractedText.count) chars)")")
+                let _ = print("  - sessionName.isEmpty: \(sessionName.isEmpty)")
+                let _ = print("  - sessionName.count: \(sessionName.count)")
                 
                 TavusInterviewView(
                     category: selectedCategory,
-                    sessionName: sessionName,
-                    duration: sessionDuration,
+                    sessionName: sessionName,  // CRITICAL: Direct value like duration
+                    duration: sessionDuration, // This works, so sessionName should too
                     cvContext: cvExtractor.extractedText.isEmpty ? nil : cvExtractor.extractedText,
                     onBackToSetup: {
-                        // ENHANCED: Back to setup functionality
                         showingTavusInterview = false
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             showingSessionSetup = true
@@ -506,7 +521,7 @@ struct CVPickerView: View {
     let onUpload: (Bool) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var showingDocumentPicker = false
-    @State private var hasAnalysis = false // FIXED: Track analysis state with Bool
+    @State private var hasAnalysis = false
     
     private var categoryColor: Color {
         category == "Technical" ? .blue : .purple
@@ -638,7 +653,6 @@ struct CVPickerView: View {
             ) { result in
                 handleFileSelection(result: result)
             }
-            // FIXED: Use onReceive instead of onChange to avoid Equatable requirement
             .onReceive(cvExtractor.$cvAnalysis) { analysis in
                 let newHasAnalysis = analysis != nil
                 if newHasAnalysis != hasAnalysis {
@@ -654,7 +668,6 @@ struct CVPickerView: View {
         }
     }
     
-    // FIXED: Enhanced file handling with proper security scoped resource access
     private func handleFileSelection(result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
@@ -666,55 +679,46 @@ struct CVPickerView: View {
             print("📁 Selected file: \(url.lastPathComponent)")
             print("📁 File URL: \(url)")
             
-            // CRITICAL: Start accessing security scoped resource
             guard url.startAccessingSecurityScopedResource() else {
                 cvExtractor.extractionError = "Cannot access the selected file. Please try selecting the file again."
                 print("❌ Failed to start accessing security scoped resource")
                 return
             }
             
-            // Ensure we stop accessing the resource when done
             defer {
                 url.stopAccessingSecurityScopedResource()
                 print("✅ Stopped accessing security scoped resource")
             }
             
             do {
-                // Check if file exists and is readable
                 guard FileManager.default.fileExists(atPath: url.path) else {
                     throw NSError(domain: "FileError", code: 404, userInfo: [NSLocalizedDescriptionKey: "File not found at path: \(url.path)"])
                 }
                 
-                // Get file attributes to check size
                 let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
                 let fileSize = attributes[.size] as? Int64 ?? 0
                 
                 print("📊 File size: \(fileSize) bytes")
                 
-                // Check file size (10MB limit)
                 let maxSize: Int64 = 10 * 1024 * 1024 // 10MB
                 guard fileSize <= maxSize else {
                     throw NSError(domain: "FileError", code: 413, userInfo: [NSLocalizedDescriptionKey: "File is too large. Maximum size is 10MB."])
                 }
                 
-                // Read file data
                 let data = try Data(contentsOf: url)
                 let fileName = url.lastPathComponent
                 
                 print("✅ Successfully read file: \(fileName) (\(data.count) bytes)")
                 
-                // Clear any previous errors
                 DispatchQueue.main.async {
                     self.cvExtractor.extractionError = nil
                 }
                 
-                // Extract text from document
                 cvExtractor.extractTextFromDocument(data: data, fileName: fileName)
                 
             } catch {
                 print("❌ Error reading file: \(error)")
                 
-                // Provide user-friendly error messages
                 let errorMessage: String
                 if let nsError = error as NSError? {
                     switch nsError.code {
@@ -743,7 +747,7 @@ struct CVPickerView: View {
     }
 }
 
-// MARK: - Session Setup View (ENHANCED: Better session name validation and debugging)
+// MARK: - Session Setup View (ENHANCED: Better debugging and validation)
 struct SessionSetupView: View {
     let category: String
     let onSessionStart: (String, Int) -> Void
@@ -770,7 +774,6 @@ struct SessionSetupView: View {
         }
     }
     
-    // ENHANCED: Better session name validation
     private var trimmedSessionName: String {
         sessionName.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -804,7 +807,7 @@ struct SessionSetupView: View {
                     .padding(.top, 20)
                     
                     VStack(spacing: 24) {
-                        // ENHANCED: Session Name Input with better validation
+                        // ENHANCED: Session Name Input with extensive debugging
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Text("Session Name")
@@ -840,10 +843,13 @@ struct SessionSetupView: View {
                                         }
                                     }
                                     .onChange(of: sessionName) { newValue in
-                                        // ENHANCED: Real-time validation feedback
-                                        print("🔧 DEBUG: Session name changed to: '\(newValue)'")
+                                        // CRITICAL: Extensive debugging for session name
+                                        print("🔧 DEBUG: Session name input changed")
+                                        print("  - Raw input: '\(newValue)'")
                                         print("  - Trimmed: '\(trimmedSessionName)'")
                                         print("  - Valid: \(isSessionNameValid)")
+                                        print("  - Length: \(newValue.count)")
+                                        print("  - Trimmed Length: \(trimmedSessionName.count)")
                                     }
                                 
                                 Text(placeholderText)
@@ -851,7 +857,6 @@ struct SessionSetupView: View {
                                     .foregroundColor(.secondary)
                                     .italic()
                                 
-                                // ENHANCED: Validation feedback
                                 if !sessionName.isEmpty && !isSessionNameValid {
                                     Text("Session name must be at least 3 characters")
                                         .font(.caption)
@@ -870,7 +875,6 @@ struct SessionSetupView: View {
                                 .font(.headline)
                                 .fontWeight(.semibold)
                             
-                            // Grid layout for consistent design
                             LazyVGrid(columns: [
                                 GridItem(.flexible(), spacing: 12),
                                 GridItem(.flexible(), spacing: 12)
@@ -883,6 +887,7 @@ struct SessionSetupView: View {
                                     ) {
                                         withAnimation(.easeInOut(duration: 0.2)) {
                                             selectedDuration = duration
+                                            print("🔧 DEBUG: Duration selected: \(duration)")
                                         }
                                     }
                                 }
@@ -895,7 +900,7 @@ struct SessionSetupView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // ENHANCED: Start Button with better validation
+                    // ENHANCED: Start Button with extensive debugging
                     Button(action: {
                         startTavusInterview()
                     }) {
@@ -972,7 +977,6 @@ struct SessionSetupView: View {
                 }
             }
             .onAppear {
-                // Auto-focus on text field when view appears
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     isTextFieldFocused = true
                 }
@@ -986,15 +990,20 @@ struct SessionSetupView: View {
             return 
         }
         
-        // ENHANCED: Debug session start
-        print("🚀 DEBUG: Starting Tavus Interview")
+        // CRITICAL: Extensive debugging before callback
+        print("🚀 DEBUG: Starting Tavus Interview from SessionSetupView")
         print("  - Category: \(category)")
-        print("  - Session Name: '\(trimmedSessionName)'")
-        print("  - Duration: \(selectedDuration)")
+        print("  - Raw Session Name: '\(sessionName)'")
+        print("  - Trimmed Session Name: '\(trimmedSessionName)'")
+        print("  - Selected Duration: \(selectedDuration)")
         print("  - Name Length: \(trimmedSessionName.count)")
+        print("  - Is Valid: \(isSessionNameValid)")
         
-        // Pass validated session data to parent
+        // CRITICAL: Call the callback with exact same pattern as duration
+        print("🔧 DEBUG: About to call onSessionStart callback")
         onSessionStart(trimmedSessionName, selectedDuration)
+        
+        print("🔧 DEBUG: Callback completed, dismissing SessionSetupView")
         dismiss()
     }
 }
