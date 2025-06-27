@@ -204,7 +204,7 @@ struct TranscriptStatsHeader: View {
     }
 }
 
-struct StatItem: View {
+private struct StatItem: View {
     let title: String
     let value: String
     let icon: String
@@ -231,7 +231,7 @@ struct StatItem: View {
     }
 }
 
-struct FilterTab: View {
+private struct FilterTab: View {
     let title: String
     let icon: String
     let isSelected: Bool
