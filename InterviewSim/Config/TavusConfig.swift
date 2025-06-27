@@ -20,15 +20,15 @@ struct TavusConfig {
         return EnvironmentConfig.shared.tavusBaseURL
     }
     
-    // MARK: - Conversation Settings
+    // MARK: - Conversation Settings (FIXED: Explicit type annotations)
     
-    /// Default conversation properties - FIXED: Explicit type annotation
+    /// Default conversation properties
     static let defaultConversationProperties: [String: Any] = [
-        "max_duration": 3600, // 1 hour in seconds
-        "language": "en",
-        "conversation_type": "interview",
-        "enable_recording": true,
-        "enable_transcription": true
+        "max_duration": 3600 as Int, // 1 hour in seconds
+        "language": "en" as String,
+        "conversation_type": "interview" as String,
+        "enable_recording": true as Bool,
+        "enable_transcription": true as Bool
     ]
     
     // MARK: - Interview Templates
@@ -160,13 +160,32 @@ struct TavusConfig {
     /// Supported conversation languages
     static let supportedLanguages: [String] = ["en", "es", "fr", "de", "it", "pt"]
     
-    /// Default conversation settings
+    /// Default conversation settings (FIXED: Explicit type annotations)
     static let defaultSettings: [String: Any] = [
-        "auto_start": true,
-        "show_controls": true,
-        "enable_fullscreen": true,
-        "theme": "professional"
+        "auto_start": true as Bool,
+        "show_controls": true as Bool,
+        "enable_fullscreen": true as Bool,
+        "theme": "professional" as String
     ]
+    
+    // MARK: - Replica Configuration
+    
+    /// Default replica ID - You need to get this from your Tavus dashboard
+    /// Go to https://platform.tavus.io/replicas to find your replica ID
+    static let defaultReplicaId = "r12345678-1234-1234-1234-123456789012"
+    
+    /// Instructions for getting replica ID
+    static let replicaSetupInstructions = """
+    REPLICA SETUP INSTRUCTIONS:
+    
+    1. Go to https://platform.tavus.io/replicas
+    2. Create or select an existing replica
+    3. Copy the replica ID (format: r12345678-1234-1234-1234-123456789012)
+    4. Update TavusConfig.defaultReplicaId with your actual replica ID
+    
+    Note: You need a replica to create conversations. The replica represents
+    the AI interviewer that will conduct the interview.
+    """
 }
 
 // MARK: - Configuration Errors
@@ -205,11 +224,16 @@ enum TavusConfigError: Error, LocalizedError {
     - Create a new API key
     - Add it to your .env file
  
- 3. For production builds, add these keys to Info.plist:
+ 3. Get your Replica ID:
+    - Go to https://platform.tavus.io/replicas
+    - Create or select a replica
+    - Copy the replica ID and update TavusConfig.defaultReplicaId
+ 
+ 4. For production builds, add these keys to Info.plist:
     <key>TAVUS_API_KEY</key>
     <string>$(TAVUS_API_KEY)</string>
  
- 4. Test the configuration:
+ 5. Test the configuration:
     TavusConfig.validateConfiguration()
  
  SECURITY NOTES:
