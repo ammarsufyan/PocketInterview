@@ -75,7 +75,7 @@ class TavusService: ObservableObject {
         }
     }
     
-    // MARK: - API Calls (FIXED: Based on Official Tavus API Documentation)
+    // MARK: - API Calls (FIXED: Using x-api-key header instead of Bearer)
     
     private func createTavusConversation(data: TavusConversationRequest) async throws -> TavusConversationResponse {
         // FIXED: Use official Tavus API endpoint
@@ -94,7 +94,8 @@ class TavusService: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        // FIXED: Changed from Bearer to x-api-key header
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
         
@@ -226,7 +227,7 @@ class TavusService: ObservableObject {
         return TavusConfig.validateConfiguration() && TavusConfig.validateReplicaId()
     }
     
-    // MARK: - Test API Key Function (ENHANCED)
+    // MARK: - Test API Key Function (ENHANCED with x-api-key)
     
     func testApiKey() async -> Bool {
         do {
@@ -247,7 +248,8 @@ class TavusService: ObservableObject {
             
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            // FIXED: Changed from Bearer to x-api-key header for testing
+            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             
             do {
