@@ -84,13 +84,13 @@ class AuthenticationManager: ObservableObject {
             print("Sign up response - User: \(response.user?.id.uuidString ?? "nil"), Session: \(response.session != nil)")
             
             // Check if user needs email confirmation
-            if response.user != nil && response.session == nil {
+            if let user = response.user, response.session == nil {
                 // User created but needs email confirmation
                 self.errorMessage = "Please check your email and confirm your account before signing in."
-            } else if response.user != nil && response.session != nil {
+            } else if let user = response.user, response.session != nil {
                 // User is automatically signed in
                 print("User signed up successfully with display name: \(fullName)")
-                self.currentUser = response.user
+                self.currentUser = user
                 self.isAuthenticated = true
             }
         } catch {
@@ -242,17 +242,16 @@ class AuthenticationManager: ObservableObject {
         errorMessage = nil
         
         do {
-            try await supabase.auth.updateUser(
-                attributes: UserAttributes(
-                    data: [
-                        "display_name": .string(displayName)
-                    ]
-                )
+            let userAttributes = UserAttributes(
+                data: [
+                    "display_name": .string(displayName)
+                ]
             )
             
-            // Refresh the current user to get updated metadata
-            let session = try await supabase.auth.session
-            self.currentUser = session.user
+            let updatedUser = try await supabase.auth.updateUser(attributes: userAttributes)
+            
+            // Update the current user with the response
+            self.currentUser = updatedUser.user
             
             print("Display name updated successfully to: \(displayName)")
         } catch {
