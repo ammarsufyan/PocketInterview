@@ -104,7 +104,8 @@ struct TavusInterviewView: View {
             .navigationBarBackButtonHidden()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if isSessionActive {
+                    // ENHANCED: Always show "End Interview" when webview is loaded
+                    if tavusService.conversationUrl != nil {
                         Button("End Interview") {
                             sessionEndReason = "manual"
                             showingEndConfirmation = true
