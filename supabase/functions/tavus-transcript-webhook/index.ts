@@ -10,7 +10,7 @@ const corsHeaders = {
 interface TavusWebhookPayload {
   properties: {
     transcript: Array<{
-      role: "user" | "assistant"
+      role: "user" | "assistant" | "system"
       content: string
     }>
   }
@@ -21,9 +21,14 @@ interface TavusWebhookPayload {
   timestamp: string
 }
 
+interface TranscriptMessage {
+  role: "user" | "assistant"
+  content: string
+}
+
 interface TranscriptInsert {
   conversation_id: string
-  transcript_data: any
+  transcript_data: TranscriptMessage[]
   message_count: number
   user_message_count: number
   assistant_message_count: number
@@ -100,22 +105,47 @@ serve(async (req: Request) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Process transcript data
-    const transcript = payload.properties.transcript
-    const messageCount = transcript.length
-    const userMessageCount = transcript.filter(msg => msg.role === "user").length
-    const assistantMessageCount = transcript.filter(msg => msg.role === "assistant").length
+    // Filter out system messages and process transcript data
+    const rawTranscript = payload.properties.transcript
+    const filteredTranscript: TranscriptMessage[] = rawTranscript
+      .filter(msg => msg.role !== "system") // Exclude system messages
+      .map(msg => ({
+        role: msg.role as "user" | "assistant",
+        content: msg.content.trim()
+      }))
+      .filter(msg => msg.content.length > 0) // Remove empty messages
+
+    const messageCount = filteredTranscript.length
+    const userMessageCount = filteredTranscript.filter(msg => msg.role === "user").length
+    const assistantMessageCount = filteredTranscript.filter(msg => msg.role === "assistant").length
 
     console.log("📊 Transcript analysis:", {
-      total_messages: messageCount,
+      raw_messages: rawTranscript.length,
+      filtered_messages: messageCount,
+      system_messages_excluded: rawTranscript.length - messageCount,
       user_messages: userMessageCount,
       assistant_messages: assistantMessageCount
     })
 
+    // Skip if no meaningful content after filtering
+    if (messageCount === 0) {
+      console.log("⚠️ No meaningful transcript content after filtering system messages")
+      return new Response(
+        JSON.stringify({ 
+          message: "No meaningful transcript content",
+          conversation_id: payload.conversation_id 
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      )
+    }
+
     // Prepare transcript data for insertion
     const transcriptInsert: TranscriptInsert = {
       conversation_id: payload.conversation_id,
-      transcript_data: transcript,
+      transcript_data: filteredTranscript,
       message_count: messageCount,
       user_message_count: userMessageCount,
       assistant_message_count: assistantMessageCount,
@@ -147,10 +177,11 @@ serve(async (req: Request) => {
 
     console.log("✅ Transcript saved successfully:", {
       conversation_id: payload.conversation_id,
-      record_id: data?.[0]?.id
+      record_id: data?.[0]?.id,
+      filtered_messages: messageCount
     })
 
-    // Optionally update the interview session with transcript availability
+    // Update the interview session with transcript availability and question count
     const { error: sessionUpdateError } = await supabase
       .from('interview_sessions')
       .update({ 
@@ -172,9 +203,10 @@ serve(async (req: Request) => {
         success: true,
         message: "Transcript processed successfully",
         conversation_id: payload.conversation_id,
-        message_count: messageCount,
+        total_messages: messageCount,
         user_messages: userMessageCount,
-        assistant_messages: assistantMessageCount
+        assistant_messages: assistantMessageCount,
+        system_messages_excluded: rawTranscript.length - messageCount
       }),
       {
         status: 200,

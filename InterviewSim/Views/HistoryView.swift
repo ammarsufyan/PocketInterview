@@ -65,7 +65,7 @@ struct HistoryView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
                             ForEach(filters, id: \.self) { filter in
-                                FilterTab(
+                                HistoryFilterTab(
                                     title: filter,
                                     isSelected: selectedFilter == filter
                                 ) {
@@ -100,6 +100,25 @@ struct HistoryView: View {
                         onViewTranscript: { transcript in
                             selectedTranscript = transcript
                             showingTranscriptDetail = true
+                        },
+                        onSessionTap: { session in
+                            // Handle session card tap to view transcript
+                            if transcriptManager.hasTranscript(for: session.conversationId) {
+                                if let transcript = transcriptManager.getLocalTranscript(for: session.conversationId ?? "") {
+                                    selectedTranscript = transcript
+                                    showingTranscriptDetail = true
+                                }
+                            } else {
+                                // Load transcript from server
+                                Task {
+                                    if let transcript = await transcriptManager.getTranscriptForSession(session) {
+                                        await MainActor.run {
+                                            selectedTranscript = transcript
+                                            showingTranscriptDetail = true
+                                        }
+                                    }
+                                }
+                            }
                         }
                     )
                 }
@@ -189,6 +208,7 @@ struct SessionsList: View {
     @ObservedObject var transcriptManager: TranscriptManager
     let onDelete: (InterviewSession) -> Void
     let onViewTranscript: (InterviewTranscript) -> Void
+    let onSessionTap: (InterviewSession) -> Void
     
     var body: some View {
         ScrollView {
@@ -213,6 +233,9 @@ struct SessionsList: View {
                                     }
                                 }
                             }
+                        },
+                        onTap: {
+                            onSessionTap(session)
                         }
                     )
                 }
@@ -223,7 +246,7 @@ struct SessionsList: View {
     }
 }
 
-struct FilterTab: View {
+struct HistoryFilterTab: View {
     let title: String
     let isSelected: Bool
     let action: () -> Void
@@ -271,9 +294,9 @@ struct HistoryStatsView: View {
     
     var body: some View {
         HStack(spacing: 16) {
-            StatItem(title: "Avg Score", value: "\(averageScore)%", icon: "star.fill", color: .orange)
-            StatItem(title: "Total Time", value: "\(totalDuration)m", icon: "clock.fill", color: .blue)
-            StatItem(title: "Questions", value: "\(totalQuestions)", icon: "questionmark.circle.fill", color: .green)
+            HistoryStatItem(title: "Avg Score", value: "\(averageScore)%", icon: "star.fill", color: .orange)
+            HistoryStatItem(title: "Total Time", value: "\(totalDuration)m", icon: "clock.fill", color: .blue)
+            HistoryStatItem(title: "Questions", value: "\(totalQuestions)", icon: "questionmark.circle.fill", color: .green)
         }
         .padding(20)
         .background(Color(.systemBackground))
@@ -282,7 +305,7 @@ struct HistoryStatsView: View {
     }
 }
 
-struct StatItem: View {
+struct HistoryStatItem: View {
     let title: String
     let value: String
     let icon: String
@@ -313,95 +336,120 @@ struct HistorySessionCard: View {
     let hasTranscript: Bool
     let onDelete: () -> Void
     let onViewTranscript: () -> Void
+    let onTap: () -> Void
     
     var body: some View {
-        HStack(spacing: 16) {
-            // Category Icon
-            Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
-                .font(.title2)
-                .foregroundColor(session.categoryColor)
-                .frame(width: 48, height: 48)
-                .background(session.categoryColor.opacity(0.1))
-                .cornerRadius(12)
-                .symbolRenderingMode(.hierarchical)
-            
-            // Session Info
-            VStack(alignment: .leading, spacing: 8) {
-                // Session Name and Score
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(session.sessionName)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                            .lineLimit(1)
-                        
-                        HStack(spacing: 8) {
-                            Text(session.category)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(session.categoryColor)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(session.categoryColor.opacity(0.1))
-                                .cornerRadius(4)
-                            
-                            Text(session.statusText)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(session.statusColor)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(session.statusColor.opacity(0.1))
-                                .cornerRadius(4)
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    Text(session.scoreText)
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundColor(session.scoreColor)
-                }
+        Button(action: onTap) {
+            HStack(spacing: 16) {
+                // Category Icon
+                Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
+                    .font(.title2)
+                    .foregroundColor(session.categoryColor)
+                    .frame(width: 48, height: 48)
+                    .background(session.categoryColor.opacity(0.1))
+                    .cornerRadius(12)
+                    .symbolRenderingMode(.hierarchical)
                 
-                // Session Details
-                HStack(spacing: 16) {
-                    Label(session.durationText, systemImage: "clock")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Label("\(session.questionsAnswered) questions", systemImage: "questionmark.circle")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    if hasTranscript {
-                        Button(action: onViewTranscript) {
-                            Label("Transcript", systemImage: "text.bubble")
-                                .font(.caption)
-                                .foregroundColor(.blue)
+                // Session Info
+                VStack(alignment: .leading, spacing: 8) {
+                    // Session Name and Score
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(session.sessionName)
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                            
+                            HStack(spacing: 8) {
+                                Text(session.category)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(session.categoryColor)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 2)
+                                    .background(session.categoryColor.opacity(0.1))
+                                    .cornerRadius(4)
+                                
+                                Text(session.statusText)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(session.statusColor)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 2)
+                                    .background(session.statusColor.opacity(0.1))
+                                    .cornerRadius(4)
+                                
+                                if hasTranscript {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "text.bubble.fill")
+                                            .font(.caption2)
+                                        Text("Transcript")
+                                            .font(.caption2)
+                                    }
+                                    .foregroundColor(.blue)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.blue.opacity(0.1))
+                                    .cornerRadius(4)
+                                }
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(session.scoreText)
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundColor(session.scoreColor)
+                            
+                            if hasTranscript {
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                            }
                         }
                     }
                     
-                    Spacer()
-                    
-                    VStack(alignment: .trailing, spacing: 1) {
-                        Text(session.formattedDate)
+                    // Session Details
+                    HStack(spacing: 16) {
+                        Label(session.durationText, systemImage: "clock")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .fontWeight(.medium)
                         
-                        Text(session.formattedTime)
-                            .font(.caption2)
-                            .foregroundColor(.secondary.opacity(0.8))
+                        Label("\(session.questionsAnswered) questions", systemImage: "questionmark.circle")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text(session.formattedDate)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fontWeight(.medium)
+                            
+                            Text(session.formattedTime)
+                                .font(.caption2)
+                                .foregroundColor(.secondary.opacity(0.8))
+                        }
                     }
                 }
             }
+            .padding(20)
+            .background(Color(.systemBackground))
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        hasTranscript ? session.categoryColor.opacity(0.2) : Color.clear,
+                        lineWidth: 1
+                    )
+            )
         }
-        .padding(20)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .buttonStyle(PlainButtonStyle())
         .contextMenu {
             if hasTranscript {
                 Button("View Transcript", systemImage: "text.bubble") {
