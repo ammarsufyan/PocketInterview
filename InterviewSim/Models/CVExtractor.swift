@@ -871,9 +871,8 @@ class CVExtractor: ObservableObject {
     }
 }
 
-// MARK: - Enhanced CV Analysis Model
-@MainActor
-class CVAnalysis: ObservableObject, Equatable, Sendable {
+// MARK: - Enhanced CV Analysis Model (FIXED: Removed @MainActor and Equatable)
+class CVAnalysis: ObservableObject {
     @Published var technicalSkills: [String] = []
     @Published var softSkills: [String] = []
     @Published var workExperience: [String] = []
@@ -900,17 +899,5 @@ class CVAnalysis: ObservableObject, Equatable, Sendable {
         }
         
         return summaryParts.joined(separator: " • ")
-    }
-    
-    // MARK: - Equatable Conformance
-    static func == (lhs: CVAnalysis, rhs: CVAnalysis) -> Bool {
-        return lhs.technicalSkills == rhs.technicalSkills &&
-               lhs.softSkills == rhs.softSkills &&
-               lhs.workExperience == rhs.workExperience &&
-               lhs.yearsOfExperience == rhs.yearsOfExperience &&
-               lhs.education == rhs.education &&
-               lhs.projects == rhs.projects &&
-               lhs.certifications == rhs.certifications &&
-               lhs.achievements == rhs.achievements
     }
 }

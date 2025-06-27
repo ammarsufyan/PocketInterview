@@ -30,7 +30,7 @@ struct TavusInterviewView: View {
         NavigationView {
             ZStack {
                 if tavusService.isLoading {
-                    LoadingView(category: category)
+                    TavusLoadingView(category: category) // FIXED: Renamed to avoid conflict
                 } else if let conversationUrl = tavusService.conversationUrl {
                     TavusWebView(
                         url: conversationUrl,
@@ -43,7 +43,7 @@ struct TavusInterviewView: View {
                         }
                     )
                 } else if let errorMessage = tavusService.errorMessage {
-                    ErrorView(
+                    TavusErrorView( // FIXED: Renamed to avoid conflict
                         message: errorMessage,
                         categoryColor: categoryColor,
                         onRetry: {
@@ -56,7 +56,7 @@ struct TavusInterviewView: View {
                         }
                     )
                 } else {
-                    PreparationView(
+                    TavusPreparationView( // FIXED: Renamed to avoid conflict
                         category: category,
                         sessionName: sessionName,
                         duration: duration,
@@ -171,9 +171,9 @@ struct TavusInterviewView: View {
     }
 }
 
-// MARK: - Supporting Views
+// MARK: - Supporting Views (FIXED: All renamed to avoid conflicts)
 
-struct LoadingView: View {
+struct TavusLoadingView: View {
     let category: String
     
     private var categoryColor: Color {
@@ -217,7 +217,7 @@ struct LoadingView: View {
     }
 }
 
-struct ErrorView: View {
+struct TavusErrorView: View {
     let message: String
     let categoryColor: Color
     let onRetry: () -> Void
@@ -272,7 +272,7 @@ struct ErrorView: View {
     }
 }
 
-struct PreparationView: View {
+struct TavusPreparationView: View {
     let category: String
     let sessionName: String
     let duration: Int
