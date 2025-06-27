@@ -19,9 +19,22 @@
 		85B233C52E099323008315FC /* InterviewSim.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InterviewSim.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		85932A5D2E0E53F800F7666D /* Exceptions for "InterviewSim" folder in "InterviewSim" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 85B233C42E099323008315FC /* InterviewSim */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		85B233C72E099323008315FC /* InterviewSim */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				85932A5D2E0E53F800F7666D /* Exceptions for "InterviewSim" folder in "InterviewSim" target */,
+			);
 			path = InterviewSim;
 			sourceTree = "<group>";
 		};
@@ -289,11 +302,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F64CG297K7;
+				DEVELOPMENT_TEAM = X7HM5SFDUV;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = InterviewSim/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = InterviewSim;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Please turn on your camera for interview.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -323,11 +338,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = F64CG297K7;
+				DEVELOPMENT_TEAM = X7HM5SFDUV;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = InterviewSim/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = InterviewSim;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Please turn on your camera for interview.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
