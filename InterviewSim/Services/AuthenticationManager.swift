@@ -13,7 +13,6 @@ import Combine
 class AuthenticationManager: ObservableObject {
     @Published var isAuthenticated = false
     @Published var currentUser: User?
-    @Published var userProfile: UserProfile?
     @Published var isLoading = false
     @Published var errorMessage: String?
     
@@ -34,15 +33,10 @@ class AuthenticationManager: ObservableObject {
             let session = try await supabase.auth.session
             self.currentUser = session.user
             self.isAuthenticated = session.user != nil
-            
-            if session.user != nil {
-                await fetchUserProfile(userId: session.user.id.uuidString)
-            }
         } catch {
             print("Error checking initial auth state: \(error)")
             self.isAuthenticated = false
             self.currentUser = nil
-            self.userProfile = nil
         }
     }
     
@@ -60,129 +54,14 @@ class AuthenticationManager: ObservableObject {
             self.currentUser = session?.user
             self.isAuthenticated = true
             self.errorMessage = nil
-            
-            if let user = session?.user {
-                await fetchUserProfile(userId: user.id.uuidString)
-            }
         case .signedOut:
             self.currentUser = nil
-            self.userProfile = nil
             self.isAuthenticated = false
         case .tokenRefreshed:
             self.currentUser = session?.user
         default:
             break
         }
-    }
-    
-    // MARK: - Profile Management
-    
-    private func fetchUserProfile(userId: String) async {
-        do {
-            let response = try await supabase
-                .from("profiles")
-                .select("id, email, full_name, created_at, updated_at")
-                .eq("id", value: userId)
-                .single()
-                .execute()
-            
-            print("Profile fetch response: \(response)")
-            
-            // Parse the response data
-            if let data = response.data,
-               let profileDict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                
-                let profile = UserProfile(
-                    id: profileDict["id"] as? String ?? userId,
-                    email: profileDict["email"] as? String ?? currentUser?.email ?? "",
-                    fullName: profileDict["full_name"] as? String ?? "",
-                    createdAt: parseDate(from: profileDict["created_at"]) ?? Date(),
-                    updatedAt: parseDate(from: profileDict["updated_at"])
-                )
-                
-                print("Parsed profile: \(profile)")
-                self.userProfile = profile
-            }
-        } catch {
-            print("Error fetching user profile: \(error)")
-            
-            // If profile doesn't exist or there's an error, try to create one
-            if let user = currentUser {
-                print("Creating fallback profile for user: \(user.email ?? "unknown")")
-                let fallbackName = extractNameFromEmail(user.email ?? "")
-                await createUserProfile(userId: user.id.uuidString, email: user.email ?? "", fullName: fallbackName)
-            }
-        }
-    }
-    
-    private func parseDate(from value: Any?) -> Date? {
-        guard let dateString = value as? String else { return nil }
-        
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        
-        return formatter.date(from: dateString) ?? {
-            // Fallback to basic ISO8601 format
-            let basicFormatter = ISO8601DateFormatter()
-            return basicFormatter.date(from: dateString)
-        }()
-    }
-    
-    private func createUserProfile(userId: String, email: String, fullName: String) async {
-        do {
-            let profileData: [String: Any] = [
-                "id": userId,
-                "email": email,
-                "full_name": fullName
-            ]
-            
-            print("Creating profile with data: \(profileData)")
-            
-            let response = try await supabase
-                .from("profiles")
-                .insert(profileData)
-                .execute()
-            
-            print("Profile creation response: \(response)")
-            
-            // Create the profile object locally
-            let profile = UserProfile(
-                id: userId,
-                email: email,
-                fullName: fullName,
-                createdAt: Date(),
-                updatedAt: nil
-            )
-            
-            self.userProfile = profile
-            print("Profile created successfully: \(profile)")
-        } catch {
-            print("Error creating user profile: \(error)")
-            
-            // Create a local profile even if database insert fails
-            let profile = UserProfile(
-                id: userId,
-                email: email,
-                fullName: fullName,
-                createdAt: Date(),
-                updatedAt: nil
-            )
-            self.userProfile = profile
-        }
-    }
-    
-    private func extractNameFromEmail(_ email: String) -> String {
-        let username = email.components(separatedBy: "@").first ?? email
-        let cleanedUsername = username.replacingOccurrences(of: ".", with: " ")
-            .replacingOccurrences(of: "_", with: " ")
-            .replacingOccurrences(of: "-", with: " ")
-        
-        // Remove numbers and capitalize
-        let nameComponents = cleanedUsername.components(separatedBy: CharacterSet.decimalDigits.union(.whitespaces))
-            .filter { !$0.isEmpty }
-            .map { $0.capitalized }
-        
-        return nameComponents.joined(separator: " ").trimmingCharacters(in: .whitespaces)
     }
     
     // MARK: - Authentication Methods
@@ -196,7 +75,10 @@ class AuthenticationManager: ObservableObject {
             
             let response = try await supabase.auth.signUp(
                 email: email,
-                password: password
+                password: password,
+                data: [
+                    "display_name": .string(fullName)
+                ]
             )
             
             print("Sign up response - User: \(response.user?.id.uuidString ?? "nil"), Session: \(response.session != nil)")
@@ -206,9 +88,8 @@ class AuthenticationManager: ObservableObject {
                 // User created but needs email confirmation
                 self.errorMessage = "Please check your email and confirm your account before signing in."
             } else if response.user != nil && response.session != nil {
-                // User is automatically signed in, create profile
-                print("User signed up successfully, creating profile...")
-                await createUserProfile(userId: response.user.id.uuidString, email: email, fullName: fullName)
+                // User is automatically signed in
+                print("User signed up successfully with display name: \(fullName)")
                 self.currentUser = response.user
                 self.isAuthenticated = true
             }
@@ -232,10 +113,6 @@ class AuthenticationManager: ObservableObject {
             
             self.currentUser = response.user
             self.isAuthenticated = true
-            
-            if response.user != nil {
-                await fetchUserProfile(userId: response.user.id.uuidString)
-            }
         } catch {
             self.errorMessage = handleAuthError(error)
         }
@@ -249,7 +126,6 @@ class AuthenticationManager: ObservableObject {
         do {
             try await supabase.auth.signOut()
             self.currentUser = nil
-            self.userProfile = nil
             self.isAuthenticated = false
         } catch {
             self.errorMessage = handleAuthError(error)
@@ -315,15 +191,19 @@ class AuthenticationManager: ObservableObject {
     }
     
     var userName: String? {
-        guard let profile = userProfile else {
-            // Fallback to extracting name from email if profile is not loaded
-            if let email = currentUser?.email {
-                return extractNameFromEmail(email)
-            }
-            return nil
+        // First try to get display_name from user metadata
+        if let userMetadata = currentUser?.userMetadata,
+           let displayName = userMetadata["display_name"]?.stringValue,
+           !displayName.isEmpty {
+            return displayName
         }
         
-        return profile.fullName.isEmpty ? extractNameFromEmail(profile.email) : profile.fullName
+        // Fallback to extracting name from email
+        if let email = currentUser?.email {
+            return extractNameFromEmail(email)
+        }
+        
+        return nil
     }
     
     var userInitials: String {
@@ -341,58 +221,45 @@ class AuthenticationManager: ObservableObject {
         }
     }
     
+    private func extractNameFromEmail(_ email: String) -> String {
+        let username = email.components(separatedBy: "@").first ?? email
+        let cleanedUsername = username.replacingOccurrences(of: ".", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+        
+        // Remove numbers and capitalize
+        let nameComponents = cleanedUsername.components(separatedBy: CharacterSet.decimalDigits.union(.whitespaces))
+            .filter { !$0.isEmpty }
+            .map { $0.capitalized }
+        
+        return nameComponents.joined(separator: " ").trimmingCharacters(in: .whitespaces)
+    }
+    
     // MARK: - Profile Update Methods
     
-    func updateProfile(fullName: String) async {
-        guard let userId = userId else { return }
-        
+    func updateDisplayName(_ displayName: String) async {
         isLoading = true
+        errorMessage = nil
         
         do {
-            let updateData: [String: Any] = [
-                "full_name": fullName
-            ]
-            
-            try await supabase
-                .from("profiles")
-                .update(updateData)
-                .eq("id", value: userId)
-                .execute()
-            
-            // Update local profile
-            if var profile = userProfile {
-                profile = UserProfile(
-                    id: profile.id,
-                    email: profile.email,
-                    fullName: fullName,
-                    createdAt: profile.createdAt,
-                    updatedAt: Date()
+            try await supabase.auth.updateUser(
+                attributes: UserAttributes(
+                    data: [
+                        "display_name": .string(displayName)
+                    ]
                 )
-                self.userProfile = profile
-            }
+            )
+            
+            // Refresh the current user to get updated metadata
+            let session = try await supabase.auth.session
+            self.currentUser = session.user
+            
+            print("Display name updated successfully to: \(displayName)")
         } catch {
-            print("Error updating profile: \(error)")
-            self.errorMessage = "Failed to update profile"
+            print("Error updating display name: \(error)")
+            self.errorMessage = "Failed to update display name"
         }
         
         isLoading = false
-    }
-}
-
-// MARK: - UserProfile Model
-
-struct UserProfile: Codable {
-    let id: String
-    let email: String
-    let fullName: String
-    let createdAt: Date
-    let updatedAt: Date?
-    
-    enum CodingKeys: String, CodingKey {
-        case id
-        case email
-        case fullName = "full_name"
-        case createdAt = "created_at"
-        case updatedAt = "updated_at"
     }
 }
