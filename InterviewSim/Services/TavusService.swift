@@ -58,6 +58,7 @@ class TavusService: ObservableObject {
             print("✅ Tavus conversation created successfully")
             print("🔗 Conversation URL: \(response.conversationUrl)")
             print("🆔 Session ID: \(response.sessionId)")
+            print("📝 Session Name: \(sessionName)")
             
             isLoading = false
             return true
@@ -75,7 +76,7 @@ class TavusService: ObservableObject {
         }
     }
     
-    // MARK: - End Conversation Session (NEW)
+    // MARK: - End Conversation Session
     
     func endConversationSession() async -> Bool {
         guard let sessionId = sessionId else {
@@ -135,18 +136,18 @@ class TavusService: ObservableObject {
         // FIXED: Generate shorter, concise conversational context
         let shortContext = generateShortInstructions(for: data.category, cvContext: data.cvContext)
         
-        // ENHANCED: Use correct Tavus API payload structure with timeout properties
+        // ENHANCED: Use user's session name directly in conversation_name
         let payload = TavusCreateConversationPayload(
             replicaId: TavusConfig.defaultReplicaId,
-            conversationName: data.sessionName,
+            conversationName: data.sessionName, // FIXED: Use actual user input
             conversationalContext: shortContext,
             properties: TavusConversationProperties(
                 maxCallDuration: data.duration * 60, // Convert minutes to seconds
                 enableRecording: false,
                 enableClosedCaptions: true,
                 language: "english",
-                participantLeftTimeout: 10,  // NEW: 10 seconds timeout when participant leaves
-                participantAbsentTimeout: 60 // NEW: 60 seconds timeout if no one joins
+                participantLeftTimeout: 10,  // 10 seconds timeout when participant leaves
+                participantAbsentTimeout: 60 // 60 seconds timeout if no one joins
             )
         )
         
@@ -154,17 +155,20 @@ class TavusService: ObservableObject {
             let jsonData = try JSONEncoder().encode(payload)
             request.httpBody = jsonData
             
-            // Debug: Print request details with context length
+            // Debug: Print request details with session name
             print("📤 DEBUG: Request Details")
             print("  - Method: \(request.httpMethod ?? "Unknown")")
             print("  - URL: \(endpoint)")
             print("  - Replica ID: \(TavusConfig.defaultReplicaId)")
+            print("  - Session Name: '\(data.sessionName)'") // ENHANCED: Show actual session name
             print("  - Context Length: \(shortContext.count) characters")
             print("  - Participant Left Timeout: 10 seconds")
             print("  - Participant Absent Timeout: 60 seconds")
             print("  - Headers: \(request.allHTTPHeaderFields ?? [:])")
+            
+            // ENHANCED: Show payload for debugging
             if let bodyString = String(data: jsonData, encoding: .utf8) {
-                print("  - Body: \(bodyString)")
+                print("  - Payload: \(bodyString)")
             }
             
             let (responseData, response) = try await URLSession.shared.data(for: request)
@@ -203,13 +207,13 @@ class TavusService: ObservableObject {
                 
             case 400:
                 print("🚨 400 BAD REQUEST - Payload Issues:")
-                print("  - Context Length: \(shortContext.count) characters")
                 print("  - Session Name: '\(data.sessionName)'")
+                print("  - Context Length: \(shortContext.count) characters")
                 print("  - Duration: \(data.duration) minutes")
                 if let errorData = try? JSONDecoder().decode(TavusErrorResponse.self, from: responseData) {
                     throw TavusError.apiErrorWithMessage(400, errorData.message)
                 } else {
-                    throw TavusError.apiErrorWithMessage(400, "Invalid request payload. Context length: \(shortContext.count) chars")
+                    throw TavusError.apiErrorWithMessage(400, "Invalid request payload. Session name: '\(data.sessionName)'")
                 }
                 
             default:
@@ -231,7 +235,7 @@ class TavusService: ObservableObject {
         }
     }
     
-    // MARK: - End Conversation API Call (NEW)
+    // MARK: - End Conversation API Call
     
     private func endTavusConversation(conversationId: String) async throws -> Bool {
         let endpoint = "https://tavusapi.com/v2/conversations/\(conversationId)/end"
@@ -473,8 +477,8 @@ struct TavusConversationProperties: Codable {
     let enableRecording: Bool
     let enableClosedCaptions: Bool
     let language: String
-    let participantLeftTimeout: Int    // NEW: Timeout when participant leaves (seconds)
-    let participantAbsentTimeout: Int  // NEW: Timeout when no one joins (seconds)
+    let participantLeftTimeout: Int    // Timeout when participant leaves (seconds)
+    let participantAbsentTimeout: Int  // Timeout when no one joins (seconds)
     
     enum CodingKeys: String, CodingKey {
         case maxCallDuration = "max_call_duration"
