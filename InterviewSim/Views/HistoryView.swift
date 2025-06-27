@@ -8,71 +8,27 @@
 import SwiftUI
 
 struct HistoryView: View {
+    @StateObject private var historyManager = InterviewHistoryManager()
     @State private var selectedFilter = "All"
     @State private var searchText = ""
+    @State private var showingDeleteAlert = false
+    @State private var sessionToDelete: InterviewSession?
     
     let filters = ["All", "Technical", "Behavioral"]
     
-    // Sample data with user-defined session names only
-    let sessions = [
-        InterviewSession(
-            id: 1, 
-            category: "Technical", 
-            sessionName: "iOS Development Practice", 
-            score: 78, 
-            date: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!, 
-            duration: 45, 
-            questionsAnswered: 12
-        ),
-        InterviewSession(
-            id: 2, 
-            category: "Technical", 
-            sessionName: "Data Structures Deep Dive", 
-            score: 85, 
-            date: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!, 
-            duration: 35, 
-            questionsAnswered: 10
-        ),
-        InterviewSession(
-            id: 3, 
-            category: "Behavioral", 
-            sessionName: "Leadership Experience", 
-            score: 92, 
-            date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, 
-            duration: 30, 
-            questionsAnswered: 8
-        ),
-        InterviewSession(
-            id: 4, 
-            category: "Technical", 
-            sessionName: "System Design Interview", 
-            score: 74, 
-            date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, 
-            duration: 50, 
-            questionsAnswered: 15
-        ),
-        InterviewSession(
-            id: 5, 
-            category: "Behavioral", 
-            sessionName: "Communication Skills", 
-            score: 88, 
-            date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!, 
-            duration: 25, 
-            questionsAnswered: 6
-        )
-    ]
-    
     var filteredSessions: [InterviewSession] {
-        let filtered = selectedFilter == "All" ? sessions : sessions.filter { $0.category == selectedFilter }
+        let filtered = selectedFilter == "All" ? 
+            historyManager.sessions : 
+            historyManager.sessions.filter { $0.category == selectedFilter }
         
         if searchText.isEmpty {
-            return filtered.sorted { $0.date > $1.date }
+            return filtered.sorted { $0.createdAt > $1.createdAt }
         } else {
             return filtered.filter { 
                 $0.category.localizedCaseInsensitiveContains(searchText) ||
                 $0.sessionName.localizedCaseInsensitiveContains(searchText)
             }
-            .sorted { $0.date > $1.date }
+            .sorted { $0.createdAt > $1.createdAt }
         }
     }
     
@@ -81,7 +37,7 @@ struct HistoryView: View {
             VStack(spacing: 0) {
                 // Header with Statistics Summary
                 VStack(spacing: 20) {
-                    // Statistics Overview - Moved below title
+                    // Statistics Overview
                     if !filteredSessions.isEmpty {
                         HistoryStatsView(sessions: filteredSessions)
                             .padding(.horizontal, 20)
@@ -122,35 +78,115 @@ struct HistoryView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 20)
                 
-                // Sessions List
-                if filteredSessions.isEmpty {
-                    EmptyStateView(searchText: searchText)
+                // Content
+                if historyManager.isLoading {
+                    LoadingView()
+                } else if filteredSessions.isEmpty {
+                    EmptyStateView(
+                        searchText: searchText,
+                        hasData: !historyManager.sessions.isEmpty
+                    )
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 16) {
-                            ForEach(filteredSessions) { session in
-                                HistorySessionCard(session: session)
-                            }
+                    SessionsList(
+                        sessions: filteredSessions,
+                        onDelete: { session in
+                            sessionToDelete = session
+                            showingDeleteAlert = true
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
-                    }
+                    )
                 }
             }
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.large)
+            .refreshable {
+                await historyManager.refreshSessions()
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button("Refresh", systemImage: "arrow.clockwise") {
+                            Task {
+                                await historyManager.refreshSessions()
+                            }
+                        }
+                        
+                        Button("Add Sample Data", systemImage: "plus.circle") {
+                            Task {
+                                await historyManager.addSampleData()
+                            }
+                        }
+                        
+                        if let errorMessage = historyManager.errorMessage {
+                            Button("Clear Error", systemImage: "xmark.circle") {
+                                historyManager.clearError()
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
+            .alert("Delete Session", isPresented: $showingDeleteAlert) {
+                Button("Cancel", role: .cancel) {
+                    sessionToDelete = nil
+                }
+                Button("Delete", role: .destructive) {
+                    if let session = sessionToDelete {
+                        Task {
+                            await historyManager.deleteSession(session)
+                        }
+                    }
+                    sessionToDelete = nil
+                }
+            } message: {
+                if let session = sessionToDelete {
+                    Text("Are you sure you want to delete '\(session.sessionName)'? This action cannot be undone.")
+                }
+            }
+            .onAppear {
+                Task {
+                    await historyManager.loadSessions()
+                }
+            }
         }
     }
 }
 
-struct InterviewSession: Identifiable {
-    let id: Int
-    let category: String
-    let sessionName: String // User-defined session name only
-    let score: Int
-    let date: Date
-    let duration: Int // in minutes
-    let questionsAnswered: Int
+struct LoadingView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.2)
+            
+            Text("Loading your interview history...")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(40)
+    }
+}
+
+struct SessionsList: View {
+    let sessions: [InterviewSession]
+    let onDelete: (InterviewSession) -> Void
+    
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(sessions) { session in
+                    HistorySessionCard(
+                        session: session,
+                        onDelete: {
+                            onDelete(session)
+                        }
+                    )
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+        }
+    }
 }
 
 struct FilterTab: View {
@@ -186,12 +222,13 @@ struct HistoryStatsView: View {
     let sessions: [InterviewSession]
     
     var averageScore: Int {
-        guard !sessions.isEmpty else { return 0 }
-        return sessions.reduce(0) { $0 + $1.score } / sessions.count
+        let sessionsWithScores = sessions.compactMap { $0.score }
+        guard !sessionsWithScores.isEmpty else { return 0 }
+        return sessionsWithScores.reduce(0, +) / sessionsWithScores.count
     }
     
     var totalDuration: Int {
-        sessions.reduce(0) { $0 + $1.duration }
+        sessions.reduce(0) { $0 + $1.durationMinutes }
     }
     
     var totalQuestions: Int {
@@ -239,19 +276,16 @@ struct StatItem: View {
 
 struct HistorySessionCard: View {
     let session: InterviewSession
-    
-    private var categoryColor: Color {
-        session.category == "Technical" ? .blue : .purple
-    }
+    let onDelete: () -> Void
     
     var body: some View {
         HStack(spacing: 16) {
             // Category Icon
             Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
                 .font(.title2)
-                .foregroundColor(categoryColor)
+                .foregroundColor(session.categoryColor)
                 .frame(width: 48, height: 48)
-                .background(categoryColor.opacity(0.1))
+                .background(session.categoryColor.opacity(0.1))
                 .cornerRadius(12)
                 .symbolRenderingMode(.hierarchical)
             
@@ -269,24 +303,24 @@ struct HistorySessionCard: View {
                         Text(session.category)
                             .font(.caption)
                             .fontWeight(.medium)
-                            .foregroundColor(categoryColor)
+                            .foregroundColor(session.categoryColor)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
-                            .background(categoryColor.opacity(0.1))
+                            .background(session.categoryColor.opacity(0.1))
                             .cornerRadius(4)
                     }
                     
                     Spacer()
                     
-                    Text("\(session.score)%")
+                    Text(session.scoreText)
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor(scoreColor(session.score))
+                        .foregroundColor(session.scoreColor)
                 }
                 
                 // Session Details
                 HStack(spacing: 16) {
-                    Label("\(session.duration) min", systemImage: "clock")
+                    Label("\(session.durationMinutes) min", systemImage: "clock")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
@@ -297,12 +331,12 @@ struct HistorySessionCard: View {
                     Spacer()
                     
                     VStack(alignment: .trailing, spacing: 1) {
-                        Text(formatDate(session.date))
+                        Text(session.formattedDate)
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .fontWeight(.medium)
                         
-                        Text(formatTime(session.date))
+                        Text(session.formattedTime)
                             .font(.caption2)
                             .foregroundColor(.secondary.opacity(0.8))
                     }
@@ -313,40 +347,17 @@ struct HistorySessionCard: View {
         .background(Color(.systemBackground))
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-    }
-    
-    private func scoreColor(_ score: Int) -> Color {
-        switch score {
-        case 90...100: return .green
-        case 70...89: return .orange
-        default: return .red
+        .contextMenu {
+            Button("Delete Session", systemImage: "trash", role: .destructive) {
+                onDelete()
+            }
         }
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let calendar = Calendar.current
-        // Fixed: Removed unused 'now' variable
-        
-        if calendar.isDateInToday(date) {
-            return "Today"
-        } else if calendar.isDateInYesterday(date) {
-            return "Yesterday"
-        } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d"
-            return formatter.string(from: date)
-        }
-    }
-    
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
     }
 }
 
 struct EmptyStateView: View {
     let searchText: String
+    let hasData: Bool
     
     var body: some View {
         VStack(spacing: 20) {
@@ -362,7 +373,7 @@ struct EmptyStateView: View {
                     .foregroundColor(.primary)
                 
                 Text(searchText.isEmpty ? 
-                     "Start your first mock interview to see your history here" :
+                     (hasData ? "No sessions match your current filter" : "Start your first mock interview to see your history here") :
                      "Try adjusting your search or filter criteria"
                 )
                 .font(.subheadline)
