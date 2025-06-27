@@ -81,11 +81,12 @@ class InterviewHistoryManager: ObservableObject {
     ) async -> InterviewSession? {
         
         do {
-            // Get current user - FIXED: Call the function and access user property
+            // FIXED: Get current user properly
             let currentUser = try await supabase.auth.user
+            let userId = currentUser.id
             
             let newSession = InterviewSessionInsert(
-                userId: currentUser.id,
+                userId: userId,
                 category: category,
                 sessionName: sessionName,
                 score: score,
@@ -260,6 +261,7 @@ class InterviewHistoryManager: ObservableObject {
 
 // MARK: - Helper Structs
 
+// FIXED: Simplified InterviewSessionInsert struct
 struct InterviewSessionInsert: Codable {
     let userId: UUID
     let category: String
@@ -267,7 +269,7 @@ struct InterviewSessionInsert: Codable {
     let score: Int?
     let durationMinutes: Int
     let questionsAnswered: Int
-    let sessionData: [String: Any]
+    let sessionData: String // Store as JSON string
     
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -279,25 +281,26 @@ struct InterviewSessionInsert: Codable {
         case sessionData = "session_data"
     }
     
-    // FIXED: Custom encoding for sessionData
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
+    // FIXED: Initialize with proper JSON encoding
+    init(userId: UUID, category: String, sessionName: String, score: Int?, durationMinutes: Int, questionsAnswered: Int, sessionData: [String: Any]) {
+        self.userId = userId
+        self.category = category
+        self.sessionName = sessionName
+        self.score = score
+        self.durationMinutes = durationMinutes
+        self.questionsAnswered = questionsAnswered
         
-        try container.encode(userId, forKey: .userId)
-        try container.encode(category, forKey: .category)
-        try container.encode(sessionName, forKey: .sessionName)
-        try container.encodeIfPresent(score, forKey: .score)
-        try container.encode(durationMinutes, forKey: .durationMinutes)
-        try container.encode(questionsAnswered, forKey: .questionsAnswered)
-        
-        // Convert [String: Any] to JSON data
-        let jsonData = try JSONSerialization.data(withJSONObject: sessionData)
-        let jsonString = String(data: jsonData, encoding: .utf8) ?? "{}"
-        try container.encode(jsonString, forKey: .sessionData)
+        // Convert [String: Any] to JSON string
+        if let jsonData = try? JSONSerialization.data(withJSONObject: sessionData),
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            self.sessionData = jsonString
+        } else {
+            self.sessionData = "{}"
+        }
     }
 }
 
-// Helper for handling dynamic JSON data
+// FIXED: Simplified AnyCodable implementation
 struct AnyCodable: Codable {
     let value: Any
     
