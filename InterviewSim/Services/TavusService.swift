@@ -75,7 +75,40 @@ class TavusService: ObservableObject {
         }
     }
     
-    // MARK: - API Calls (FIXED: Shorter Conversational Context)
+    // MARK: - End Conversation Session (NEW)
+    
+    func endConversationSession() async -> Bool {
+        guard let sessionId = sessionId else {
+            print("❌ Cannot end conversation: No session ID available")
+            return false
+        }
+        
+        print("🔚 Attempting to end Tavus conversation: \(sessionId)")
+        
+        do {
+            let success = try await endTavusConversation(conversationId: sessionId)
+            
+            if success {
+                print("✅ Tavus conversation ended successfully")
+                // Clear session data after successful end
+                self.conversationUrl = nil
+                self.sessionId = nil
+            } else {
+                print("⚠️ Tavus conversation end returned false")
+            }
+            
+            return success
+            
+        } catch {
+            print("❌ Error ending Tavus conversation: \(error)")
+            // Even if API call fails, we should clear local session data
+            self.conversationUrl = nil
+            self.sessionId = nil
+            return false
+        }
+    }
+    
+    // MARK: - API Calls
     
     private func createTavusConversation(data: TavusConversationRequest) async throws -> TavusConversationResponse {
         // FIXED: Use official Tavus API endpoint
@@ -190,6 +223,86 @@ class TavusService: ObservableObject {
             throw TavusError.decodingError
         } catch {
             print("❌ Network Error: \(error)")
+            throw error
+        }
+    }
+    
+    // MARK: - End Conversation API Call (NEW)
+    
+    private func endTavusConversation(conversationId: String) async throws -> Bool {
+        let endpoint = "https://tavusapi.com/v2/conversations/\(conversationId)/end"
+        
+        let apiKey = try TavusConfig.getApiKey()
+        
+        print("🔚 DEBUG: End Conversation Request")
+        print("  - Conversation ID: \(conversationId)")
+        print("  - Endpoint: \(endpoint)")
+        print("  - API Key: \(String(apiKey.prefix(15)))...")
+        
+        guard let url = URL(string: endpoint) else {
+            throw TavusError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
+        
+        // End conversation API typically doesn't require a body, but let's add empty JSON
+        request.httpBody = "{}".data(using: .utf8)
+        
+        do {
+            let (responseData, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw TavusError.invalidResponse
+            }
+            
+            print("📥 DEBUG: End Conversation Response")
+            print("  - Status Code: \(httpResponse.statusCode)")
+            print("  - Headers: \(httpResponse.allHeaderFields)")
+            
+            if let responseString = String(data: responseData, encoding: .utf8) {
+                print("  - Body: \(responseString)")
+            }
+            
+            // Handle response codes for end conversation
+            switch httpResponse.statusCode {
+            case 200, 201, 204:
+                // Success - conversation ended
+                print("✅ Conversation ended successfully")
+                return true
+                
+            case 404:
+                // Conversation not found or already ended
+                print("⚠️ Conversation not found or already ended")
+                return true // Consider this a success since conversation is not active
+                
+            case 401:
+                print("🚨 401 UNAUTHORIZED - API Key Issues")
+                throw TavusError.apiErrorWithMessage(401, "Invalid API key for ending conversation")
+                
+            case 400:
+                print("🚨 400 BAD REQUEST - Invalid conversation ID or state")
+                if let errorData = try? JSONDecoder().decode(TavusErrorResponse.self, from: responseData) {
+                    throw TavusError.apiErrorWithMessage(400, errorData.message)
+                } else {
+                    throw TavusError.apiErrorWithMessage(400, "Invalid conversation ID or conversation already ended")
+                }
+                
+            default:
+                // Try to parse error response
+                if let errorData = try? JSONDecoder().decode(TavusErrorResponse.self, from: responseData) {
+                    throw TavusError.apiErrorWithMessage(httpResponse.statusCode, errorData.message)
+                } else {
+                    let responseString = String(data: responseData, encoding: .utf8) ?? "Unknown error"
+                    throw TavusError.apiErrorWithMessage(httpResponse.statusCode, responseString)
+                }
+            }
+            
+        } catch {
+            print("❌ Network Error ending conversation: \(error)")
             throw error
         }
     }

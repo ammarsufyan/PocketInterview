@@ -24,6 +24,7 @@ struct TavusInterviewView: View {
     @State private var showingApiKeyTest = false
     @State private var sessionEndReason: String = "manual"
     @State private var hasSessionStarted = false // Track if session has actually started
+    @State private var isEndingSession = false // Track if we're currently ending the session
     
     private var categoryColor: Color {
         category == "Technical" ? .blue : .purple
@@ -78,6 +79,25 @@ struct TavusInterviewView: View {
                         }
                     )
                 }
+                
+                // Loading overlay when ending session
+                if isEndingSession {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                            .tint(.white)
+                        
+                        Text("Ending Interview...")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
+                    .padding(32)
+                    .background(Color.black.opacity(0.7))
+                    .cornerRadius(16)
+                }
             }
             .navigationTitle("AI Interview")
             .navigationBarTitleDisplayMode(.inline)
@@ -90,6 +110,7 @@ struct TavusInterviewView: View {
                             showingEndConfirmation = true
                         }
                         .foregroundColor(.red)
+                        .disabled(isEndingSession)
                     } else {
                         Button("Cancel") {
                             dismiss()
@@ -116,7 +137,9 @@ struct TavusInterviewView: View {
             .alert("End Interview", isPresented: $showingEndConfirmation) {
                 Button("Continue", role: .cancel) { }
                 Button("End Interview", role: .destructive) {
-                    endInterview(reason: sessionEndReason)
+                    Task {
+                        await endInterviewWithAPI(reason: sessionEndReason)
+                    }
                 }
             } message: {
                 Text("Are you sure you want to end the interview? Your progress will be saved.")
@@ -196,11 +219,15 @@ struct TavusInterviewView: View {
             print("🔧 Session too short (\(sessionDuration)s), delaying end")
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                 if self.isSessionActive {
-                    self.endInterview(reason: reason)
+                    Task {
+                        await self.endInterviewWithAPI(reason: reason)
+                    }
                 }
             }
         } else {
-            endInterview(reason: reason)
+            Task {
+                await endInterviewWithAPI(reason: reason)
+            }
         }
     }
     
@@ -224,44 +251,79 @@ struct TavusInterviewView: View {
         showingApiKeyTest = true
     }
     
-    private func endInterview(reason: String = "manual") {
-        guard hasSessionStarted else {
-            print("🔧 Cannot end interview - session never started")
-            dismiss()
+    // MARK: - End Interview with API Call (NEW)
+    
+    private func endInterviewWithAPI(reason: String = "manual") async {
+        guard hasSessionStarted && !isEndingSession else {
+            print("🔧 Cannot end interview - session never started or already ending")
+            if !hasSessionStarted {
+                dismiss()
+            }
             return
         }
         
+        // Show loading state
+        isEndingSession = true
+        
+        print("🔚 Starting interview end process...")
+        print("  - Reason: \(reason)")
+        print("  - Session ID: \(tavusService.sessionId ?? "None")")
+        
+        // Step 1: Call Tavus API to end the conversation
+        let apiSuccess = await tavusService.endConversationSession()
+        
+        if apiSuccess {
+            print("✅ Tavus conversation ended via API")
+        } else {
+            print("⚠️ Tavus API end call failed, but continuing with local cleanup")
+        }
+        
+        // Step 2: Calculate session duration
         let actualDuration = Int(Date().timeIntervalSince(sessionStartTime) / 60)
         
         print("📊 Interview ended:")
         print("  - Reason: \(reason)")
         print("  - Duration: \(actualDuration) minutes")
         print("  - Session Name: \(sessionName)")
+        print("  - API End Success: \(apiSuccess)")
         
-        // Save session to history
-        Task {
-            await historyManager.createSession(
-                category: category,
-                sessionName: sessionName,
-                score: nil, // Score will be determined later
-                durationMinutes: max(actualDuration, 1), // Minimum 1 minute
-                questionsAnswered: 0, // Will be updated based on Tavus data
-                sessionData: [
-                    "tavus_session_id": tavusService.sessionId ?? "",
-                    "conversation_url": tavusService.conversationUrl ?? "",
-                    "cv_context_provided": cvContext != nil,
-                    "end_reason": reason,
-                    "actual_duration_seconds": Int(Date().timeIntervalSince(sessionStartTime))
-                ]
-            )
-        }
+        // Step 3: Save session to history
+        await historyManager.createSession(
+            category: category,
+            sessionName: sessionName,
+            score: nil, // Score will be determined later
+            durationMinutes: max(actualDuration, 1), // Minimum 1 minute
+            questionsAnswered: 0, // Will be updated based on Tavus data
+            sessionData: [
+                "tavus_session_id": tavusService.sessionId ?? "",
+                "conversation_url": tavusService.conversationUrl ?? "",
+                "cv_context_provided": cvContext != nil,
+                "end_reason": reason,
+                "actual_duration_seconds": Int(Date().timeIntervalSince(sessionStartTime)),
+                "api_end_success": apiSuccess
+            ]
+        )
         
-        // Reset session state
+        // Step 4: Reset session state
         isSessionActive = false
         hasSessionStarted = false
+        isEndingSession = false
         
-        // Dismiss the view
+        // Step 5: Clear Tavus service session data
+        tavusService.clearSession()
+        
+        print("✅ Interview end process completed")
+        
+        // Step 6: Dismiss the view
         dismiss()
+    }
+    
+    // MARK: - Legacy method for backward compatibility
+    
+    private func endInterview(reason: String = "manual") {
+        Task {
+            await endInterviewWithAPI(reason: reason)
+        }
     }
 }
 
