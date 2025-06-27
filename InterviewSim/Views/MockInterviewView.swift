@@ -476,6 +476,7 @@ struct CVPickerView: View {
     let onUpload: (Bool) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var showingDocumentPicker = false
+    @State private var hasAnalysis = false // FIXED: Track analysis state with Bool
     
     private var categoryColor: Color {
         category == "Technical" ? .blue : .purple
@@ -607,12 +608,16 @@ struct CVPickerView: View {
             ) { result in
                 handleFileSelection(result: result)
             }
-            // Fixed: Updated onChange to use new iOS 17+ syntax
-            .onChange(of: cvExtractor.cvAnalysis) { _, analysis in
-                if analysis != nil && !cvExtractor.isExtracting {
-                    onUpload(true)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        dismiss()
+            // FIXED: Use onReceive instead of onChange to avoid Equatable requirement
+            .onReceive(cvExtractor.$cvAnalysis) { analysis in
+                let newHasAnalysis = analysis != nil
+                if newHasAnalysis != hasAnalysis {
+                    hasAnalysis = newHasAnalysis
+                    if hasAnalysis && !cvExtractor.isExtracting {
+                        onUpload(true)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            dismiss()
+                        }
                     }
                 }
             }
