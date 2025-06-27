@@ -6,6 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		708F7C172E0C3F250041D18B /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 708F7C162E0C3F250041D18B /* Auth */; };
+		708F7C192E0C3F250041D18B /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 708F7C182E0C3F250041D18B /* Functions */; };
+		708F7C1B2E0C3F250041D18B /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 708F7C1A2E0C3F250041D18B /* PostgREST */; };
+		708F7C1D2E0C3F250041D18B /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 708F7C1C2E0C3F250041D18B /* Realtime */; };
+		708F7C1F2E0C3F250041D18B /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 708F7C1E2E0C3F250041D18B /* Storage */; };
+		708F7C222E0CE4160041D18B /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 708F7C212E0CE4160041D18B /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		85B233C52E099323008315FC /* InterviewSim.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InterviewSim.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,16 +32,30 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				708F7C1B2E0C3F250041D18B /* PostgREST in Frameworks */,
+				708F7C192E0C3F250041D18B /* Functions in Frameworks */,
+				708F7C222E0CE4160041D18B /* Supabase in Frameworks */,
+				708F7C172E0C3F250041D18B /* Auth in Frameworks */,
+				708F7C1F2E0C3F250041D18B /* Storage in Frameworks */,
+				708F7C1D2E0C3F250041D18B /* Realtime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		708F7C202E0CE4160041D18B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		85B233BC2E099323008315FC = {
 			isa = PBXGroup;
 			children = (
 				85B233C72E099323008315FC /* InterviewSim */,
+				708F7C202E0CE4160041D18B /* Frameworks */,
 				85B233C62E099323008315FC /* Products */,
 			);
 			sourceTree = "<group>";
@@ -65,6 +88,12 @@
 			);
 			name = InterviewSim;
 			packageProductDependencies = (
+				708F7C162E0C3F250041D18B /* Auth */,
+				708F7C182E0C3F250041D18B /* Functions */,
+				708F7C1A2E0C3F250041D18B /* PostgREST */,
+				708F7C1C2E0C3F250041D18B /* Realtime */,
+				708F7C1E2E0C3F250041D18B /* Storage */,
+				708F7C212E0CE4160041D18B /* Supabase */,
 			);
 			productName = InterviewSim;
 			productReference = 85B233C52E099323008315FC /* InterviewSim.app */;
@@ -94,6 +123,9 @@
 			);
 			mainGroup = 85B233BC2E099323008315FC;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				708F7C152E0C3F250041D18B /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 85B233C62E099323008315FC /* Products */;
 			projectDirPath = "";
@@ -164,6 +196,7 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/**";
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -178,6 +211,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/**";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -228,6 +262,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				FRAMEWORK_SEARCH_PATHS = "$(SRCROOT)/**";
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -236,6 +271,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = "$(SRCROOT)/**";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -253,7 +289,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = X7HM5SFDUV;
+				DEVELOPMENT_TEAM = F64CG297K7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = InterviewSim;
@@ -262,7 +298,6 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -288,7 +323,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = X7HM5SFDUV;
+				DEVELOPMENT_TEAM = F64CG297K7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = InterviewSim;
@@ -297,7 +332,6 @@
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -338,6 +372,50 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		708F7C152E0C3F250041D18B /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		708F7C162E0C3F250041D18B /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 708F7C152E0C3F250041D18B /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		708F7C182E0C3F250041D18B /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 708F7C152E0C3F250041D18B /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		708F7C1A2E0C3F250041D18B /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 708F7C152E0C3F250041D18B /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		708F7C1C2E0C3F250041D18B /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 708F7C152E0C3F250041D18B /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		708F7C1E2E0C3F250041D18B /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 708F7C152E0C3F250041D18B /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		708F7C212E0CE4160041D18B /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 708F7C152E0C3F250041D18B /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 85B233BD2E099323008315FC /* Project object */;
 }
