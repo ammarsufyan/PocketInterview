@@ -50,19 +50,20 @@ class TavusService: ObservableObject {
             print("🔗 Conversation URL: \(response.conversationUrl)")
             print("🆔 Session ID: \(response.sessionId)")
             
+            isLoading = false
             return true
             
         } catch let error as TavusConfigError {
             print("❌ Tavus configuration error: \(error)")
             self.errorMessage = error.localizedDescription
+            isLoading = false
             return false
         } catch {
             print("❌ Error creating Tavus conversation: \(error)")
             self.errorMessage = "Failed to create interview session: \(error.localizedDescription)"
+            isLoading = false
             return false
         }
-        
-        isLoading = false
     }
     
     // MARK: - API Calls
@@ -73,24 +74,24 @@ class TavusService: ObservableObject {
             throw TavusError.invalidURL
         }
         
-        // Get API key and replica ID from environment
+        // Get API key from environment
         let apiKey = try TavusConfig.getApiKey()
-        let replicaId = try TavusConfig.getReplicaId()
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        // Create the conversation payload
+        // Create the conversation payload without replica dependency
         let payload = TavusAPIPayload(
             conversationName: data.sessionName,
-            replicaId: replicaId,
             conversationProperties: TavusConversationProperties(
                 category: data.category,
                 duration: data.duration,
                 cvContext: data.cvContext,
-                instructions: generateInstructions(for: data.category, cvContext: data.cvContext)
+                instructions: generateInstructions(for: data.category, cvContext: data.cvContext),
+                conversationType: "interview",
+                language: "en"
             )
         )
         
@@ -107,7 +108,8 @@ class TavusService: ObservableObject {
             if let errorData = try? JSONDecoder().decode(TavusErrorResponse.self, from: responseData) {
                 throw TavusError.apiErrorWithMessage(httpResponse.statusCode, errorData.message)
             } else {
-                throw TavusError.apiError(httpResponse.statusCode)
+                let responseString = String(data: responseData, encoding: .utf8) ?? "Unknown error"
+                throw TavusError.apiErrorWithMessage(httpResponse.statusCode, responseString)
             }
         }
         
@@ -164,12 +166,10 @@ struct TavusConversationResponse {
 
 struct TavusAPIPayload: Codable {
     let conversationName: String
-    let replicaId: String
     let conversationProperties: TavusConversationProperties
     
     enum CodingKeys: String, CodingKey {
         case conversationName = "conversation_name"
-        case replicaId = "replica_id"
         case conversationProperties = "properties"
     }
 }
@@ -179,12 +179,16 @@ struct TavusConversationProperties: Codable {
     let duration: Int
     let cvContext: String?
     let instructions: String
+    let conversationType: String
+    let language: String
     
     enum CodingKeys: String, CodingKey {
         case category
         case duration
         case cvContext = "cv_context"
         case instructions
+        case conversationType = "conversation_type"
+        case language
     }
 }
 

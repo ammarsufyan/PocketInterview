@@ -13,7 +13,6 @@ Create a `.env` file in your project root directory:
 ```bash
 # Tavus API Configuration
 TAVUS_API_KEY=your_actual_tavus_api_key_here
-TAVUS_REPLICA_ID=your_actual_replica_id_here
 TAVUS_BASE_URL=https://tavusapi.com/v2
 
 # Supabase Configuration
@@ -29,11 +28,7 @@ SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 3. Create a new API key
 4. Copy the API key and replace `your_actual_tavus_api_key_here` in your `.env` file
 
-#### Replica ID:
-1. Go to [Tavus Replicas](https://platform.tavus.io/replicas)
-2. Create a new replica (AI interviewer persona)
-3. Customize the replica's appearance and voice
-4. Copy the Replica ID and replace `your_actual_replica_id_here` in your `.env` file
+**Note**: No replica setup needed! The app will use Tavus's direct conversation API without requiring a pre-configured replica.
 
 ### 3. Verify Supabase Configuration
 
@@ -59,8 +54,6 @@ For production builds, add environment variables to your Info.plist:
 ```xml
 <key>TAVUS_API_KEY</key>
 <string>$(TAVUS_API_KEY)</string>
-<key>TAVUS_REPLICA_ID</key>
-<string>$(TAVUS_REPLICA_ID)</string>
 <key>SUPABASE_URL</key>
 <string>$(SUPABASE_URL)</string>
 <key>SUPABASE_ANON_KEY</key>
@@ -110,10 +103,10 @@ print("Supabase config valid: \(supabaseValid)")
    - Check for extra spaces or characters
    - Ensure the key has proper permissions
 
-3. **"Replica not found"**
-   - Verify the Replica ID in Tavus dashboard
-   - Check if the replica is active and published
-   - Ensure the replica supports conversations
+3. **"Conversation creation failed"**
+   - Check your Tavus API quota and limits
+   - Verify the API endpoint is correct
+   - Check network connectivity
 
 ### Debug Commands:
 
@@ -123,7 +116,6 @@ EnvironmentConfig.shared.printLoadedVariables()
 
 // Check specific values
 print("Tavus API Key exists: \(EnvironmentConfig.shared.tavusApiKey != nil)")
-print("Replica ID exists: \(EnvironmentConfig.shared.tavusReplicaId != nil)")
 ```
 
 ## 📁 File Structure
@@ -140,14 +132,15 @@ InterviewSim/
     └── TavusService.swift        # Tavus API service
 ```
 
-## 🚀 Next Steps
+## 🚀 Simplified Tavus Integration
 
-After setting up environment variables:
+With the updated configuration:
 
-1. Test the Tavus integration with a sample conversation
-2. Verify Supabase connection and data operations
-3. Test the full interview flow from CV upload to AI conversation
-4. Configure production environment variables for deployment
+- ✅ **No replica setup required** - Direct API integration
+- ✅ **Simplified configuration** - Only API key needed
+- ✅ **Dynamic conversation creation** - AI interviewer created on-demand
+- ✅ **Personalized prompts** - CV context automatically included
+- ✅ **Flexible interview types** - Technical and Behavioral support
 
 ## 📞 Support
 

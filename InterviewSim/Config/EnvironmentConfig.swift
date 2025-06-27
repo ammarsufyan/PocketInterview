@@ -67,7 +67,6 @@ class EnvironmentConfig {
         // Load specific keys from Info.plist
         let envKeys = [
             "TAVUS_API_KEY",
-            "TAVUS_REPLICA_ID",
             "TAVUS_BASE_URL",
             "SUPABASE_URL",
             "SUPABASE_ANON_KEY"
@@ -83,7 +82,6 @@ class EnvironmentConfig {
     private func loadFromSystemEnvironment() {
         let envKeys = [
             "TAVUS_API_KEY",
-            "TAVUS_REPLICA_ID",
             "TAVUS_BASE_URL",
             "SUPABASE_URL",
             "SUPABASE_ANON_KEY"
@@ -123,10 +121,6 @@ class EnvironmentConfig {
         return getValue(for: "TAVUS_API_KEY")
     }
     
-    var tavusReplicaId: String? {
-        return getValue(for: "TAVUS_REPLICA_ID")
-    }
-    
     var tavusBaseURL: String {
         return getValue(for: "TAVUS_BASE_URL", defaultValue: "https://tavusapi.com/v2")
     }
@@ -146,11 +140,6 @@ class EnvironmentConfig {
     func validateTavusConfiguration() -> Bool {
         guard let apiKey = tavusApiKey, !apiKey.isEmpty else {
             print("❌ TAVUS_API_KEY not found in environment")
-            return false
-        }
-        
-        guard let replicaId = tavusReplicaId, !replicaId.isEmpty else {
-            print("❌ TAVUS_REPLICA_ID not found in environment")
             return false
         }
         

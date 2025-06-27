@@ -20,22 +20,15 @@ struct TavusConfig {
         return EnvironmentConfig.shared.tavusBaseURL
     }
     
-    /// Tavus Replica ID from environment variables
-    static var defaultReplicaId: String? {
-        return EnvironmentConfig.shared.tavusReplicaId
-    }
-    
     // MARK: - Conversation Settings
     
     /// Default conversation properties
     static let defaultConversationProperties = [
         "max_duration": 3600, // 1 hour in seconds
         "language": "en",
-        "voice_settings": [
-            "stability": 0.8,
-            "similarity_boost": 0.8,
-            "style": 0.2
-        ]
+        "conversation_type": "interview",
+        "enable_recording": true,
+        "enable_transcription": true
     ]
     
     // MARK: - Interview Templates
@@ -133,28 +126,18 @@ struct TavusConfig {
         }
         return apiKey
     }
-    
-    static func getReplicaId() throws -> String {
-        guard let replicaId = defaultReplicaId, !replicaId.isEmpty else {
-            throw TavusConfigError.missingReplicaId
-        }
-        return replicaId
-    }
 }
 
 // MARK: - Configuration Errors
 
 enum TavusConfigError: Error, LocalizedError {
     case missingApiKey
-    case missingReplicaId
     case invalidConfiguration
     
     var errorDescription: String? {
         switch self {
         case .missingApiKey:
             return "Tavus API key not found. Please add TAVUS_API_KEY to your .env file."
-        case .missingReplicaId:
-            return "Tavus Replica ID not found. Please add TAVUS_REPLICA_ID to your .env file."
         case .invalidConfiguration:
             return "Invalid Tavus configuration. Please check your environment variables."
         }
@@ -168,7 +151,6 @@ enum TavusConfigError: Error, LocalizedError {
  
  1. Create a .env file in your project root with:
     TAVUS_API_KEY=your_actual_api_key_here
-    TAVUS_REPLICA_ID=your_actual_replica_id_here
     TAVUS_BASE_URL=https://tavusapi.com/v2
  
  2. Get your Tavus API Key:
@@ -176,19 +158,11 @@ enum TavusConfigError: Error, LocalizedError {
     - Create a new API key
     - Add it to your .env file
  
- 3. Create a Replica:
-    - Go to https://platform.tavus.io/replicas
-    - Create a new replica (AI interviewer persona)
-    - Copy the Replica ID
-    - Add it to your .env file
- 
- 4. For production builds, add these keys to Info.plist:
+ 3. For production builds, add these keys to Info.plist:
     <key>TAVUS_API_KEY</key>
     <string>$(TAVUS_API_KEY)</string>
-    <key>TAVUS_REPLICA_ID</key>
-    <string>$(TAVUS_REPLICA_ID)</string>
  
- 5. Test the configuration:
+ 4. Test the configuration:
     TavusConfig.validateConfiguration()
  
  SECURITY NOTES:
