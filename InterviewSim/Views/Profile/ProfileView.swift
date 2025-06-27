@@ -28,7 +28,7 @@ struct ProfileView: View {
                             )
                             .frame(width: 100, height: 100)
                             .overlay(
-                                Text(initials)
+                                Text(authManager.userInitials)
                                     .font(.system(size: 36, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
                             )
@@ -41,12 +41,12 @@ struct ProfileView: View {
                         
                         // User Info
                         VStack(spacing: 4) {
-                            Text(authManager.userEmail ?? "User")
+                            Text(authManager.userName ?? "User")
                                 .font(.title2)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.primary)
                             
-                            Text("InterviewSim Member")
+                            Text(authManager.userEmail ?? "")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -138,18 +138,6 @@ struct ProfileView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
-        }
-    }
-    
-    private var initials: String {
-        guard let email = authManager.userEmail else { return "U" }
-        let components = email.components(separatedBy: "@")
-        let username = components.first ?? email
-        
-        if username.count >= 2 {
-            return String(username.prefix(2)).uppercased()
-        } else {
-            return String(username.prefix(1)).uppercased()
         }
     }
 }

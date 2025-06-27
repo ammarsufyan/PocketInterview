@@ -11,9 +11,11 @@ struct SignUpView: View {
     @ObservedObject var authManager: AuthenticationManager
     @Binding var showingSignUp: Bool
     
+    @State private var fullName = ""
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
+    @State private var isNameValid = true
     @State private var isEmailValid = true
     @State private var isPasswordValid = true
     @State private var isConfirmPasswordValid = true
@@ -42,10 +44,33 @@ struct SignUpView: View {
                                 .multilineTextAlignment(.center)
                         }
                     }
-                    .frame(minHeight: geometry.size.height * 0.3)
+                    .frame(minHeight: geometry.size.height * 0.25)
                     
                     // Form Section
                     VStack(spacing: 20) {
+                        // Full Name Field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Full Name")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                            
+                            TextField("Enter your full name", text: $fullName)
+                                .textFieldStyle(AuthTextFieldStyle(isValid: isNameValid))
+                                .textContentType(.name)
+                                .autocapitalization(.words)
+                                .onChange(of: fullName) { _ in
+                                    validateName()
+                                    authManager.clearError()
+                                }
+                            
+                            if !isNameValid {
+                                Text("Please enter your full name")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            }
+                        }
+                        
                         // Email Field
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Email")
@@ -197,6 +222,10 @@ struct SignUpView: View {
     
     // MARK: - Validation
     
+    private func validateName() {
+        isNameValid = fullName.isEmpty || fullName.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2
+    }
+    
     private func validateEmail() {
         isEmailValid = email.isEmpty || (email.contains("@") && email.contains("."))
     }
@@ -210,9 +239,11 @@ struct SignUpView: View {
     }
     
     private var isFormValid: Bool {
-        return !email.isEmpty && 
+        return !fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+               !email.isEmpty && 
                !password.isEmpty && 
                !confirmPassword.isEmpty &&
+               isNameValid &&
                isEmailValid && 
                isPasswordValid && 
                isConfirmPasswordValid
@@ -222,7 +253,11 @@ struct SignUpView: View {
     
     private func signUp() {
         Task {
-            await authManager.signUp(email: email, password: password)
+            await authManager.signUp(
+                email: email,
+                password: password,
+                fullName: fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
         }
     }
 }

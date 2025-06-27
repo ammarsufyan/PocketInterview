@@ -13,6 +13,7 @@ import Combine
 class AuthenticationManager: ObservableObject {
     @Published var isAuthenticated = false
     @Published var currentUser: User?
+    @Published var userProfile: UserProfile?
     @Published var isLoading = false
     @Published var errorMessage: String?
     
@@ -33,10 +34,15 @@ class AuthenticationManager: ObservableObject {
             let session = try await supabase.auth.session
             self.currentUser = session.user
             self.isAuthenticated = session.user != nil
+            
+            if let user = session.user {
+                await fetchUserProfile(userId: user.id.uuidString)
+            }
         } catch {
             print("Error checking initial auth state: \(error)")
             self.isAuthenticated = false
             self.currentUser = nil
+            self.userProfile = nil
         }
     }
     
@@ -54,8 +60,13 @@ class AuthenticationManager: ObservableObject {
             self.currentUser = session?.user
             self.isAuthenticated = true
             self.errorMessage = nil
+            
+            if let user = session?.user {
+                await fetchUserProfile(userId: user.id.uuidString)
+            }
         case .signedOut:
             self.currentUser = nil
+            self.userProfile = nil
             self.isAuthenticated = false
         case .tokenRefreshed:
             self.currentUser = session?.user
@@ -64,9 +75,62 @@ class AuthenticationManager: ObservableObject {
         }
     }
     
+    // MARK: - Profile Management
+    
+    private func fetchUserProfile(userId: String) async {
+        do {
+            let profile: UserProfile = try await supabase
+                .from("profiles")
+                .select()
+                .eq("id", value: userId)
+                .single()
+                .execute()
+                .value
+            
+            self.userProfile = profile
+        } catch {
+            print("Error fetching user profile: \(error)")
+            // If profile doesn't exist, create a default one
+            if let user = currentUser {
+                let defaultProfile = UserProfile(
+                    id: user.id.uuidString,
+                    email: user.email ?? "",
+                    fullName: extractNameFromEmail(user.email ?? ""),
+                    createdAt: Date()
+                )
+                self.userProfile = defaultProfile
+            }
+        }
+    }
+    
+    private func createUserProfile(userId: String, email: String, fullName: String) async {
+        do {
+            let profile = UserProfile(
+                id: userId,
+                email: email,
+                fullName: fullName,
+                createdAt: Date()
+            )
+            
+            try await supabase
+                .from("profiles")
+                .insert(profile)
+                .execute()
+            
+            self.userProfile = profile
+        } catch {
+            print("Error creating user profile: \(error)")
+        }
+    }
+    
+    private func extractNameFromEmail(_ email: String) -> String {
+        let username = email.components(separatedBy: "@").first ?? email
+        return username.replacingOccurrences(of: ".", with: " ").capitalized
+    }
+    
     // MARK: - Authentication Methods
     
-    func signUp(email: String, password: String) async {
+    func signUp(email: String, password: String, fullName: String) async {
         isLoading = true
         errorMessage = nil
         
@@ -80,9 +144,10 @@ class AuthenticationManager: ObservableObject {
             if response.user != nil && response.session == nil {
                 // User created but needs email confirmation
                 self.errorMessage = "Please check your email and confirm your account before signing in."
-            } else if response.session != nil {
-                // User is automatically signed in
-                self.currentUser = response.user
+            } else if let user = response.user, response.session != nil {
+                // User is automatically signed in, create profile
+                await createUserProfile(userId: user.id.uuidString, email: email, fullName: fullName)
+                self.currentUser = user
                 self.isAuthenticated = true
             }
         } catch {
@@ -104,6 +169,10 @@ class AuthenticationManager: ObservableObject {
             
             self.currentUser = response.user
             self.isAuthenticated = true
+            
+            if let user = response.user {
+                await fetchUserProfile(userId: user.id.uuidString)
+            }
         } catch {
             self.errorMessage = handleAuthError(error)
         }
@@ -117,6 +186,7 @@ class AuthenticationManager: ObservableObject {
         do {
             try await supabase.auth.signOut()
             self.currentUser = nil
+            self.userProfile = nil
             self.isAuthenticated = false
         } catch {
             self.errorMessage = handleAuthError(error)
@@ -179,5 +249,40 @@ class AuthenticationManager: ObservableObject {
     
     var userId: String? {
         return currentUser?.id.uuidString
+    }
+    
+    var userName: String? {
+        return userProfile?.fullName
+    }
+    
+    var userInitials: String {
+        guard let name = userProfile?.fullName, !name.isEmpty else {
+            return userEmail?.prefix(2).uppercased() ?? "U"
+        }
+        
+        let components = name.components(separatedBy: " ")
+        if components.count >= 2 {
+            let firstInitial = String(components[0].prefix(1))
+            let lastInitial = String(components[1].prefix(1))
+            return (firstInitial + lastInitial).uppercased()
+        } else {
+            return String(name.prefix(2)).uppercased()
+        }
+    }
+}
+
+// MARK: - UserProfile Model
+
+struct UserProfile: Codable {
+    let id: String
+    let email: String
+    let fullName: String
+    let createdAt: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case email
+        case fullName = "full_name"
+        case createdAt = "created_at"
     }
 }
