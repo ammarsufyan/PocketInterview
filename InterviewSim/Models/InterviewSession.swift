@@ -19,6 +19,7 @@ struct InterviewSession: Identifiable, Codable, Equatable {
     let sessionData: SafeAnyCodable
     let createdAt: Date
     let updatedAt: Date
+    let conversationId: String?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -31,6 +32,7 @@ struct InterviewSession: Identifiable, Codable, Equatable {
         case sessionData = "session_data"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        case conversationId = "conversation_id"
     }
     
     // MARK: - Computed Properties

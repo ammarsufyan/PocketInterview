@@ -250,6 +250,7 @@ struct TavusInterviewView: View {
         
         let actualDuration = Int(Date().timeIntervalSince(sessionStartTime) / 60)
         
+        // Create session record with conversation_id
         _ = await historyManager.createSession(
             category: sessionData.category,
             sessionName: sessionData.sessionName,
@@ -262,7 +263,8 @@ struct TavusInterviewView: View {
                 "end_reason": reason,
                 "api_end_success": apiSuccess,
                 "actual_duration_seconds": Int(Date().timeIntervalSince(sessionStartTime))
-            ]
+            ],
+            conversationId: tavusService.sessionId // Pass the conversation ID here
         )
         
         resetAllState()

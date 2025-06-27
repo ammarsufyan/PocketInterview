@@ -76,7 +76,8 @@ class InterviewHistoryManager: ObservableObject {
         score: Int? = nil,
         durationMinutes: Int,
         questionsAnswered: Int = 0,
-        sessionData: [String: Any] = [:]
+        sessionData: [String: Any] = [:],
+        conversationId: String? = nil
     ) async -> InterviewSession? {
         
         do {
@@ -91,7 +92,8 @@ class InterviewHistoryManager: ObservableObject {
                 score: score,
                 durationMinutes: durationMinutes,
                 questionsAnswered: questionsAnswered,
-                sessionData: sessionData
+                sessionData: sessionData,
+                conversationId: conversationId
             )
             
             let response: InterviewSession = try await supabase
@@ -117,14 +119,16 @@ class InterviewHistoryManager: ObservableObject {
         sessionId: UUID,
         score: Int? = nil,
         questionsAnswered: Int? = nil,
-        sessionData: [String: Any]? = nil
+        sessionData: [String: Any]? = nil,
+        conversationId: String? = nil
     ) async -> Bool {
         
         do {
             let updateData = SessionUpdateData(
                 score: score,
                 questionsAnswered: questionsAnswered,
-                sessionData: sessionData
+                sessionData: sessionData,
+                conversationId: conversationId
             )
             
             let response: InterviewSession = try await supabase
@@ -199,7 +203,8 @@ class InterviewHistoryManager: ObservableObject {
                 sessionData: [
                     "sample": true,
                     "created_by": "sample_data_generator"
-                ]
+                ],
+                conversationId: "sample_conversation_\(UUID().uuidString.prefix(8))"
             )
         }
     }
@@ -216,7 +221,8 @@ class InterviewHistoryManager: ObservableObject {
                 questionsAnswered: 12,
                 sessionData: SafeAnyCodable([:]),
                 createdAt: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!,
-                updatedAt: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!
+                updatedAt: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!,
+                conversationId: "sample_conv_123"
             ),
             InterviewSession(
                 id: UUID(),
@@ -228,7 +234,8 @@ class InterviewHistoryManager: ObservableObject {
                 questionsAnswered: 10,
                 sessionData: SafeAnyCodable([:]),
                 createdAt: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!,
-                updatedAt: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!
+                updatedAt: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!,
+                conversationId: "sample_conv_456"
             ),
             InterviewSession(
                 id: UUID(),
@@ -240,7 +247,8 @@ class InterviewHistoryManager: ObservableObject {
                 questionsAnswered: 8,
                 sessionData: SafeAnyCodable([:]),
                 createdAt: Calendar.current.date(byAdding: .day, value: -1, to: Date())!,
-                updatedAt: Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+                updatedAt: Calendar.current.date(byAdding: .day, value: -1, to: Date())!,
+                conversationId: "sample_conv_789"
             )
         ]
     }
@@ -248,7 +256,7 @@ class InterviewHistoryManager: ObservableObject {
 
 // MARK: - Helper Structs
 
-// Simplified InterviewSessionInsert struct
+// Updated InterviewSessionInsert struct with conversationId
 struct InterviewSessionInsert: Codable {
     let userId: UUID
     let category: String
@@ -257,6 +265,7 @@ struct InterviewSessionInsert: Codable {
     let durationMinutes: Int
     let questionsAnswered: Int
     let sessionData: String // Store as JSON string
+    let conversationId: String?
     
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -266,16 +275,18 @@ struct InterviewSessionInsert: Codable {
         case durationMinutes = "duration_minutes"
         case questionsAnswered = "questions_answered"
         case sessionData = "session_data"
+        case conversationId = "conversation_id"
     }
     
-    // Initialize with proper JSON encoding
-    init(userId: UUID, category: String, sessionName: String, score: Int?, durationMinutes: Int, questionsAnswered: Int, sessionData: [String: Any]) {
+    // Initialize with proper JSON encoding and conversationId
+    init(userId: UUID, category: String, sessionName: String, score: Int?, durationMinutes: Int, questionsAnswered: Int, sessionData: [String: Any], conversationId: String? = nil) {
         self.userId = userId
         self.category = category
         self.sessionName = sessionName
         self.score = score
         self.durationMinutes = durationMinutes
         self.questionsAnswered = questionsAnswered
+        self.conversationId = conversationId
         
         // Convert [String: Any] to JSON string
         if let jsonData = try? JSONSerialization.data(withJSONObject: sessionData),
@@ -291,16 +302,19 @@ struct SessionUpdateData: Codable {
     let score: Int?
     let questionsAnswered: Int?
     let sessionData: String?
+    let conversationId: String?
     
     enum CodingKeys: String, CodingKey {
         case score
         case questionsAnswered = "questions_answered"
         case sessionData = "session_data"
+        case conversationId = "conversation_id"
     }
     
-    init(score: Int?, questionsAnswered: Int?, sessionData: [String: Any]?) {
+    init(score: Int?, questionsAnswered: Int?, sessionData: [String: Any]?, conversationId: String? = nil) {
         self.score = score
         self.questionsAnswered = questionsAnswered
+        self.conversationId = conversationId
         
         // Convert sessionData to JSON string if provided
         if let sessionData = sessionData {
