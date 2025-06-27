@@ -9,10 +9,13 @@ import SwiftUI
 
 struct HistoryView: View {
     @StateObject private var historyManager = InterviewHistoryManager()
+    @StateObject private var transcriptManager = TranscriptManager()
     @State private var selectedFilter = "All"
     @State private var searchText = ""
     @State private var showingDeleteAlert = false
     @State private var sessionToDelete: InterviewSession?
+    @State private var selectedTranscript: InterviewTranscript?
+    @State private var showingTranscriptDetail = false
     
     let filters = ["All", "Technical", "Behavioral"]
     
@@ -89,9 +92,14 @@ struct HistoryView: View {
                 } else {
                     SessionsList(
                         sessions: filteredSessions,
+                        transcriptManager: transcriptManager,
                         onDelete: { session in
                             sessionToDelete = session
                             showingDeleteAlert = true
+                        },
+                        onViewTranscript: { transcript in
+                            selectedTranscript = transcript
+                            showingTranscriptDetail = true
                         }
                     )
                 }
@@ -100,6 +108,7 @@ struct HistoryView: View {
             .navigationBarTitleDisplayMode(.large)
             .refreshable {
                 await historyManager.refreshSessions()
+                await transcriptManager.refreshTranscripts()
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -107,6 +116,7 @@ struct HistoryView: View {
                         Button("Refresh", systemImage: "arrow.clockwise") {
                             Task {
                                 await historyManager.refreshSessions()
+                                await transcriptManager.refreshTranscripts()
                             }
                         }
                         
@@ -143,9 +153,16 @@ struct HistoryView: View {
                     Text("Are you sure you want to delete '\(session.sessionName)'? This action cannot be undone.")
                 }
             }
+            .sheet(isPresented: $showingTranscriptDetail) {
+                if let transcript = selectedTranscript {
+                    let session = historyManager.sessions.first { $0.conversationId == transcript.conversationId }
+                    TranscriptDetailView(transcript: transcript, session: session)
+                }
+            }
             .onAppear {
                 Task {
                     await historyManager.loadSessions()
+                    await transcriptManager.loadTranscripts()
                 }
             }
         }
@@ -169,7 +186,9 @@ struct LoadingView: View {
 
 struct SessionsList: View {
     let sessions: [InterviewSession]
+    @ObservedObject var transcriptManager: TranscriptManager
     let onDelete: (InterviewSession) -> Void
+    let onViewTranscript: (InterviewTranscript) -> Void
     
     var body: some View {
         ScrollView {
@@ -177,8 +196,23 @@ struct SessionsList: View {
                 ForEach(sessions) { session in
                     HistorySessionCard(
                         session: session,
+                        hasTranscript: transcriptManager.hasTranscript(for: session.conversationId),
                         onDelete: {
                             onDelete(session)
+                        },
+                        onViewTranscript: {
+                            if let transcript = transcriptManager.getLocalTranscript(for: session.conversationId ?? "") {
+                                onViewTranscript(transcript)
+                            } else {
+                                // Load transcript from server
+                                Task {
+                                    if let transcript = await transcriptManager.getTranscriptForSession(session) {
+                                        await MainActor.run {
+                                            onViewTranscript(transcript)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     )
                 }
@@ -276,7 +310,9 @@ struct StatItem: View {
 
 struct HistorySessionCard: View {
     let session: InterviewSession
+    let hasTranscript: Bool
     let onDelete: () -> Void
+    let onViewTranscript: () -> Void
     
     var body: some View {
         HStack(spacing: 16) {
@@ -339,6 +375,14 @@ struct HistorySessionCard: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
+                    if hasTranscript {
+                        Button(action: onViewTranscript) {
+                            Label("Transcript", systemImage: "text.bubble")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    
                     Spacer()
                     
                     VStack(alignment: .trailing, spacing: 1) {
@@ -359,6 +403,12 @@ struct HistorySessionCard: View {
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
         .contextMenu {
+            if hasTranscript {
+                Button("View Transcript", systemImage: "text.bubble") {
+                    onViewTranscript()
+                }
+            }
+            
             Button("Delete Session", systemImage: "trash", role: .destructive) {
                 onDelete()
             }
