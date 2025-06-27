@@ -13,6 +13,7 @@ struct TavusInterviewView: View {
     let sessionName: String
     let duration: Int
     let cvContext: String?
+    let onBackToSetup: () -> Void // NEW: Back to setup callback
     
     @StateObject private var tavusService = TavusService()
     @EnvironmentObject private var historyManager: InterviewHistoryManager
@@ -24,8 +25,6 @@ struct TavusInterviewView: View {
     @State private var sessionEndReason: String = "manual"
     @State private var hasSessionStarted = false
     @State private var isEndingSession = false
-    
-    // FIXED: Add state to prevent multiple alerts
     @State private var isShowingAlert = false
     
     private var categoryColor: Color {
@@ -106,10 +105,10 @@ struct TavusInterviewView: View {
             .navigationBarBackButtonHidden()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    // FIXED: Show End Interview when webview is loaded, but prevent multiple alerts
+                    // ENHANCED: Different buttons based on state
                     if tavusService.conversationUrl != nil {
+                        // Show End Interview when webview is loaded
                         Button("End Interview") {
-                            // FIXED: Prevent multiple alerts
                             if !isShowingAlert && !isEndingSession {
                                 sessionEndReason = "manual"
                                 isShowingAlert = true
@@ -119,8 +118,9 @@ struct TavusInterviewView: View {
                         .foregroundColor(.red)
                         .disabled(isEndingSession || isShowingAlert)
                     } else {
-                        Button("Cancel") {
-                            dismiss()
+                        // ENHANCED: Show Back to Setup instead of Cancel
+                        Button("Back to Setup") {
+                            onBackToSetup()
                         }
                         .foregroundColor(categoryColor)
                     }
@@ -143,7 +143,6 @@ struct TavusInterviewView: View {
             }
             .alert("End Interview", isPresented: $showingEndConfirmation) {
                 Button("Continue", role: .cancel) {
-                    // FIXED: Reset alert state when cancelled
                     isShowingAlert = false
                 }
                 Button("End Interview", role: .destructive) {
@@ -157,13 +156,21 @@ struct TavusInterviewView: View {
             }
         }
         .onAppear {
+            // ENHANCED: Debug session data on appear
+            print("🔧 DEBUG: TavusInterviewView appeared")
+            print("  - Category: '\(category)'")
+            print("  - Session Name: '\(sessionName)'")
+            print("  - Duration: \(duration)")
+            print("  - CV Context: \(cvContext != nil ? "Provided" : "None")")
+            
             if !sessionName.isEmpty {
                 Task {
                     await startTavusSession()
                 }
+            } else {
+                print("❌ Session name is empty, not starting session")
             }
         }
-        // FIXED: Remove app lifecycle listeners that might cause issues
     }
     
     // MARK: - Computed Properties
@@ -185,7 +192,6 @@ struct TavusInterviewView: View {
         
         print("🎬 Session start confirmed")
         
-        // FIXED: More conservative session start
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             if !self.hasSessionStarted {
                 self.sessionStartTime = Date()
@@ -239,7 +245,6 @@ struct TavusInterviewView: View {
             return
         }
         
-        // FIXED: Prevent multiple end calls
         isEndingSession = true
         
         print("🔚 Ending interview...")
@@ -614,7 +619,10 @@ struct TipsCard: View {
         category: "Technical",
         sessionName: "iOS Development Practice",
         duration: 30,
-        cvContext: "Senior iOS Developer with 5+ years experience"
+        cvContext: "Senior iOS Developer with 5+ years experience",
+        onBackToSetup: {
+            print("Back to setup")
+        }
     )
     .environmentObject(InterviewHistoryManager())
 }

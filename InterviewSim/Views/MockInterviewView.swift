@@ -195,7 +195,8 @@ struct MockInterviewView: View {
             .sheet(isPresented: $showingExtractionResults) {
                 CVExtractionResultView(cvExtractor: cvExtractor, category: selectedCategory)
             }
-            .fullScreenCover(isPresented: $showingTavusInterview) {
+            // CHANGED: From fullScreenCover to sheet for modal behavior
+            .sheet(isPresented: $showingTavusInterview) {
                 // FIXED: Use sessionData instead of individual state variables
                 if let sessionData = sessionData {
                     let _ = print("🔧 DEBUG: Opening TavusInterviewView with SessionData")
@@ -208,7 +209,14 @@ struct MockInterviewView: View {
                         category: sessionData.category,
                         sessionName: sessionData.sessionName,
                         duration: sessionData.duration,
-                        cvContext: sessionData.cvContext
+                        cvContext: sessionData.cvContext,
+                        onBackToSetup: {
+                            // ENHANCED: Back to setup functionality
+                            showingTavusInterview = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                showingSessionSetup = true
+                            }
+                        }
                     )
                     .environmentObject(InterviewHistoryManager())
                 } else {
