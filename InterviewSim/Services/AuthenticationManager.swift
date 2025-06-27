@@ -243,7 +243,7 @@ class AuthenticationManager: ObservableObject {
         
         do {
             // Use the correct method for updating user metadata in Supabase Swift SDK
-            let response = try await supabase.auth.update(
+            let updatedUser = try await supabase.auth.update(
                 user: UserAttributes(
                     data: [
                         "display_name": .string(displayName)
@@ -251,8 +251,8 @@ class AuthenticationManager: ObservableObject {
                 )
             )
             
-            // Update the current user with the response
-            self.currentUser = response.user
+            // Update the current user with the updated user directly
+            self.currentUser = updatedUser
             
             print("Display name updated successfully to: \(displayName)")
         } catch {
