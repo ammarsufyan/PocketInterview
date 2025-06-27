@@ -22,6 +22,7 @@ struct TavusInterviewView: View {
     @State private var sessionStartTime = Date()
     @State private var isSessionActive = false
     @State private var showingApiKeyTest = false
+    @State private var sessionEndReason: String = "manual"
     
     private var categoryColor: Color {
         category == "Technical" ? .blue : .purple
@@ -36,11 +37,10 @@ struct TavusInterviewView: View {
                     TavusWebView(
                         url: conversationUrl,
                         onSessionStart: {
-                            sessionStartTime = Date()
-                            isSessionActive = true
+                            handleSessionStart()
                         },
                         onSessionEnd: {
-                            endInterview()
+                            handleSessionEnd(reason: "ios_cancel")
                         }
                     )
                 } else if let errorMessage = tavusService.errorMessage {
@@ -85,6 +85,7 @@ struct TavusInterviewView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if isSessionActive {
                         Button("End Interview") {
+                            sessionEndReason = "manual"
                             showingEndConfirmation = true
                         }
                         .foregroundColor(.red)
@@ -114,7 +115,7 @@ struct TavusInterviewView: View {
             .alert("End Interview", isPresented: $showingEndConfirmation) {
                 Button("Continue", role: .cancel) { }
                 Button("End Interview", role: .destructive) {
-                    endInterview()
+                    endInterview(reason: sessionEndReason)
                 }
             } message: {
                 Text("Are you sure you want to end the interview? Your progress will be saved.")
@@ -133,6 +134,21 @@ struct TavusInterviewView: View {
                 }
             }
         }
+        // ENHANCED: Handle app lifecycle changes
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+            // App going to background during active session
+            if isSessionActive {
+                print("📱 App going to background during active session")
+                // Don't end immediately, wait for app to return
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            // App returning from background
+            if isSessionActive {
+                print("📱 App returned from background")
+                // Session might have ended while in background
+            }
+        }
     }
     
     // MARK: - Computed Properties
@@ -144,7 +160,22 @@ struct TavusInterviewView: View {
         return String(format: "%02d:%02d", minutes, seconds)
     }
     
-    // MARK: - Methods
+    // MARK: - Session Management Methods
+    
+    private func handleSessionStart() {
+        sessionStartTime = Date()
+        isSessionActive = true
+        print("🎬 Session started at: \(sessionStartTime)")
+    }
+    
+    private func handleSessionEnd(reason: String) {
+        print("🏁 Session ended - Reason: \(reason)")
+        
+        // Automatically end interview when session ends
+        DispatchQueue.main.async {
+            self.endInterview(reason: reason)
+        }
+    }
     
     private func startTavusSession() async {
         let success = await tavusService.createConversationSession(
@@ -166,8 +197,13 @@ struct TavusInterviewView: View {
         showingApiKeyTest = true
     }
     
-    private func endInterview() {
+    private func endInterview(reason: String = "manual") {
         let actualDuration = Int(Date().timeIntervalSince(sessionStartTime) / 60)
+        
+        print("📊 Interview ended:")
+        print("  - Reason: \(reason)")
+        print("  - Duration: \(actualDuration) minutes")
+        print("  - Session Name: \(sessionName)")
         
         // Save session to history
         Task {
@@ -175,21 +211,27 @@ struct TavusInterviewView: View {
                 category: category,
                 sessionName: sessionName,
                 score: nil, // Score will be determined later
-                durationMinutes: actualDuration,
+                durationMinutes: max(actualDuration, 1), // Minimum 1 minute
                 questionsAnswered: 0, // Will be updated based on Tavus data
                 sessionData: [
                     "tavus_session_id": tavusService.sessionId ?? "",
                     "conversation_url": tavusService.conversationUrl ?? "",
-                    "cv_context_provided": cvContext != nil
+                    "cv_context_provided": cvContext != nil,
+                    "end_reason": reason,
+                    "actual_duration_seconds": Int(Date().timeIntervalSince(sessionStartTime))
                 ]
             )
         }
         
+        // Reset session state
+        isSessionActive = false
+        
+        // Dismiss the view
         dismiss()
     }
 }
 
-// MARK: - Supporting Views
+// MARK: - Supporting Views (No changes needed, keeping existing implementations)
 
 struct TavusLoadingView: View {
     let category: String
@@ -278,7 +320,6 @@ struct TavusErrorView: View {
                     .cornerRadius(12)
                 }
                 
-                // ADDED: Test API Key Button for debugging
                 Button(action: onTestApiKey) {
                     HStack(spacing: 12) {
                         Image(systemName: "key.fill")
