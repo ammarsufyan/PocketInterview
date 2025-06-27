@@ -134,3 +134,56 @@ Once the database is set up:
 1. The iOS app will automatically connect to this table
 2. Users can create interview sessions that will be stored in Supabase
 3. History will be loaded from the database when users open the History tab
+
+## Alternative Methods to Run SQL
+
+### Method 2: Supabase CLI (Advanced)
+```bash
+# Install Supabase CLI
+npm install -g supabase
+
+# Login to Supabase
+supabase login
+
+# Link to your project
+supabase link --project-ref YOUR_PROJECT_REF
+
+# Run SQL file
+supabase db reset --db-url YOUR_DATABASE_URL
+```
+
+### Method 3: Direct Database Connection
+You can also connect directly using any PostgreSQL client:
+- **Host**: db.YOUR_PROJECT_REF.supabase.co
+- **Database**: postgres
+- **Port**: 5432
+- **User**: postgres
+- **Password**: Your database password
+
+### Method 4: API (Programmatic)
+```javascript
+// Using Supabase JavaScript client
+const { data, error } = await supabase.rpc('your_function_name')
+```
+
+## Quick Setup Steps:
+
+1. **Copy the SQL** from the code block above
+2. **Go to Supabase Dashboard** → Your Project → SQL Editor
+3. **Paste and Run** the SQL
+4. **Verify** the table was created in the Table Editor
+5. **Test** by running the verification queries
+
+The SQL will create:
+- ✅ `interview_sessions` table with proper structure
+- ✅ Row Level Security (RLS) policies
+- ✅ Indexes for performance
+- ✅ Triggers for automatic `updated_at` timestamps
+- ✅ Proper foreign key relationships with `auth.users`
+
+Once this is done, your iOS app will be able to:
+- 📱 Create new interview sessions
+- 📊 Load user's interview history
+- ✏️ Update session scores and data
+- 🗑️ Delete sessions
+- 🔒 Ensure data security with RLS
