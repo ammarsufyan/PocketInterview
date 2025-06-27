@@ -16,9 +16,14 @@ class SupabaseConfig {
     private init() {
         let envConfig = EnvironmentConfig.shared
         
-        // Try to get URL and key from environment first
-        let supabaseURL = envConfig.supabaseURL ?? "https://icwmrtklyfnwrbpqhksm.supabase.co"
-        let apiKey = envConfig.supabaseAnonKey ?? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imljd21ydGtseWZud3JicHFoa3NtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4NTU5NjYsImV4cCI6MjA2NjQzMTk2Nn0.howPW3vqhNEWpX3o8eaYBhoaHDuvDM93WOSuzkcrPzI"
+        // Get URL and key from environment variables
+        guard let supabaseURL = envConfig.supabaseURL, !supabaseURL.isEmpty else {
+            fatalError("SUPABASE_URL not found in environment variables. Please add it to your .env file.")
+        }
+        
+        guard let apiKey = envConfig.supabaseAnonKey, !apiKey.isEmpty else {
+            fatalError("SUPABASE_ANON_KEY not found in environment variables. Please add it to your .env file.")
+        }
         
         guard let url = URL(string: supabaseURL) else {
             fatalError("Invalid Supabase URL: \(supabaseURL)")
@@ -30,5 +35,21 @@ class SupabaseConfig {
         )
         
         print("✅ Supabase client initialized with URL: \(supabaseURL)")
+        print("🔑 Using API key from environment variables")
+    }
+    
+    // MARK: - Configuration Validation
+    
+    static func validateConfiguration() -> Bool {
+        return EnvironmentConfig.shared.validateSupabaseConfiguration()
+    }
+    
+    // MARK: - Debug Information
+    
+    func printConfiguration() {
+        let envConfig = EnvironmentConfig.shared
+        print("🔧 Supabase Configuration:")
+        print("  URL: \(envConfig.supabaseURL ?? "Not set")")
+        print("  API Key: \(envConfig.supabaseAnonKey?.prefix(8) ?? "Not set")...")
     }
 }

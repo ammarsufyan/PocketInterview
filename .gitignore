@@ -56,8 +56,8 @@ playground.xcworkspace
 #
 # Pods/
 #
-# Add this line if you want to avoid checking in source code from the CocoaPods dependencies.
-# Pods/
+# Add this line if you want to avoid checking in source code from the Xcode workspace
+# *.xcworkspace
 
 # Carthage
 #
@@ -74,8 +74,8 @@ Dependencies/
 #
 # It is recommended to not store the screenshots in the git repo.
 # Instead, use fastlane to re-generate the screenshots whenever they are needed.
-# For more information about the fastlane concept, see https://docs.fastlane.tools
-# and https://docs.fastlane.tools/best-practices/source-control/#source-control
+# For more information about the tools used to generate the screenshots, see
+# https://docs.fastlane.tools/actions/snapshot/
 
 fastlane/report.xml
 fastlane/Preview.html
@@ -95,11 +95,10 @@ iOSInjectionProject/
 .env.development
 .env.production
 
-# API Keys and Secrets
-secrets.plist
-config.plist
+# IDE
+.vscode/
+.idea/
 
-# Temporary files
-*.tmp
-*.temp
+# OS
 .DS_Store
+Thumbs.db
