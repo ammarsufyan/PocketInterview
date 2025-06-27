@@ -32,7 +32,7 @@ class AuthenticationManager: ObservableObject {
         do {
             let session = try await supabase.auth.session
             self.currentUser = session.user
-            self.isAuthenticated = session.user != nil
+            self.isAuthenticated = true
         } catch {
             print("Error checking initial auth state: \(error)")
             self.isAuthenticated = false
@@ -81,13 +81,13 @@ class AuthenticationManager: ObservableObject {
                 ]
             )
             
-            print("Sign up response - User: \(response.user?.id.uuidString ?? "nil"), Session: \(response.session != nil)")
+            print("Sign up response - User: \(response.user.id.uuidString), Session: \(response.session != nil)")
             
             // Check if user needs email confirmation
-            if response.user != nil && response.session == nil {
+            if response.session == nil {
                 // User created but needs email confirmation
                 self.errorMessage = "Please check your email and confirm your account before signing in."
-            } else if response.user != nil && response.session != nil {
+            } else {
                 // User is automatically signed in
                 print("User signed up successfully with display name: \(fullName)")
                 self.currentUser = response.user
@@ -242,16 +242,17 @@ class AuthenticationManager: ObservableObject {
         errorMessage = nil
         
         do {
-            let userAttributes = UserAttributes(
-                data: [
-                    "display_name": .string(displayName)
-                ]
+            // Use the correct method for updating user metadata
+            let response = try await supabase.auth.updateUser(
+                attributes: UserAttributes(
+                    data: [
+                        "display_name": .string(displayName)
+                    ]
+                )
             )
             
-            let updatedUser = try await supabase.auth.updateUser(attributes: userAttributes)
-            
             // Update the current user with the response
-            self.currentUser = updatedUser.user
+            self.currentUser = response.user
             
             print("Display name updated successfully to: \(displayName)")
         } catch {
