@@ -74,10 +74,12 @@ class InterviewHistoryManager: ObservableObject {
         category: String,
         sessionName: String,
         score: Int? = nil,
-        durationMinutes: Int,
+        expectedDurationMinutes: Int,
+        actualDurationMinutes: Int? = nil,
         questionsAnswered: Int = 0,
-        sessionData: [String: Any] = [:],
-        conversationId: String? = nil
+        conversationId: String? = nil,
+        sessionStatus: String = "created",
+        endReason: String? = nil
     ) async -> InterviewSession? {
         
         do {
@@ -90,10 +92,12 @@ class InterviewHistoryManager: ObservableObject {
                 category: category,
                 sessionName: sessionName,
                 score: score,
-                durationMinutes: durationMinutes,
+                expectedDurationMinutes: expectedDurationMinutes,
+                actualDurationMinutes: actualDurationMinutes,
                 questionsAnswered: questionsAnswered,
-                sessionData: sessionData,
-                conversationId: conversationId
+                conversationId: conversationId,
+                sessionStatus: sessionStatus,
+                endReason: endReason
             )
             
             let response: InterviewSession = try await supabase
@@ -118,17 +122,21 @@ class InterviewHistoryManager: ObservableObject {
     func updateSession(
         sessionId: UUID,
         score: Int? = nil,
+        actualDurationMinutes: Int? = nil,
         questionsAnswered: Int? = nil,
-        sessionData: [String: Any]? = nil,
-        conversationId: String? = nil
+        sessionStatus: String? = nil,
+        endReason: String? = nil,
+        completedTimestamp: Date? = nil
     ) async -> Bool {
         
         do {
             let updateData = SessionUpdateData(
                 score: score,
+                actualDurationMinutes: actualDurationMinutes,
                 questionsAnswered: questionsAnswered,
-                sessionData: sessionData,
-                conversationId: conversationId
+                sessionStatus: sessionStatus,
+                endReason: endReason,
+                completedTimestamp: completedTimestamp
             )
             
             let response: InterviewSession = try await supabase
@@ -198,13 +206,12 @@ class InterviewHistoryManager: ObservableObject {
                 category: category,
                 sessionName: name,
                 score: score,
-                durationMinutes: duration,
+                expectedDurationMinutes: duration,
+                actualDurationMinutes: duration + Int.random(in: -5...5),
                 questionsAnswered: questions,
-                sessionData: [
-                    "sample": true,
-                    "created_by": "sample_data_generator"
-                ],
-                conversationId: "sample_conversation_\(UUID().uuidString.prefix(8))"
+                conversationId: "sample_conversation_\(UUID().uuidString.prefix(8))",
+                sessionStatus: "completed",
+                endReason: "manual"
             )
         }
     }
@@ -217,12 +224,15 @@ class InterviewHistoryManager: ObservableObject {
                 category: "Technical",
                 sessionName: "iOS Development Practice",
                 score: 78,
-                durationMinutes: 45,
+                expectedDurationMinutes: 45,
+                actualDurationMinutes: 42,
                 questionsAnswered: 12,
-                sessionData: SafeAnyCodable([:]),
                 createdAt: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!,
                 updatedAt: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!,
-                conversationId: "sample_conv_123"
+                conversationId: "sample_conv_123",
+                completedTimestamp: Calendar.current.date(byAdding: .minute, value: -28, to: Date())!,
+                sessionStatus: "completed",
+                endReason: "manual"
             ),
             InterviewSession(
                 id: UUID(),
@@ -230,12 +240,15 @@ class InterviewHistoryManager: ObservableObject {
                 category: "Technical",
                 sessionName: "Data Structures Deep Dive",
                 score: 85,
-                durationMinutes: 35,
+                expectedDurationMinutes: 35,
+                actualDurationMinutes: 38,
                 questionsAnswered: 10,
-                sessionData: SafeAnyCodable([:]),
                 createdAt: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!,
                 updatedAt: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!,
-                conversationId: "sample_conv_456"
+                conversationId: "sample_conv_456",
+                completedTimestamp: Calendar.current.date(byAdding: .hour, value: -1, to: Date())!,
+                sessionStatus: "completed",
+                endReason: "timeout"
             ),
             InterviewSession(
                 id: UUID(),
@@ -243,12 +256,15 @@ class InterviewHistoryManager: ObservableObject {
                 category: "Behavioral",
                 sessionName: "Leadership Experience",
                 score: 92,
-                durationMinutes: 30,
+                expectedDurationMinutes: 30,
+                actualDurationMinutes: 32,
                 questionsAnswered: 8,
-                sessionData: SafeAnyCodable([:]),
                 createdAt: Calendar.current.date(byAdding: .day, value: -1, to: Date())!,
                 updatedAt: Calendar.current.date(byAdding: .day, value: -1, to: Date())!,
-                conversationId: "sample_conv_789"
+                conversationId: "sample_conv_789",
+                completedTimestamp: Calendar.current.date(byAdding: .day, value: -1, to: Date())!,
+                sessionStatus: "completed",
+                endReason: "manual"
             )
         ]
     }
@@ -256,121 +272,64 @@ class InterviewHistoryManager: ObservableObject {
 
 // MARK: - Helper Structs
 
-// Updated InterviewSessionInsert struct with conversationId
+// Updated InterviewSessionInsert struct
 struct InterviewSessionInsert: Codable {
     let userId: UUID
     let category: String
     let sessionName: String
     let score: Int?
-    let durationMinutes: Int
+    let expectedDurationMinutes: Int
+    let actualDurationMinutes: Int?
     let questionsAnswered: Int
-    let sessionData: String // Store as JSON string
     let conversationId: String?
+    let sessionStatus: String
+    let endReason: String?
     
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
         case category
         case sessionName = "session_name"
         case score
-        case durationMinutes = "duration_minutes"
+        case expectedDurationMinutes = "expected_duration_minutes"
+        case actualDurationMinutes = "actual_duration_minutes"
         case questionsAnswered = "questions_answered"
-        case sessionData = "session_data"
         case conversationId = "conversation_id"
-    }
-    
-    // Initialize with proper JSON encoding and conversationId
-    init(userId: UUID, category: String, sessionName: String, score: Int?, durationMinutes: Int, questionsAnswered: Int, sessionData: [String: Any], conversationId: String? = nil) {
-        self.userId = userId
-        self.category = category
-        self.sessionName = sessionName
-        self.score = score
-        self.durationMinutes = durationMinutes
-        self.questionsAnswered = questionsAnswered
-        self.conversationId = conversationId
-        
-        // Convert [String: Any] to JSON string
-        if let jsonData = try? JSONSerialization.data(withJSONObject: sessionData),
-           let jsonString = String(data: jsonData, encoding: .utf8) {
-            self.sessionData = jsonString
-        } else {
-            self.sessionData = "{}"
-        }
+        case sessionStatus = "session_status"
+        case endReason = "end_reason"
     }
 }
 
 struct SessionUpdateData: Codable {
     let score: Int?
+    let actualDurationMinutes: Int?
     let questionsAnswered: Int?
-    let sessionData: String?
-    let conversationId: String?
+    let sessionStatus: String?
+    let endReason: String?
+    let completedTimestamp: String?
     
     enum CodingKeys: String, CodingKey {
         case score
+        case actualDurationMinutes = "actual_duration_minutes"
         case questionsAnswered = "questions_answered"
-        case sessionData = "session_data"
-        case conversationId = "conversation_id"
+        case sessionStatus = "session_status"
+        case endReason = "end_reason"
+        case completedTimestamp = "completed_timestamp"
     }
     
-    init(score: Int?, questionsAnswered: Int?, sessionData: [String: Any]?, conversationId: String? = nil) {
+    init(score: Int?, actualDurationMinutes: Int?, questionsAnswered: Int?, sessionStatus: String?, endReason: String?, completedTimestamp: Date?) {
         self.score = score
+        self.actualDurationMinutes = actualDurationMinutes
         self.questionsAnswered = questionsAnswered
-        self.conversationId = conversationId
+        self.sessionStatus = sessionStatus
+        self.endReason = endReason
         
-        // Convert sessionData to JSON string if provided
-        if let sessionData = sessionData {
-            if let jsonData = try? JSONSerialization.data(withJSONObject: sessionData),
-               let jsonString = String(data: jsonData, encoding: .utf8) {
-                self.sessionData = jsonString
-            } else {
-                self.sessionData = nil
-            }
+        // Convert Date to ISO string if provided
+        if let timestamp = completedTimestamp {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            self.completedTimestamp = formatter.string(from: timestamp)
         } else {
-            self.sessionData = nil
+            self.completedTimestamp = nil
         }
-    }
-}
-
-// Completely rewritten SafeAnyCodable to avoid encoding issues
-struct SafeAnyCodable: Codable {
-    private let jsonString: String
-    
-    init(_ value: Any) {
-        if let data = try? JSONSerialization.data(withJSONObject: value),
-           let string = String(data: data, encoding: .utf8) {
-            self.jsonString = string
-        } else {
-            self.jsonString = "{}"
-        }
-    }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        
-        if let string = try? container.decode(String.self) {
-            self.jsonString = string
-        } else if let dict = try? container.decode([String: String].self) {
-            if let data = try? JSONSerialization.data(withJSONObject: dict),
-               let string = String(data: data, encoding: .utf8) {
-                self.jsonString = string
-            } else {
-                self.jsonString = "{}"
-            }
-        } else {
-            self.jsonString = "{}"
-        }
-    }
-    
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(jsonString)
-    }
-    
-    // Helper to get the original value back
-    var value: Any {
-        guard let data = jsonString.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data) else {
-            return [:]
-        }
-        return object
     }
 }

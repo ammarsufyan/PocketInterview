@@ -72,16 +72,12 @@ class TavusService: ObservableObject {
                 category: category,
                 sessionName: trimmedSessionName,
                 score: nil, // Will be updated later
-                durationMinutes: duration, // Planned duration
+                expectedDurationMinutes: duration, // Planned duration
+                actualDurationMinutes: nil, // Will be set when completed
                 questionsAnswered: 0, // Will be updated later
-                sessionData: [
-                    "tavus_conversation_url": response.conversationUrl,
-                    "planned_duration_minutes": duration,
-                    "cv_context_provided": cvContext != nil,
-                    "session_status": "created",
-                    "created_timestamp": Date().timeIntervalSince1970
-                ],
-                conversationId: response.sessionId
+                conversationId: response.sessionId,
+                sessionStatus: "created",
+                endReason: nil
             )
             
             // Store the created session ID for later updates
@@ -147,15 +143,11 @@ class TavusService: ObservableObject {
         let success = await historyManager.updateSession(
             sessionId: sessionId,
             score: score,
+            actualDurationMinutes: actualDurationMinutes,
             questionsAnswered: questionsAnswered,
-            sessionData: [
-                "session_status": "completed",
-                "end_reason": endReason,
-                "actual_duration_minutes": actualDurationMinutes,
-                "completed_timestamp": Date().timeIntervalSince1970,
-                "tavus_session_id": self.sessionId ?? "",
-                "conversation_url": self.conversationUrl ?? ""
-            ]
+            sessionStatus: "completed",
+            endReason: endReason,
+            completedTimestamp: Date()
         )
         
         if success {

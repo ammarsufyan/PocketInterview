@@ -14,12 +14,15 @@ struct InterviewSession: Identifiable, Codable, Equatable {
     let category: String
     let sessionName: String
     let score: Int?
-    let durationMinutes: Int
+    let expectedDurationMinutes: Int
+    let actualDurationMinutes: Int?
     let questionsAnswered: Int
-    let sessionData: SafeAnyCodable
     let createdAt: Date
     let updatedAt: Date
     let conversationId: String?
+    let completedTimestamp: Date?
+    let sessionStatus: String
+    let endReason: String?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -27,22 +30,33 @@ struct InterviewSession: Identifiable, Codable, Equatable {
         case category
         case sessionName = "session_name"
         case score
-        case durationMinutes = "duration_minutes"
+        case expectedDurationMinutes = "expected_duration_minutes"
+        case actualDurationMinutes = "actual_duration_minutes"
         case questionsAnswered = "questions_answered"
-        case sessionData = "session_data"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case conversationId = "conversation_id"
+        case completedTimestamp = "completed_timestamp"
+        case sessionStatus = "session_status"
+        case endReason = "end_reason"
     }
     
     // MARK: - Computed Properties
     
     var duration: Int {
-        return durationMinutes
+        return actualDurationMinutes ?? expectedDurationMinutes
     }
     
     var date: Date {
-        return createdAt
+        return completedTimestamp ?? createdAt
+    }
+    
+    var isCompleted: Bool {
+        return sessionStatus == "completed"
+    }
+    
+    var isActive: Bool {
+        return sessionStatus == "active"
     }
     
     // MARK: - Equatable
@@ -79,28 +93,79 @@ extension InterviewSession {
         }
     }
     
+    var statusColor: Color {
+        switch sessionStatus {
+        case "completed":
+            return .green
+        case "active":
+            return .blue
+        case "created":
+            return .orange
+        case "cancelled":
+            return .red
+        case "error":
+            return .red
+        default:
+            return .gray
+        }
+    }
+    
     var formattedDate: String {
+        let targetDate = completedTimestamp ?? createdAt
         let calendar = Calendar.current
         
-        if calendar.isDateInToday(createdAt) {
+        if calendar.isDateInToday(targetDate) {
             return "Today"
-        } else if calendar.isDateInYesterday(createdAt) {
+        } else if calendar.isDateInYesterday(targetDate) {
             return "Yesterday"
         } else {
             let formatter = DateFormatter()
             formatter.dateFormat = "MMM d"
-            return formatter.string(from: createdAt)
+            return formatter.string(from: targetDate)
         }
     }
     
     var formattedTime: String {
+        let targetDate = completedTimestamp ?? createdAt
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
-        return formatter.string(from: createdAt)
+        return formatter.string(from: targetDate)
     }
     
     var scoreText: String {
         guard let score = score else { return "N/A" }
         return "\(score)%"
+    }
+    
+    var statusText: String {
+        switch sessionStatus {
+        case "created":
+            return "Created"
+        case "active":
+            return "In Progress"
+        case "completed":
+            return "Completed"
+        case "cancelled":
+            return "Cancelled"
+        case "error":
+            return "Error"
+        default:
+            return sessionStatus.capitalized
+        }
+    }
+    
+    var durationText: String {
+        let minutes = duration
+        if minutes >= 60 {
+            let hours = minutes / 60
+            let remainingMinutes = minutes % 60
+            if remainingMinutes == 0 {
+                return "\(hours)h"
+            } else {
+                return "\(hours)h \(remainingMinutes)m"
+            }
+        } else {
+            return "\(minutes)m"
+        }
     }
 }

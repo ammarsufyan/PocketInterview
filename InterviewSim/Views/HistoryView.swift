@@ -228,7 +228,7 @@ struct HistoryStatsView: View {
     }
     
     var totalDuration: Int {
-        sessions.reduce(0) { $0 + $1.durationMinutes }
+        sessions.reduce(0) { $0 + $1.duration }
     }
     
     var totalQuestions: Int {
@@ -300,14 +300,25 @@ struct HistorySessionCard: View {
                             .foregroundColor(.primary)
                             .lineLimit(1)
                         
-                        Text(session.category)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(session.categoryColor)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(session.categoryColor.opacity(0.1))
-                            .cornerRadius(4)
+                        HStack(spacing: 8) {
+                            Text(session.category)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(session.categoryColor)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(session.categoryColor.opacity(0.1))
+                                .cornerRadius(4)
+                            
+                            Text(session.statusText)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(session.statusColor)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(session.statusColor.opacity(0.1))
+                                .cornerRadius(4)
+                        }
                     }
                     
                     Spacer()
@@ -320,7 +331,7 @@ struct HistorySessionCard: View {
                 
                 // Session Details
                 HStack(spacing: 16) {
-                    Label("\(session.durationMinutes) min", systemImage: "clock")
+                    Label(session.durationText, systemImage: "clock")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
