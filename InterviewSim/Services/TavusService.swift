@@ -142,7 +142,7 @@ class TavusService: ObservableObject {
             conversationalContext: shortContext,
             properties: TavusConversationProperties(
                 maxCallDuration: data.duration * 60, // Convert minutes to seconds
-                enableRecording: true,
+                enableRecording: false,
                 enableClosedCaptions: true,
                 language: "english",
                 participantLeftTimeout: 10,  // NEW: 10 seconds timeout when participant leaves
