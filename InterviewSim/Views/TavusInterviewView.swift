@@ -21,10 +21,12 @@ struct TavusInterviewView: View {
     @State private var showingEndConfirmation = false
     @State private var sessionStartTime = Date()
     @State private var isSessionActive = false
-    @State private var showingApiKeyTest = false
     @State private var sessionEndReason: String = "manual"
-    @State private var hasSessionStarted = false // Track if session has actually started
-    @State private var isEndingSession = false // Track if we're currently ending the session
+    @State private var hasSessionStarted = false
+    @State private var isEndingSession = false
+    
+    // FIXED: Add state to prevent multiple alerts
+    @State private var isShowingAlert = false
     
     private var categoryColor: Color {
         category == "Technical" ? .blue : .purple
@@ -42,7 +44,7 @@ struct TavusInterviewView: View {
                             handleSessionStart()
                         },
                         onSessionEnd: {
-                            handleSessionEnd(reason: "ios_cancel")
+                            handleSessionEnd(reason: "tavus_end")
                         }
                     )
                 } else if let errorMessage = tavusService.errorMessage {
@@ -104,14 +106,18 @@ struct TavusInterviewView: View {
             .navigationBarBackButtonHidden()
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    // ENHANCED: Always show "End Interview" when webview is loaded
+                    // FIXED: Show End Interview when webview is loaded, but prevent multiple alerts
                     if tavusService.conversationUrl != nil {
                         Button("End Interview") {
-                            sessionEndReason = "manual"
-                            showingEndConfirmation = true
+                            // FIXED: Prevent multiple alerts
+                            if !isShowingAlert && !isEndingSession {
+                                sessionEndReason = "manual"
+                                isShowingAlert = true
+                                showingEndConfirmation = true
+                            }
                         }
                         .foregroundColor(.red)
-                        .disabled(isEndingSession)
+                        .disabled(isEndingSession || isShowingAlert)
                     } else {
                         Button("Cancel") {
                             dismiss()
@@ -136,8 +142,12 @@ struct TavusInterviewView: View {
                 }
             }
             .alert("End Interview", isPresented: $showingEndConfirmation) {
-                Button("Continue", role: .cancel) { }
+                Button("Continue", role: .cancel) {
+                    // FIXED: Reset alert state when cancelled
+                    isShowingAlert = false
+                }
                 Button("End Interview", role: .destructive) {
+                    isShowingAlert = false
                     Task {
                         await endInterviewWithAPI(reason: sessionEndReason)
                     }
@@ -145,33 +155,15 @@ struct TavusInterviewView: View {
             } message: {
                 Text("Are you sure you want to end the interview? Your progress will be saved.")
             }
-            .alert("API Key Test Result", isPresented: $showingApiKeyTest) {
-                Button("OK") { }
-            } message: {
-                Text("Check the console for detailed API key test results.")
-            }
         }
         .onAppear {
-            // Auto-start if we have all required data
             if !sessionName.isEmpty {
                 Task {
                     await startTavusSession()
                 }
             }
         }
-        // ENHANCED: Handle app lifecycle changes more conservatively
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
-            if isSessionActive && hasSessionStarted {
-                print("📱 App going to background during confirmed active session")
-                // Don't end immediately, just log
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            if isSessionActive && hasSessionStarted {
-                print("📱 App returned from background")
-                // Check if session is still active
-            }
-        }
+        // FIXED: Remove app lifecycle listeners that might cause issues
     }
     
     // MARK: - Computed Properties
@@ -186,49 +178,34 @@ struct TavusInterviewView: View {
     // MARK: - Session Management Methods
     
     private func handleSessionStart() {
-        // CONSERVATIVE: Additional validation before starting session
         guard !hasSessionStarted else {
-            print("🔧 Session already started, ignoring duplicate start")
+            print("🔧 Session already started")
             return
         }
         
-        print("🎬 Session start requested")
+        print("🎬 Session start confirmed")
         
-        // Add a small delay to ensure this is a real session start
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        // FIXED: More conservative session start
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             if !self.hasSessionStarted {
                 self.sessionStartTime = Date()
                 self.isSessionActive = true
                 self.hasSessionStarted = true
-                print("🎬 Session confirmed started at: \(self.sessionStartTime)")
+                print("🎬 Session officially started")
             }
         }
     }
     
     private func handleSessionEnd(reason: String) {
-        // CONSERVATIVE: Only end if session was actually started
-        guard hasSessionStarted && isSessionActive else {
-            print("🔧 Session end ignored - not in active state")
+        guard hasSessionStarted && isSessionActive && !isEndingSession else {
+            print("🔧 Session end ignored - invalid state")
             return
         }
         
-        print("🏁 Session end requested - Reason: \(reason)")
+        print("🏁 Session end triggered - Reason: \(reason)")
         
-        // Add a small delay to avoid immediate end after start
-        let sessionDuration = Date().timeIntervalSince(sessionStartTime)
-        if sessionDuration < 10.0 {
-            print("🔧 Session too short (\(sessionDuration)s), delaying end")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                if self.isSessionActive {
-                    Task {
-                        await self.endInterviewWithAPI(reason: reason)
-                    }
-                }
-            }
-        } else {
-            Task {
-                await endInterviewWithAPI(reason: reason)
-            }
+        Task {
+            await endInterviewWithAPI(reason: reason)
         }
     }
     
@@ -246,89 +223,69 @@ struct TavusInterviewView: View {
     }
     
     private func testApiKey() async {
-        print("🧪 Testing Tavus API Key...")
+        print("🧪 Testing API Key...")
         let isValid = await tavusService.testApiKey()
-        print("🧪 API Key Test Result: \(isValid ? "✅ Valid" : "❌ Invalid")")
-        showingApiKeyTest = true
+        print("🧪 Result: \(isValid ? "✅ Valid" : "❌ Invalid")")
     }
     
-    // MARK: - End Interview with API Call (NEW)
+    // MARK: - End Interview with API Call
     
     private func endInterviewWithAPI(reason: String = "manual") async {
         guard hasSessionStarted && !isEndingSession else {
-            print("🔧 Cannot end interview - session never started or already ending")
+            print("🔧 Cannot end - invalid state")
             if !hasSessionStarted {
                 dismiss()
             }
             return
         }
         
-        // Show loading state
+        // FIXED: Prevent multiple end calls
         isEndingSession = true
         
-        print("🔚 Starting interview end process...")
+        print("🔚 Ending interview...")
         print("  - Reason: \(reason)")
-        print("  - Session ID: \(tavusService.sessionId ?? "None")")
         
-        // Step 1: Call Tavus API to end the conversation
+        // Step 1: End Tavus conversation
         let apiSuccess = await tavusService.endConversationSession()
         
-        if apiSuccess {
-            print("✅ Tavus conversation ended via API")
-        } else {
-            print("⚠️ Tavus API end call failed, but continuing with local cleanup")
-        }
-        
-        // Step 2: Calculate session duration
+        // Step 2: Calculate duration
         let actualDuration = Int(Date().timeIntervalSince(sessionStartTime) / 60)
         
         print("📊 Interview ended:")
-        print("  - Reason: \(reason)")
         print("  - Duration: \(actualDuration) minutes")
-        print("  - Session Name: \(sessionName)")
-        print("  - API End Success: \(apiSuccess)")
+        print("  - API Success: \(apiSuccess)")
         
-        // Step 3: Save session to history
+        // Step 3: Save to history
         await historyManager.createSession(
             category: category,
             sessionName: sessionName,
-            score: nil, // Score will be determined later
-            durationMinutes: max(actualDuration, 1), // Minimum 1 minute
-            questionsAnswered: 0, // Will be updated based on Tavus data
+            score: nil,
+            durationMinutes: max(actualDuration, 1),
+            questionsAnswered: 0,
             sessionData: [
                 "tavus_session_id": tavusService.sessionId ?? "",
-                "conversation_url": tavusService.conversationUrl ?? "",
-                "cv_context_provided": cvContext != nil,
                 "end_reason": reason,
-                "actual_duration_seconds": Int(Date().timeIntervalSince(sessionStartTime)),
                 "api_end_success": apiSuccess
             ]
         )
         
-        // Step 4: Reset session state
+        // Step 4: Reset state
         isSessionActive = false
         hasSessionStarted = false
         isEndingSession = false
+        isShowingAlert = false
         
-        // Step 5: Clear Tavus service session data
+        // Step 5: Clear service
         tavusService.clearSession()
         
-        print("✅ Interview end process completed")
+        print("✅ Interview end completed")
         
-        // Step 6: Dismiss the view
+        // Step 6: Dismiss
         dismiss()
-    }
-    
-    // MARK: - Legacy method for backward compatibility
-    
-    private func endInterview(reason: String = "manual") {
-        Task {
-            await endInterviewWithAPI(reason: reason)
-        }
     }
 }
 
-// MARK: - Supporting Views (No changes needed, keeping existing implementations)
+// MARK: - Supporting Views (keeping existing implementations)
 
 struct TavusLoadingView: View {
     let category: String
@@ -339,7 +296,6 @@ struct TavusLoadingView: View {
     
     var body: some View {
         VStack(spacing: 24) {
-            // Animated Logo
             ZStack {
                 Circle()
                     .fill(categoryColor.opacity(0.1))
@@ -460,7 +416,6 @@ struct TavusPreparationView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
-                // Header
                 VStack(spacing: 16) {
                     Image(systemName: category == "Technical" ? "laptopcomputer" : "person.2.fill")
                         .font(.system(size: 60))
@@ -480,7 +435,6 @@ struct TavusPreparationView: View {
                 }
                 .padding(.top, 40)
                 
-                // Session Details
                 VStack(spacing: 16) {
                     SessionDetailRow(
                         icon: "text.quote",
@@ -505,11 +459,9 @@ struct TavusPreparationView: View {
                 }
                 .padding(.horizontal, 20)
                 
-                // Tips
                 TipsCard(category: category, categoryColor: categoryColor)
                     .padding(.horizontal, 20)
                 
-                // Action Buttons
                 VStack(spacing: 12) {
                     Button(action: onStart) {
                         HStack(spacing: 12) {
@@ -652,7 +604,7 @@ struct TipsCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(categoryColor.opacity(0.2), lineWidth: 1)
-            )
+        )
         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
 }
@@ -662,7 +614,7 @@ struct TipsCard: View {
         category: "Technical",
         sessionName: "iOS Development Practice",
         duration: 30,
-        cvContext: "Senior iOS Developer with 5+ years experience in Swift, SwiftUI, and UIKit"
+        cvContext: "Senior iOS Developer with 5+ years experience"
     )
     .environmentObject(InterviewHistoryManager())
 }
