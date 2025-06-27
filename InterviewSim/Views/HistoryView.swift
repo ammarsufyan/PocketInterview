@@ -13,13 +13,53 @@ struct HistoryView: View {
     
     let filters = ["All", "Technical", "Behavioral"]
     
-    // Sample data - focused on Technical and Behavioral only
+    // Sample data with user-defined session names only
     let sessions = [
-        InterviewSession(id: 1, category: "Technical", score: 78, date: Date(), duration: 45, questionsAnswered: 12),
-        InterviewSession(id: 2, category: "Behavioral", score: 92, date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, duration: 30, questionsAnswered: 8),
-        InterviewSession(id: 3, category: "Technical", score: 85, date: Calendar.current.date(byAdding: .day, value: -2, to: Date())!, duration: 35, questionsAnswered: 10),
-        InterviewSession(id: 4, category: "Behavioral", score: 88, date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!, duration: 25, questionsAnswered: 6),
-        InterviewSession(id: 5, category: "Technical", score: 74, date: Calendar.current.date(byAdding: .day, value: -5, to: Date())!, duration: 50, questionsAnswered: 15)
+        InterviewSession(
+            id: 1, 
+            category: "Technical", 
+            sessionName: "iOS Development Practice", 
+            score: 78, 
+            date: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!, 
+            duration: 45, 
+            questionsAnswered: 12
+        ),
+        InterviewSession(
+            id: 2, 
+            category: "Technical", 
+            sessionName: "Data Structures Deep Dive", 
+            score: 85, 
+            date: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!, 
+            duration: 35, 
+            questionsAnswered: 10
+        ),
+        InterviewSession(
+            id: 3, 
+            category: "Behavioral", 
+            sessionName: "Leadership Experience", 
+            score: 92, 
+            date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, 
+            duration: 30, 
+            questionsAnswered: 8
+        ),
+        InterviewSession(
+            id: 4, 
+            category: "Technical", 
+            sessionName: "System Design Interview", 
+            score: 74, 
+            date: Calendar.current.date(byAdding: .day, value: -1, to: Date())!, 
+            duration: 50, 
+            questionsAnswered: 15
+        ),
+        InterviewSession(
+            id: 5, 
+            category: "Behavioral", 
+            sessionName: "Communication Skills", 
+            score: 88, 
+            date: Calendar.current.date(byAdding: .day, value: -3, to: Date())!, 
+            duration: 25, 
+            questionsAnswered: 6
+        )
     ]
     
     var filteredSessions: [InterviewSession] {
@@ -28,54 +68,59 @@ struct HistoryView: View {
         if searchText.isEmpty {
             return filtered.sorted { $0.date > $1.date }
         } else {
-            return filtered.filter { $0.category.localizedCaseInsensitiveContains(searchText) }
-                .sorted { $0.date > $1.date }
+            return filtered.filter { 
+                $0.category.localizedCaseInsensitiveContains(searchText) ||
+                $0.sessionName.localizedCaseInsensitiveContains(searchText)
+            }
+            .sorted { $0.date > $1.date }
         }
     }
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Search Bar
-                HStack(spacing: 12) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 16))
+                // Header with Statistics Summary
+                VStack(spacing: 20) {
+                    // Statistics Overview - Moved below title
+                    if !filteredSessions.isEmpty {
+                        HistoryStatsView(sessions: filteredSessions)
+                            .padding(.horizontal, 20)
+                    }
                     
-                    TextField("Search sessions...", text: $searchText)
-                        .textFieldStyle(PlainTextFieldStyle())
-                        .font(.subheadline)
-                }
-                .padding(16)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                
-                // Filter Tabs
-                ScrollView(.horizontal, showsIndicators: false) {
+                    // Search Bar
                     HStack(spacing: 12) {
-                        ForEach(filters, id: \.self) { filter in
-                            FilterTab(
-                                title: filter,
-                                isSelected: selectedFilter == filter
-                            ) {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    selectedFilter = filter
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                            .font(.system(size: 16))
+                        
+                        TextField("Search sessions...", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                            .font(.subheadline)
+                    }
+                    .padding(16)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    .padding(.horizontal, 20)
+                    
+                    // Filter Tabs
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(filters, id: \.self) { filter in
+                                FilterTab(
+                                    title: filter,
+                                    isSelected: selectedFilter == filter
+                                ) {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        selectedFilter = filter
+                                    }
                                 }
                             }
                         }
-                    }
-                    .padding(.horizontal, 20)
-                }
-                .padding(.vertical, 20)
-                
-                // Statistics Overview
-                if !filteredSessions.isEmpty {
-                    HistoryStatsView(sessions: filteredSessions)
                         .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
+                    }
                 }
+                .padding(.top, 16)
+                .padding(.bottom, 20)
                 
                 // Sessions List
                 if filteredSessions.isEmpty {
@@ -101,6 +146,7 @@ struct HistoryView: View {
 struct InterviewSession: Identifiable {
     let id: Int
     let category: String
+    let sessionName: String // User-defined session name only
     let score: Int
     let date: Date
     let duration: Int // in minutes
@@ -210,12 +256,25 @@ struct HistorySessionCard: View {
                 .symbolRenderingMode(.hierarchical)
             
             // Session Info
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Session Name and Score
                 HStack {
-                    Text(session.category)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(session.sessionName)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                        
+                        Text(session.category)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(categoryColor)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(categoryColor.opacity(0.1))
+                            .cornerRadius(4)
+                    }
                     
                     Spacer()
                     
@@ -225,6 +284,7 @@ struct HistorySessionCard: View {
                         .foregroundColor(scoreColor(session.score))
                 }
                 
+                // Session Details
                 HStack(spacing: 16) {
                     Label("\(session.duration) min", systemImage: "clock")
                         .font(.caption)
@@ -236,10 +296,16 @@ struct HistorySessionCard: View {
                     
                     Spacer()
                     
-                    Text(formatDate(session.date))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fontWeight(.medium)
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text(formatDate(session.date))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fontWeight(.medium)
+                        
+                        Text(formatTime(session.date))
+                            .font(.caption2)
+                            .foregroundColor(.secondary.opacity(0.8))
+                    }
                 }
             }
         }
@@ -258,8 +324,23 @@ struct HistorySessionCard: View {
     }
     
     private func formatDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        // Fixed: Removed unused 'now' variable
+        
+        if calendar.isDateInToday(date) {
+            return "Today"
+        } else if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            return formatter.string(from: date)
+        }
+    }
+    
+    private func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
+        formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
     }
 }

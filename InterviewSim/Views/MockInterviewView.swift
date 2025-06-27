@@ -6,11 +6,15 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct MockInterviewView: View {
     @State private var selectedCategory = "Technical"
     @State private var showingCVPicker = false
     @State private var cvUploaded = false
+    @State private var showingSessionSetup = false
+    @State private var showingExtractionResults = false
+    @StateObject private var cvExtractor = CVExtractor()
     
     let categories = ["Technical", "Behavioral"]
     
@@ -45,14 +49,6 @@ struct MockInterviewView: View {
                     
                     // Interview Categories
                     VStack(alignment: .leading, spacing: 20) {
-                        HStack {
-                            Text("Interview Types")
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 20)
-                        
                         VStack(spacing: 16) {
                             // Technical Category
                             CategoryCard(
@@ -65,7 +61,9 @@ struct MockInterviewView: View {
                             ) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedCategory = "Technical"
-                                    cvUploaded = false // Reset CV status when switching
+                                    // Reset CV status and clear previous analysis when switching
+                                    cvUploaded = false
+                                    cvExtractor.resetAnalysis()
                                 }
                             }
                             
@@ -80,7 +78,9 @@ struct MockInterviewView: View {
                             ) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     selectedCategory = "Behavioral"
-                                    cvUploaded = false // Reset CV status when switching
+                                    // Reset CV status and clear previous analysis when switching
+                                    cvUploaded = false
+                                    cvExtractor.resetAnalysis()
                                 }
                             }
                         }
@@ -100,8 +100,12 @@ struct MockInterviewView: View {
                         CVUploadCard(
                             category: selectedCategory,
                             isUploaded: cvUploaded,
+                            cvExtractor: cvExtractor,
                             onUpload: {
                                 showingCVPicker = true
+                            },
+                            onViewResults: {
+                                showingExtractionResults = true
                             }
                         )
                         .padding(.horizontal, 20)
@@ -114,8 +118,7 @@ struct MockInterviewView: View {
                             category: selectedCategory,
                             isEnabled: cvUploaded
                         ) {
-                            // Start interview action
-                            print("Starting \(selectedCategory) interview")
+                            showingSessionSetup = true
                         }
                         .padding(.horizontal, 20)
                         
@@ -124,6 +127,12 @@ struct MockInterviewView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
+                        } else {
+                            Text("Next: Set session name and duration")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                                .multilineTextAlignment(.center)
+                                .fontWeight(.medium)
                         }
                     }
                     
@@ -138,13 +147,23 @@ struct MockInterviewView: View {
             .navigationTitle("Mock Interview")
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showingCVPicker) {
-                CVPickerView(category: selectedCategory, onUpload: { success in
-                    if success {
-                        withAnimation(.spring()) {
-                            cvUploaded = true
+                CVPickerView(
+                    category: selectedCategory,
+                    cvExtractor: cvExtractor,
+                    onUpload: { success in
+                        if success {
+                            withAnimation(.spring()) {
+                                cvUploaded = true
+                            }
                         }
                     }
-                })
+                )
+            }
+            .sheet(isPresented: $showingSessionSetup) {
+                SessionSetupView(category: selectedCategory)
+            }
+            .sheet(isPresented: $showingExtractionResults) {
+                CVExtractionResultView(cvExtractor: cvExtractor, category: selectedCategory)
             }
         }
     }
@@ -235,7 +254,9 @@ struct CategoryCard: View {
 struct CVUploadCard: View {
     let category: String
     let isUploaded: Bool
+    @ObservedObject var cvExtractor: CVExtractor
     let onUpload: () -> Void
+    let onViewResults: () -> Void
     
     private var uploadDescription: String {
         switch category {
@@ -253,51 +274,103 @@ struct CVUploadCard: View {
     }
     
     var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: isUploaded ? "checkmark.circle.fill" : "doc.text.fill")
-                .font(.title2)
-                .foregroundColor(isUploaded ? .green : (category == "Technical" ? .blue : .purple))
-                .frame(width: 44, height: 44)
-                .background(
-                    (isUploaded ? Color.green : (category == "Technical" ? Color.blue : Color.purple)).opacity(0.1)
-                )
-                .cornerRadius(10)
-                .symbolRenderingMode(.hierarchical)
-            
-            VStack(alignment: .leading, spacing: 6) {
-                Text(isUploaded ? "CV Uploaded Successfully" : "Upload Your CV")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(isUploaded ? .green : .primary)
+        VStack(spacing: 16) {
+            HStack(spacing: 16) {
+                Image(systemName: isUploaded ? "checkmark.circle.fill" : "doc.text.fill")
+                    .font(.title2)
+                    .foregroundColor(isUploaded ? .green : (category == "Technical" ? .blue : .purple))
+                    .frame(width: 44, height: 44)
+                    .background(
+                        (isUploaded ? Color.green : (category == "Technical" ? Color.blue : Color.purple)).opacity(0.1)
+                    )
+                    .cornerRadius(10)
+                    .symbolRenderingMode(.hierarchical)
                 
-                Text(uploadDescription)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(3)
-            }
-            
-            Spacer()
-            
-            if !isUploaded {
-                Button(action: onUpload) {
-                    Text("Upload")
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(isUploaded ? "CV Uploaded Successfully" : "Upload Your CV")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(isUploaded ? .green : .primary)
+                    
+                    Text(uploadDescription)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(3)
+                }
+                
+                Spacer()
+                
+                if !isUploaded {
+                    Button(action: onUpload) {
+                        Text("Upload")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(category == "Technical" ? Color.blue : Color.purple)
+                            .cornerRadius(8)
+                    }
+                } else {
+                    Image(systemName: "checkmark")
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(category == "Technical" ? Color.blue : Color.purple)
-                        .cornerRadius(8)
+                        .foregroundColor(.green)
+                        .frame(width: 24, height: 24)
+                        .background(Color.green.opacity(0.1))
+                        .cornerRadius(6)
                 }
-            } else {
-                Image(systemName: "checkmark")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.green)
-                    .frame(width: 24, height: 24)
-                    .background(Color.green.opacity(0.1))
-                    .cornerRadius(6)
+            }
+            
+            // Show extraction results if CV is uploaded
+            if isUploaded && cvExtractor.cvAnalysis != nil {
+                VStack(spacing: 12) {
+                    Divider()
+                    
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Analysis Complete")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.green)
+                            
+                            if let analysis = cvExtractor.cvAnalysis {
+                                Text(analysis.summary)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(2)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: onViewResults) {
+                            Text("View Details")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(category == "Technical" ? .blue : .purple)
+                        }
+                    }
+                }
+            }
+            
+            // Show loading state
+            if cvExtractor.isExtracting {
+                VStack(spacing: 8) {
+                    Divider()
+                    
+                    HStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        
+                        Text("Analyzing your CV...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                    }
+                }
             }
         }
         .padding(20)
@@ -378,8 +451,10 @@ struct StartInterviewButton: View {
 
 struct CVPickerView: View {
     let category: String
+    @ObservedObject var cvExtractor: CVExtractor
     let onUpload: (Bool) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var showingDocumentPicker = false
     
     private var categoryColor: Color {
         category == "Technical" ? .blue : .purple
@@ -402,13 +477,15 @@ struct CVPickerView: View {
                 Spacer()
                 
                 VStack(spacing: 20) {
-                    Image(systemName: "doc.text.fill")
+                    Image(systemName: cvExtractor.isExtracting ? "doc.text.magnifyingglass" : "doc.text.fill")
                         .font(.system(size: 60))
                         .foregroundColor(categoryColor)
                         .symbolRenderingMode(.hierarchical)
+                        .scaleEffect(cvExtractor.isExtracting ? 1.1 : 1.0)
+                        .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: cvExtractor.isExtracting)
                     
                     VStack(spacing: 12) {
-                        Text("Upload Your CV")
+                        Text(cvExtractor.isExtracting ? "Analyzing CV..." : "Upload Your CV")
                             .font(.title2)
                             .fontWeight(.bold)
                         
@@ -426,51 +503,67 @@ struct CVPickerView: View {
                     }
                 }
                 
-                VStack(spacing: 16) {
-                    Button(action: {
-                        // Simulate upload success
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            onUpload(true)
-                            dismiss()
-                        }
-                    }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "icloud.and.arrow.up")
-                                .font(.headline)
-                            Text("Choose File")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(12)
-                        .shadow(
-                            color: categoryColor.opacity(0.3),
-                            radius: 8,
-                            x: 0,
-                            y: 4
-                        )
-                    }
-                    
-                    VStack(spacing: 4) {
-                        Text("Supported formats: PDF, DOC, DOCX")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                if cvExtractor.isExtracting {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
                         
-                        Text("Max file size: 10MB")
-                            .font(.caption)
+                        Text("Extracting text and analyzing your background...")
+                            .font(.subheadline)
                             .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
+                } else {
+                    VStack(spacing: 16) {
+                        Button(action: {
+                            showingDocumentPicker = true
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "icloud.and.arrow.up")
+                                    .font(.headline)
+                                Text("Choose File")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(12)
+                            .shadow(
+                                color: categoryColor.opacity(0.3),
+                                radius: 8,
+                                x: 0,
+                                y: 4
+                            )
+                        }
+                        
+                        VStack(spacing: 4) {
+                            Text("Supported formats: PDF, DOC, DOCX")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Text("Max file size: 10MB")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 32)
                 }
-                .padding(.horizontal, 32)
+                
+                if let error = cvExtractor.extractionError {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
                 
                 Spacer()
             }
@@ -483,9 +576,300 @@ struct CVPickerView: View {
                         dismiss()
                     }
                     .foregroundColor(categoryColor)
+                    .disabled(cvExtractor.isExtracting)
+                }
+            }
+            .fileImporter(
+                isPresented: $showingDocumentPicker,
+                allowedContentTypes: [.pdf, .plainText, UTType(filenameExtension: "doc")!, UTType(filenameExtension: "docx")!],
+                allowsMultipleSelection: false
+            ) { result in
+                handleFileSelection(result: result)
+            }
+            // Fixed: Updated onChange to use new iOS 17+ syntax
+            .onChange(of: cvExtractor.cvAnalysis) { _, analysis in
+                if analysis != nil && !cvExtractor.isExtracting {
+                    onUpload(true)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        dismiss()
+                    }
                 }
             }
         }
+    }
+    
+    private func handleFileSelection(result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            
+            do {
+                let data = try Data(contentsOf: url)
+                let fileName = url.lastPathComponent
+                
+                cvExtractor.extractTextFromDocument(data: data, fileName: fileName)
+            } catch {
+                cvExtractor.extractionError = "Failed to read file: \(error.localizedDescription)"
+            }
+            
+        case .failure(let error):
+            cvExtractor.extractionError = "Failed to select file: \(error.localizedDescription)"
+        }
+    }
+}
+
+// MARK: - Session Setup View (WHERE USER INPUTS SESSION NAME)
+struct SessionSetupView: View {
+    let category: String
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var sessionName = ""
+    @State private var selectedDuration = 30
+    @FocusState private var isTextFieldFocused: Bool
+    
+    private let durations = [15, 30, 45, 60]
+    
+    private var categoryColor: Color {
+        category == "Technical" ? .blue : .purple
+    }
+    
+    private var placeholderText: String {
+        switch category {
+        case "Technical":
+            return "e.g., iOS Development Practice, Data Structures Deep Dive, System Design Interview"
+        case "Behavioral":
+            return "e.g., Leadership Experience, Communication Skills, Team Management"
+        default:
+            return "e.g., Interview Practice Session"
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 32) {
+                    // Header
+                    VStack(spacing: 16) {
+                        Image(systemName: category == "Technical" ? "laptopcomputer" : "person.2.fill")
+                            .font(.system(size: 50))
+                            .foregroundColor(categoryColor)
+                            .symbolRenderingMode(.hierarchical)
+                        
+                        VStack(spacing: 8) {
+                            Text("Setup Your Session")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            Text("\(category) Interview")
+                                .font(.headline)
+                                .foregroundColor(categoryColor)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .padding(.top, 20)
+                    
+                    VStack(spacing: 24) {
+                        // Session Name Input - MAIN INPUT FIELD
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Session Name")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                Text("*")
+                                    .font(.headline)
+                                    .foregroundColor(.red)
+                                    .fontWeight(.semibold)
+                            }
+                            
+                            VStack(alignment: .leading, spacing: 8) {
+                                TextField("Enter session name...", text: $sessionName)
+                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                                    .font(.subheadline)
+                                    .focused($isTextFieldFocused)
+                                    .submitLabel(.done)
+                                
+                                Text(placeholderText)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .italic()
+                            }
+                            
+                            Text("This name will appear in your interview history")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        // Duration Selection - IMPROVED DESIGN
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Duration")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            
+                            // Grid layout for consistent design
+                            LazyVGrid(columns: [
+                                GridItem(.flexible(), spacing: 12),
+                                GridItem(.flexible(), spacing: 12)
+                            ], spacing: 12) {
+                                ForEach(durations, id: \.self) { duration in
+                                    DurationCard(
+                                        duration: duration,
+                                        isSelected: selectedDuration == duration,
+                                        categoryColor: categoryColor
+                                    ) {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            selectedDuration = duration
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            Text("How long do you want to practice?")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Start Button
+                    Button(action: {
+                        startInterview()
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "play.circle.fill")
+                                .font(.title2)
+                            
+                            Text("Start Interview")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(sessionName.isEmpty ? .secondary : .white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(
+                            Group {
+                                if sessionName.isEmpty {
+                                    Color(.systemGray4)
+                                } else {
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                }
+                            }
+                        )
+                        .cornerRadius(16)
+                        .shadow(
+                            color: sessionName.isEmpty ? Color.clear : categoryColor.opacity(0.3),
+                            radius: sessionName.isEmpty ? 0 : 8,
+                            x: 0,
+                            y: 4
+                        )
+                        .scaleEffect(sessionName.isEmpty ? 0.98 : 1.0)
+                    }
+                    .disabled(sessionName.isEmpty)
+                    .animation(.easeInOut(duration: 0.2), value: sessionName.isEmpty)
+                    .padding(.horizontal, 20)
+                    
+                    if sessionName.isEmpty {
+                        Text("Please enter a session name to continue")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                    }
+                    
+                    Spacer(minLength: 20)
+                }
+            }
+            .navigationTitle("Session Setup")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden()
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundColor(categoryColor)
+                }
+            }
+            .onAppear {
+                // Auto-focus on text field when view appears
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isTextFieldFocused = true
+                }
+            }
+        }
+    }
+    
+    private func startInterview() {
+        // Here you would start the actual interview with:
+        // - sessionName: User's custom session name
+        // - selectedDuration: Interview duration
+        // - category: Technical or Behavioral
+        
+        print("Starting \(category) interview:")
+        print("Session Name: \(sessionName)")
+        print("Duration: \(selectedDuration) minutes")
+        
+        // For now, just dismiss
+        dismiss()
+    }
+}
+
+// MARK: - Duration Card Component
+struct DurationCard: View {
+    let duration: Int
+    let isSelected: Bool
+    let categoryColor: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Text("\(duration)")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(isSelected ? .white : categoryColor)
+                
+                Text("minutes")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(isSelected ? .white.opacity(0.9) : .secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 80)
+            .background(
+                Group {
+                    if isSelected {
+                        LinearGradient(
+                            gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    } else {
+                        Color(.systemBackground)
+                    }
+                }
+            )
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        isSelected ? Color.clear : categoryColor.opacity(0.3),
+                        lineWidth: 1.5
+                    )
+            )
+            .shadow(
+                color: isSelected ? categoryColor.opacity(0.3) : Color.black.opacity(0.05),
+                radius: isSelected ? 8 : 2,
+                x: 0,
+                y: isSelected ? 4 : 1
+            )
+            .scaleEffect(isSelected ? 1.05 : 1.0)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
     }
 }
 
