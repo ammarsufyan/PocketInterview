@@ -631,7 +631,7 @@ struct TranscriptCard: View {
             if isExpanded {
                 VStack(spacing: 12) {
                     ForEach(Array(transcript.transcriptData.prefix(10).enumerated()), id: \.element.id) { index, message in
-                        MessageBubble(
+                        CompactMessageBubble(
                             message: message,
                             messageNumber: index + 1,
                             categoryColor: categoryColor
@@ -641,7 +641,7 @@ struct TranscriptCard: View {
                     if transcript.transcriptData.count > 10 {
                         NavigationLink(destination: TranscriptDetailView(
                             transcript: transcript,
-                            session: nil
+                            session: session
                         )) {
                             HStack {
                                 Text("View Full Transcript (\(transcript.transcriptData.count - 10) more messages)")
@@ -675,7 +675,8 @@ struct TranscriptCard: View {
     }
 }
 
-struct MessageBubble: View {
+// MARK: - Compact Message Bubble (renamed to avoid conflicts)
+private struct CompactMessageBubble: View {
     let message: TranscriptMessage
     let messageNumber: Int
     let categoryColor: Color
