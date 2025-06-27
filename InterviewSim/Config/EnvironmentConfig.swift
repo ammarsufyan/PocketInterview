@@ -22,6 +22,8 @@ class EnvironmentConfig {
         // Try to load from .env file first
         if let envPath = Bundle.main.path(forResource: ".env", ofType: nil) {
             loadFromFile(path: envPath)
+        } else {
+            print("⚠️ .env file not found in bundle")
         }
         
         // Also load from Info.plist for production builds
@@ -29,6 +31,10 @@ class EnvironmentConfig {
         
         // Fallback to system environment variables
         loadFromSystemEnvironment()
+        
+        // Debug: Print what we loaded
+        print("🔧 Environment Variables Loaded:")
+        printLoadedVariables()
     }
     
     private func loadFromFile(path: String) {
@@ -50,8 +56,10 @@ class EnvironmentConfig {
                     let key = components[0].trimmingCharacters(in: .whitespacesAndNewlines)
                     let value = components.dropFirst().joined(separator: "=")
                         .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .trimmingCharacters(in: CharacterSet(charactersIn: "\"'")) // Remove quotes
                     
                     envVariables[key] = value
+                    print("✅ Loaded \(key) from .env file")
                 }
             }
             
@@ -75,6 +83,7 @@ class EnvironmentConfig {
         for key in envKeys {
             if let value = infoPlist[key] as? String, !value.isEmpty {
                 envVariables[key] = value
+                print("✅ Loaded \(key) from Info.plist")
             }
         }
     }
@@ -90,6 +99,7 @@ class EnvironmentConfig {
         for key in envKeys {
             if let value = ProcessInfo.processInfo.environment[key], !value.isEmpty {
                 envVariables[key] = value
+                print("✅ Loaded \(key) from system environment")
             }
         }
     }
@@ -118,7 +128,13 @@ class EnvironmentConfig {
     // MARK: - Tavus Configuration
     
     var tavusApiKey: String? {
-        return getValue(for: "TAVUS_API_KEY")
+        let key = getValue(for: "TAVUS_API_KEY")
+        if let key = key {
+            print("🔑 Tavus API Key found: \(String(key.prefix(10)))... (length: \(key.count))")
+        } else {
+            print("❌ Tavus API Key not found")
+        }
+        return key
     }
     
     var tavusBaseURL: String {
@@ -143,7 +159,14 @@ class EnvironmentConfig {
             return false
         }
         
+        // Additional validation for Tavus API key format
+        if apiKey.count < 10 {
+            print("⚠️ Warning: Tavus API key seems too short")
+        }
+        
         print("✅ Tavus configuration is valid")
+        print("  - API Key: \(String(apiKey.prefix(10)))... (length: \(apiKey.count))")
+        print("  - Base URL: \(tavusBaseURL)")
         return true
     }
     
@@ -169,8 +192,12 @@ class EnvironmentConfig {
         for (key, value) in envVariables {
             // Mask sensitive values
             let maskedValue = key.contains("KEY") || key.contains("SECRET") ? 
-                String(repeating: "*", count: min(value.count, 8)) : value
+                "\(String(value.prefix(10)))..." : value
             print("  \(key): \(maskedValue)")
+        }
+        
+        if envVariables.isEmpty {
+            print("  ⚠️ No environment variables loaded!")
         }
     }
 }

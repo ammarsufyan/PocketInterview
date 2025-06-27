@@ -29,6 +29,10 @@ class TavusService: ObservableObject {
         errorMessage = nil
         
         do {
+            // Debug: Print configuration
+            print("🔧 DEBUG: Tavus Configuration Check")
+            envConfig.printLoadedVariables()
+            
             // Validate configuration first
             guard TavusConfig.validateConfiguration() else {
                 throw TavusConfigError.invalidConfiguration
@@ -74,15 +78,22 @@ class TavusService: ObservableObject {
             throw TavusError.invalidURL
         }
         
-        // Get API key from environment
+        // Get API key from environment with detailed debugging
         let apiKey = try TavusConfig.getApiKey()
+        
+        print("🔑 DEBUG: API Key Info")
+        print("  - Length: \(apiKey.count)")
+        print("  - Prefix: \(String(apiKey.prefix(10)))...")
+        print("  - Contains underscore: \(apiKey.contains("_"))")
+        print("🌐 DEBUG: Request URL: \(url)")
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
         
-        // Create the conversation payload without replica dependency
+        // Create the conversation payload - UPDATED FOR TAVUS API
         let payload = TavusAPIPayload(
             conversationName: data.sessionName,
             conversationProperties: TavusConversationProperties(
@@ -95,12 +106,29 @@ class TavusService: ObservableObject {
             )
         )
         
-        request.httpBody = try JSONEncoder().encode(payload)
+        let jsonData = try JSONEncoder().encode(payload)
+        request.httpBody = jsonData
+        
+        // Debug: Print request details
+        print("📤 DEBUG: Request Details")
+        print("  - Method: \(request.httpMethod ?? "Unknown")")
+        print("  - Headers: \(request.allHTTPHeaderFields ?? [:])")
+        if let bodyString = String(data: jsonData, encoding: .utf8) {
+            print("  - Body: \(bodyString)")
+        }
         
         let (responseData, response) = try await URLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw TavusError.invalidResponse
+        }
+        
+        print("📥 DEBUG: Response Details")
+        print("  - Status Code: \(httpResponse.statusCode)")
+        print("  - Headers: \(httpResponse.allHeaderFields)")
+        
+        if let responseString = String(data: responseData, encoding: .utf8) {
+            print("  - Body: \(responseString)")
         }
         
         guard httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
@@ -162,7 +190,7 @@ struct TavusConversationResponse {
     let sessionId: String
 }
 
-// MARK: - API Models
+// MARK: - API Models (UPDATED FOR TAVUS API STRUCTURE)
 
 struct TavusAPIPayload: Codable {
     let conversationName: String

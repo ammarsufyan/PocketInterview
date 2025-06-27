@@ -115,7 +115,23 @@ struct TavusConfig {
     }
     
     static func validateConfiguration() -> Bool {
-        return EnvironmentConfig.shared.validateTavusConfiguration()
+        let isValid = EnvironmentConfig.shared.validateTavusConfiguration()
+        
+        if !isValid {
+            print("❌ Tavus Configuration Validation Failed")
+            print("📋 Required Environment Variables:")
+            print("  - TAVUS_API_KEY: \(apiKey != nil ? "✅ Found" : "❌ Missing")")
+            print("  - TAVUS_BASE_URL: \(baseURL.isEmpty ? "❌ Missing" : "✅ Found")")
+            
+            if let apiKey = apiKey {
+                print("🔑 API Key Debug Info:")
+                print("  - Length: \(apiKey.count)")
+                print("  - Starts with expected prefix: \(apiKey.hasPrefix("3d52ddd") ? "✅" : "❌")")
+                print("  - Contains underscore: \(apiKey.contains("_") ? "✅" : "❌")")
+            }
+        }
+        
+        return isValid
     }
     
     // MARK: - Safe Configuration Access
@@ -124,6 +140,12 @@ struct TavusConfig {
         guard let apiKey = apiKey, !apiKey.isEmpty else {
             throw TavusConfigError.missingApiKey
         }
+        
+        // Validate API key format (Tavus keys typically have specific format)
+        if apiKey.count < 10 {
+            print("⚠️ Warning: API key seems too short (\(apiKey.count) characters)")
+        }
+        
         return apiKey
     }
     
