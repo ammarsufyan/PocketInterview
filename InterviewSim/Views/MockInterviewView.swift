@@ -17,8 +17,9 @@ struct MockInterviewView: View {
     @State private var showingTavusInterview = false
     @StateObject private var cvExtractor = CVExtractor()
     
-    // FIXED: Use a dedicated SessionData model to prevent state loss
-    @State private var sessionData: SessionData?
+    // FIXED: Simple direct values instead of complex SessionData
+    @State private var sessionName = ""
+    @State private var sessionDuration = 30
     
     let categories = ["Technical", "Behavioral"]
     
@@ -68,7 +69,9 @@ struct MockInterviewView: View {
                                     // Reset CV status and clear previous analysis when switching
                                     cvUploaded = false
                                     cvExtractor.resetAnalysis()
-                                    sessionData = nil // Clear session data
+                                    // FIXED: Clear session data when switching categories
+                                    sessionName = ""
+                                    sessionDuration = 30
                                 }
                             }
                             
@@ -86,7 +89,9 @@ struct MockInterviewView: View {
                                     // Reset CV status and clear previous analysis when switching
                                     cvUploaded = false
                                     cvExtractor.resetAnalysis()
-                                    sessionData = nil // Clear session data
+                                    // FIXED: Clear session data when switching categories
+                                    sessionName = ""
+                                    sessionDuration = 30
                                 }
                             }
                         }
@@ -169,23 +174,16 @@ struct MockInterviewView: View {
                 SessionSetupView(
                     category: selectedCategory,
                     onSessionStart: { name, duration in
-                        // FIXED: Create SessionData object to preserve state
-                        let newSessionData = SessionData(
-                            category: selectedCategory,
-                            sessionName: name,
-                            duration: duration,
-                            cvContext: cvExtractor.extractedText.isEmpty ? nil : cvExtractor.extractedText
-                        )
+                        // FIXED: Simple direct assignment
+                        sessionName = name
+                        sessionDuration = duration
                         
-                        print("🔧 DEBUG: Creating SessionData")
-                        print("  - Category: '\(newSessionData.category)'")
-                        print("  - Name: '\(newSessionData.sessionName)'")
-                        print("  - Duration: \(newSessionData.duration)")
-                        print("  - CV Context: \(newSessionData.cvContext != nil ? "Provided" : "None")")
+                        print("🔧 DEBUG: Session Setup Completed")
+                        print("  - Name: '\(sessionName)'")
+                        print("  - Duration: \(sessionDuration)")
+                        print("  - Category: \(selectedCategory)")
                         
-                        sessionData = newSessionData
-                        
-                        // Small delay to ensure state is set before presenting
+                        // Small delay to ensure state is set
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                             showingTavusInterview = true
                         }
@@ -195,75 +193,30 @@ struct MockInterviewView: View {
             .sheet(isPresented: $showingExtractionResults) {
                 CVExtractionResultView(cvExtractor: cvExtractor, category: selectedCategory)
             }
-            // CHANGED: From fullScreenCover to sheet for modal behavior
+            // FIXED: Simple sheet with direct values
             .sheet(isPresented: $showingTavusInterview) {
-                // FIXED: Use sessionData instead of individual state variables
-                if let sessionData = sessionData {
-                    let _ = print("🔧 DEBUG: Opening TavusInterviewView with SessionData")
-                    let _ = print("  - category: '\(sessionData.category)'")
-                    let _ = print("  - sessionName: '\(sessionData.sessionName)'")
-                    let _ = print("  - duration: \(sessionData.duration)")
-                    let _ = print("  - cvContext: \(sessionData.cvContext != nil ? "Provided (\(sessionData.cvContext!.count) chars)" : "None")")
-                    
-                    TavusInterviewView(
-                        category: sessionData.category,
-                        sessionName: sessionData.sessionName,
-                        duration: sessionData.duration,
-                        cvContext: sessionData.cvContext,
-                        onBackToSetup: {
-                            // ENHANCED: Back to setup functionality
-                            showingTavusInterview = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                showingSessionSetup = true
-                            }
+                let _ = print("🔧 DEBUG: Opening TavusInterviewView")
+                let _ = print("  - category: '\(selectedCategory)'")
+                let _ = print("  - sessionName: '\(sessionName)'")
+                let _ = print("  - duration: \(sessionDuration)")
+                let _ = print("  - cvContext: \(cvExtractor.extractedText.isEmpty ? "None" : "Provided (\(cvExtractor.extractedText.count) chars)")")
+                
+                TavusInterviewView(
+                    category: selectedCategory,
+                    sessionName: sessionName,
+                    duration: sessionDuration,
+                    cvContext: cvExtractor.extractedText.isEmpty ? nil : cvExtractor.extractedText,
+                    onBackToSetup: {
+                        // ENHANCED: Back to setup functionality
+                        showingTavusInterview = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            showingSessionSetup = true
                         }
-                    )
-                    .environmentObject(InterviewHistoryManager())
-                } else {
-                    // Fallback view if sessionData is nil
-                    VStack(spacing: 20) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(.orange)
-                        
-                        Text("Session Data Missing")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        Text("Please try setting up the session again")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        Button("Close") {
-                            showingTavusInterview = false
-                        }
-                        .foregroundColor(.blue)
                     }
-                    .padding(40)
-                }
+                )
+                .environmentObject(InterviewHistoryManager())
             }
         }
-    }
-}
-
-// MARK: - SessionData Model (NEW)
-struct SessionData {
-    let category: String
-    let sessionName: String
-    let duration: Int
-    let cvContext: String?
-    
-    init(category: String, sessionName: String, duration: Int, cvContext: String?) {
-        self.category = category
-        self.sessionName = sessionName
-        self.duration = duration
-        self.cvContext = cvContext
-        
-        print("📦 SessionData created:")
-        print("  - Category: '\(category)'")
-        print("  - Session Name: '\(sessionName)'")
-        print("  - Duration: \(duration)")
-        print("  - CV Context: \(cvContext != nil ? "Yes (\(cvContext!.count) chars)" : "No")")
     }
 }
 
