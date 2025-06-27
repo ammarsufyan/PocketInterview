@@ -14,7 +14,12 @@ struct MockInterviewView: View {
     @State private var cvUploaded = false
     @State private var showingSessionSetup = false
     @State private var showingExtractionResults = false
+    @State private var showingTavusInterview = false
     @StateObject private var cvExtractor = CVExtractor()
+    
+    // Session data for Tavus
+    @State private var sessionName = ""
+    @State private var sessionDuration = 30
     
     let categories = ["Technical", "Behavioral"]
     
@@ -160,10 +165,26 @@ struct MockInterviewView: View {
                 )
             }
             .sheet(isPresented: $showingSessionSetup) {
-                SessionSetupView(category: selectedCategory)
+                SessionSetupView(
+                    category: selectedCategory,
+                    onSessionStart: { name, duration in
+                        sessionName = name
+                        sessionDuration = duration
+                        showingTavusInterview = true
+                    }
+                )
             }
             .sheet(isPresented: $showingExtractionResults) {
                 CVExtractionResultView(cvExtractor: cvExtractor, category: selectedCategory)
+            }
+            .fullScreenCover(isPresented: $showingTavusInterview) {
+                TavusInterviewView(
+                    category: selectedCategory,
+                    sessionName: sessionName,
+                    duration: sessionDuration,
+                    cvContext: cvExtractor.extractedText.isEmpty ? nil : cvExtractor.extractedText
+                )
+                .environmentObject(InterviewHistoryManager())
             }
         }
     }
@@ -618,9 +639,10 @@ struct CVPickerView: View {
     }
 }
 
-// MARK: - Session Setup View (WHERE USER INPUTS SESSION NAME)
+// MARK: - Session Setup View (UPDATED TO PASS DATA TO TAVUS)
 struct SessionSetupView: View {
     let category: String
+    let onSessionStart: (String, Int) -> Void // Updated to pass session data
     @Environment(\.dismiss) private var dismiss
     
     @State private var sessionName = ""
@@ -731,15 +753,15 @@ struct SessionSetupView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // Start Button
+                    // Start Button - UPDATED TO CALL TAVUS
                     Button(action: {
-                        startInterview()
+                        startTavusInterview()
                     }) {
                         HStack(spacing: 12) {
-                            Image(systemName: "play.circle.fill")
+                            Image(systemName: "person.wave.2.fill")
                                 .font(.title2)
                             
-                            Text("Start Interview")
+                            Text("Start AI Interview")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                         }
@@ -777,6 +799,12 @@ struct SessionSetupView: View {
                             .font(.caption)
                             .foregroundColor(.red)
                             .multilineTextAlignment(.center)
+                    } else {
+                        Text("Your AI interviewer will be personalized based on your CV")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                            .multilineTextAlignment(.center)
+                            .fontWeight(.medium)
                     }
                     
                     Spacer(minLength: 20)
@@ -802,17 +830,9 @@ struct SessionSetupView: View {
         }
     }
     
-    private func startInterview() {
-        // Here you would start the actual interview with:
-        // - sessionName: User's custom session name
-        // - selectedDuration: Interview duration
-        // - category: Technical or Behavioral
-        
-        print("Starting \(category) interview:")
-        print("Session Name: \(sessionName)")
-        print("Duration: \(selectedDuration) minutes")
-        
-        // For now, just dismiss
+    private func startTavusInterview() {
+        // Pass session data to parent and start Tavus interview
+        onSessionStart(sessionName, selectedDuration)
         dismiss()
     }
 }
