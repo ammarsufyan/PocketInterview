@@ -511,8 +511,12 @@ struct SessionDetailView: View {
                     .padding(.horizontal, 20)
                     
                     if let transcript = transcript {
-                        TranscriptCard(transcript: transcript, categoryColor: categoryColor)
-                            .padding(.horizontal, 20)
+                        TranscriptCard(
+                            transcript: transcript,
+                            session: session,
+                            categoryColor: categoryColor
+                        )
+                        .padding(.horizontal, 20)
                     } else if !isLoadingTranscript {
                         NoTranscriptCard()
                             .padding(.horizontal, 20)
@@ -592,6 +596,7 @@ struct DetailCard: View {
 
 struct TranscriptCard: View {
     let transcript: InterviewTranscript
+    let session: InterviewSession // FIXED: Added session parameter
     let categoryColor: Color
     @State private var isExpanded = false
     
