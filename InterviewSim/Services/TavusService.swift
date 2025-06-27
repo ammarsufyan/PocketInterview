@@ -38,6 +38,11 @@ class TavusService: ObservableObject {
                 throw TavusConfigError.invalidConfiguration
             }
             
+            // Validate replica ID
+            guard TavusConfig.validateReplicaId() else {
+                throw TavusConfigError.invalidReplicaId
+            }
+            
             let conversationData = TavusConversationRequest(
                 category: category,
                 sessionName: sessionName,
@@ -93,10 +98,10 @@ class TavusService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
         
-        // FIXED: Use correct Tavus API payload structure from documentation
+        // FIXED: Use correct Tavus API payload structure with YOUR replica ID
         let payload = TavusCreateConversationPayload(
             conversationName: data.sessionName,
-            replicaId: "r12345678-1234-1234-1234-123456789012", // You need to get this from Tavus dashboard
+            replicaId: TavusConfig.defaultReplicaId, // Now using your actual replica ID: rf4703150052
             properties: TavusConversationProperties(
                 maxDuration: data.duration * 60, // Convert minutes to seconds
                 language: "en",
@@ -115,6 +120,7 @@ class TavusService: ObservableObject {
             print("📤 DEBUG: Request Details")
             print("  - Method: \(request.httpMethod ?? "Unknown")")
             print("  - URL: \(endpoint)")
+            print("  - Replica ID: \(TavusConfig.defaultReplicaId)")
             print("  - Headers: \(request.allHTTPHeaderFields ?? [:])")
             if let bodyString = String(data: jsonData, encoding: .utf8) {
                 print("  - Body: \(bodyString)")
@@ -148,9 +154,11 @@ class TavusService: ObservableObject {
                 throw TavusError.apiErrorWithMessage(401, "Invalid API key. Please check your TAVUS_API_KEY in .env file.")
                 
             case 404:
-                print("🚨 404 NOT FOUND - Endpoint Issues:")
+                print("🚨 404 NOT FOUND - Possible Issues:")
                 print("  - Endpoint: \(endpoint)")
-                throw TavusError.apiErrorWithMessage(404, "API endpoint not found. Please check Tavus API documentation.")
+                print("  - Replica ID: \(TavusConfig.defaultReplicaId)")
+                print("  - Check if replica ID exists in your Tavus dashboard")
+                throw TavusError.apiErrorWithMessage(404, "Replica not found. Please verify replica ID 'rf4703150052' exists in your Tavus dashboard.")
                 
             case 400:
                 print("🚨 400 BAD REQUEST - Payload Issues:")
@@ -215,7 +223,7 @@ class TavusService: ObservableObject {
     // MARK: - Configuration Check
     
     func checkConfiguration() -> Bool {
-        return TavusConfig.validateConfiguration()
+        return TavusConfig.validateConfiguration() && TavusConfig.validateReplicaId()
     }
     
     // MARK: - Test API Key Function (ENHANCED)
@@ -230,6 +238,7 @@ class TavusService: ObservableObject {
             print("🧪 Testing Tavus API Key...")
             print("🔑 Current API key preview: \(String(apiKey.prefix(15)))...")
             print("🌐 Testing endpoint: \(testEndpoint)")
+            print("🎭 Using replica ID: \(TavusConfig.defaultReplicaId)")
             
             guard let url = URL(string: testEndpoint) else {
                 print("❌ Invalid test URL: \(testEndpoint)")
@@ -250,12 +259,14 @@ class TavusService: ObservableObject {
                     switch httpResponse.statusCode {
                     case 200, 201:
                         print("✅ API Key is valid!")
+                        print("🎭 Replica ID validation: \(TavusConfig.validateReplicaId() ? "✅ Valid" : "⚠️ Check format")")
                         return true
                     case 401:
                         print("❌ Invalid API key. Please check your TAVUS_API_KEY in .env file.")
                         return false
                     case 404:
                         print("⚠️ Endpoint not found, but API key might be valid")
+                        print("🎭 Replica ID validation: \(TavusConfig.validateReplicaId() ? "✅ Valid" : "⚠️ Check format")")
                         return true // Sometimes 404 means endpoint doesn't exist but auth is OK
                     default:
                         print("⚠️ Unexpected status \(httpResponse.statusCode)")

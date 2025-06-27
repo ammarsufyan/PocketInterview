@@ -168,23 +168,42 @@ struct TavusConfig {
         "theme": "professional" as String
     ]
     
-    // MARK: - Replica Configuration
+    // MARK: - Replica Configuration (UPDATED WITH YOUR REPLICA ID)
     
-    /// Default replica ID - You need to get this from your Tavus dashboard
-    /// Go to https://platform.tavus.io/replicas to find your replica ID
-    static let defaultReplicaId = "r12345678-1234-1234-1234-123456789012"
+    /// Your actual replica ID from Tavus dashboard
+    static let defaultReplicaId = "rf4703150052"
     
-    /// Instructions for getting replica ID
+    /// Replica validation
+    static func validateReplicaId(_ replicaId: String = defaultReplicaId) -> Bool {
+        // Tavus replica IDs typically start with 'r' followed by alphanumeric characters
+        let isValidFormat = replicaId.hasPrefix("r") && replicaId.count >= 8
+        
+        if !isValidFormat {
+            print("⚠️ Warning: Replica ID '\(replicaId)' might not be in the correct format")
+            print("   Expected format: r followed by alphanumeric characters (e.g., rf4703150052)")
+        } else {
+            print("✅ Replica ID '\(replicaId)' appears to be valid")
+        }
+        
+        return isValidFormat
+    }
+    
+    /// Instructions for replica setup (updated)
     static let replicaSetupInstructions = """
-    REPLICA SETUP INSTRUCTIONS:
+    REPLICA SETUP COMPLETED ✅
+    
+    Current Replica ID: rf4703150052
+    
+    This replica ID has been configured and should work with your Tavus account.
+    If you need to change it:
     
     1. Go to https://platform.tavus.io/replicas
-    2. Create or select an existing replica
-    3. Copy the replica ID (format: r12345678-1234-1234-1234-123456789012)
-    4. Update TavusConfig.defaultReplicaId with your actual replica ID
+    2. Select a different replica or create a new one
+    3. Copy the replica ID
+    4. Update TavusConfig.defaultReplicaId with the new ID
     
-    Note: You need a replica to create conversations. The replica represents
-    the AI interviewer that will conduct the interview.
+    Note: The replica represents the AI interviewer that will conduct the interview.
+    Make sure this replica ID exists in your Tavus account.
     """
 }
 
@@ -195,6 +214,7 @@ enum TavusConfigError: Error, LocalizedError {
     case invalidConfiguration
     case networkError
     case invalidResponse
+    case invalidReplicaId
     
     var errorDescription: String? {
         switch self {
@@ -206,35 +226,34 @@ enum TavusConfigError: Error, LocalizedError {
             return "Network error occurred while connecting to Tavus API."
         case .invalidResponse:
             return "Invalid response received from Tavus API."
+        case .invalidReplicaId:
+            return "Invalid replica ID. Please check your replica ID in Tavus dashboard."
         }
     }
 }
 
-// MARK: - Setup Instructions
+// MARK: - Setup Instructions (UPDATED)
 
 /*
  TAVUS ENVIRONMENT SETUP INSTRUCTIONS:
+ 
+ ✅ REPLICA ID CONFIGURED: rf4703150052
  
  1. Create a .env file in your project root with:
     TAVUS_API_KEY=your_actual_api_key_here
     TAVUS_BASE_URL=https://tavusapi.com/v2
  
- 2. Get your Tavus API Key:
-    - Go to https://platform.tavus.io/api-keys
-    - Create a new API key
-    - Add it to your .env file
+ 2. Your Tavus API Key should be working now
+    - Make sure it's the complete key from https://platform.tavus.io/api-keys
+    - The key should be in format: 3d52ddd842e6428...
  
- 3. Get your Replica ID:
-    - Go to https://platform.tavus.io/replicas
-    - Create or select a replica
-    - Copy the replica ID and update TavusConfig.defaultReplicaId
+ 3. Replica ID is already configured: rf4703150052
+    - This should match a replica in your Tavus dashboard
+    - Verify at: https://platform.tavus.io/replicas
  
- 4. For production builds, add these keys to Info.plist:
-    <key>TAVUS_API_KEY</key>
-    <string>$(TAVUS_API_KEY)</string>
- 
- 5. Test the configuration:
+ 4. Test the configuration:
     TavusConfig.validateConfiguration()
+    TavusConfig.validateReplicaId()
  
  SECURITY NOTES:
  - Never commit .env file to version control
