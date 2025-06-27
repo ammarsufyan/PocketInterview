@@ -75,7 +75,7 @@ class TavusService: ObservableObject {
         }
     }
     
-    // MARK: - API Calls (FIXED: Correct Tavus API Payload Structure)
+    // MARK: - API Calls (FIXED: Shorter Conversational Context)
     
     private func createTavusConversation(data: TavusConversationRequest) async throws -> TavusConversationResponse {
         // FIXED: Use official Tavus API endpoint
@@ -99,11 +99,14 @@ class TavusService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
         
+        // FIXED: Generate shorter, concise conversational context
+        let shortContext = generateShortInstructions(for: data.category, cvContext: data.cvContext)
+        
         // FIXED: Use correct Tavus API payload structure based on official documentation
         let payload = TavusCreateConversationPayload(
             replicaId: TavusConfig.defaultReplicaId,
             conversationName: data.sessionName,
-            conversationalContext: generateInstructions(for: data.category, cvContext: data.cvContext),
+            conversationalContext: shortContext,
             properties: TavusConversationProperties(
                 maxCallDuration: data.duration * 60, // Convert minutes to seconds
                 enableRecording: true,
@@ -116,11 +119,12 @@ class TavusService: ObservableObject {
             let jsonData = try JSONEncoder().encode(payload)
             request.httpBody = jsonData
             
-            // Debug: Print request details
+            // Debug: Print request details with context length
             print("📤 DEBUG: Request Details")
             print("  - Method: \(request.httpMethod ?? "Unknown")")
             print("  - URL: \(endpoint)")
             print("  - Replica ID: \(TavusConfig.defaultReplicaId)")
+            print("  - Context Length: \(shortContext.count) characters")
             print("  - Headers: \(request.allHTTPHeaderFields ?? [:])")
             if let bodyString = String(data: jsonData, encoding: .utf8) {
                 print("  - Body: \(bodyString)")
@@ -162,10 +166,13 @@ class TavusService: ObservableObject {
                 
             case 400:
                 print("🚨 400 BAD REQUEST - Payload Issues:")
+                print("  - Context Length: \(shortContext.count) characters")
+                print("  - Session Name: '\(data.sessionName)'")
+                print("  - Duration: \(data.duration) minutes")
                 if let errorData = try? JSONDecoder().decode(TavusErrorResponse.self, from: responseData) {
                     throw TavusError.apiErrorWithMessage(400, errorData.message)
                 } else {
-                    throw TavusError.apiErrorWithMessage(400, "Invalid request payload. Please check replica ID and other parameters.")
+                    throw TavusError.apiErrorWithMessage(400, "Invalid request payload. Context length: \(shortContext.count) chars")
                 }
                 
             default:
@@ -200,18 +207,44 @@ class TavusService: ObservableObject {
         }
     }
     
-    // MARK: - Helper Methods
+    // MARK: - Helper Methods (FIXED: Shorter Instructions)
+    
+    private func generateShortInstructions(for category: String, cvContext: String?) -> String {
+        // FIXED: Much shorter, concise instructions to avoid payload size issues
+        let baseInstructions: String
+        
+        switch category {
+        case "Technical":
+            baseInstructions = """
+            You are a technical interviewer. Ask coding and problem-solving questions. 
+            Focus on algorithms, data structures, and system design. 
+            Encourage the candidate to think out loud and explain their approach.
+            """
+        case "Behavioral":
+            baseInstructions = """
+            You are conducting a behavioral interview. Ask about past experiences using the STAR method. 
+            Focus on leadership, teamwork, and problem-solving situations. 
+            Ask for specific examples and results.
+            """
+        default:
+            baseInstructions = """
+            You are an experienced interviewer. Ask relevant questions about the candidate's background. 
+            Be encouraging and help them showcase their skills.
+            """
+        }
+        
+        // Add brief CV context if available (keep it short)
+        if let cvContext = cvContext, !cvContext.isEmpty {
+            let shortCvSummary = String(cvContext.prefix(200)) // Limit to 200 chars
+            return baseInstructions + " Candidate background: \(shortCvSummary)..."
+        }
+        
+        return baseInstructions
+    }
     
     private func generateInstructions(for category: String, cvContext: String?) -> String {
-        let basePrompt = category == "Technical" ? 
-            TavusConfig.technicalInterviewPrompt : 
-            TavusConfig.behavioralInterviewPrompt
-        
-        return TavusConfig.createPersonalizedPrompt(
-            basePrompt: basePrompt,
-            category: category,
-            cvContext: cvContext
-        )
+        // Keep the old method for backward compatibility, but use short version
+        return generateShortInstructions(for: category, cvContext: cvContext)
     }
     
     func clearSession() {
@@ -302,7 +335,7 @@ struct TavusConversationResponse {
     let sessionId: String
 }
 
-// MARK: - API Models (FIXED: Based on Official Tavus API Documentation)
+// MARK: - API Models (FIXED: Correct Tavus API Payload Structure)
 
 struct TavusCreateConversationPayload: Codable {
     let replicaId: String
