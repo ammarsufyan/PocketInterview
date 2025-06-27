@@ -22,8 +22,8 @@ struct TavusConfig {
     
     // MARK: - Conversation Settings
     
-    /// Default conversation properties
-    static let defaultConversationProperties = [
+    /// Default conversation properties - FIXED: Explicit type annotation
+    static let defaultConversationProperties: [String: Any] = [
         "max_duration": 3600, // 1 hour in seconds
         "language": "en",
         "conversation_type": "interview",
@@ -126,6 +126,25 @@ struct TavusConfig {
         }
         return apiKey
     }
+    
+    // MARK: - Additional Configuration Properties
+    
+    /// Default timeout for API requests (in seconds)
+    static let apiTimeout: TimeInterval = 30.0
+    
+    /// Maximum conversation duration (in seconds)
+    static let maxConversationDuration: Int = 3600 // 1 hour
+    
+    /// Supported conversation languages
+    static let supportedLanguages: [String] = ["en", "es", "fr", "de", "it", "pt"]
+    
+    /// Default conversation settings
+    static let defaultSettings: [String: Any] = [
+        "auto_start": true,
+        "show_controls": true,
+        "enable_fullscreen": true,
+        "theme": "professional"
+    ]
 }
 
 // MARK: - Configuration Errors
@@ -133,6 +152,8 @@ struct TavusConfig {
 enum TavusConfigError: Error, LocalizedError {
     case missingApiKey
     case invalidConfiguration
+    case networkError
+    case invalidResponse
     
     var errorDescription: String? {
         switch self {
@@ -140,6 +161,10 @@ enum TavusConfigError: Error, LocalizedError {
             return "Tavus API key not found. Please add TAVUS_API_KEY to your .env file."
         case .invalidConfiguration:
             return "Invalid Tavus configuration. Please check your environment variables."
+        case .networkError:
+            return "Network error occurred while connecting to Tavus API."
+        case .invalidResponse:
+            return "Invalid response received from Tavus API."
         }
     }
 }
