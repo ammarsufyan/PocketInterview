@@ -16,7 +16,7 @@ struct TavusWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         
-        // Enable media playbook
+        // Enable media playback
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
         
@@ -34,143 +34,161 @@ struct TavusWebView: UIViewRepresentable {
             name: "sessionHandler"
         )
         
-        // ENHANCED: Inject JavaScript to handle session events and iOS controls
+        // FIXED: More conservative session monitoring to prevent auto-close
         let script = WKUserScript(
             source: """
-            // Enhanced session monitoring for iOS
+            // Conservative session monitoring for iOS
             let sessionMonitor = {
                 sessionStarted: false,
                 sessionEnded: false,
+                startDetectionDelay: 10000, // Wait 10 seconds before detecting start
+                endDetectionDelay: 5000,    // Wait 5 seconds before confirming end
+                pageLoadTime: Date.now(),
                 
-                // Monitor for Tavus session events
                 init() {
-                    // Listen for Tavus-specific events
+                    console.log('🔧 Session monitor initialized at:', this.pageLoadTime);
+                    
+                    // CONSERVATIVE: Only listen for explicit Tavus events
                     window.addEventListener('message', (event) => {
                         console.log('📨 Received message:', event.data);
                         
-                        if (event.data.type === 'tavus_session_started' || 
-                            event.data.action === 'session_started' ||
-                            (event.data.event && event.data.event.includes('started'))) {
-                            this.handleSessionStart();
-                        } else if (event.data.type === 'tavus_session_ended' || 
-                                   event.data.action === 'session_ended' ||
-                                   event.data.type === 'call_ended' ||
-                                   event.data.type === 'participant_left' ||
-                                   (event.data.event && event.data.event.includes('ended'))) {
-                            this.handleSessionEnd();
+                        // Only respond to explicit Tavus session events
+                        if (event.data && typeof event.data === 'object') {
+                            if (event.data.type === 'tavus_session_started' || 
+                                event.data.action === 'session_started' ||
+                                (event.data.event && event.data.event === 'conversation_started')) {
+                                this.handleSessionStart();
+                            } else if (event.data.type === 'tavus_session_ended' || 
+                                       event.data.action === 'session_ended' ||
+                                       event.data.type === 'call_ended' ||
+                                       event.data.type === 'participant_left' ||
+                                       (event.data.event && event.data.event === 'conversation_ended')) {
+                                this.handleSessionEnd('tavus_event');
+                            }
                         }
                     });
                     
-                    // Monitor for page visibility changes (iOS backgrounding)
+                    // CONSERVATIVE: Only monitor visibility if session is confirmed active
                     document.addEventListener('visibilitychange', () => {
                         if (document.hidden && this.sessionStarted && !this.sessionEnded) {
-                            console.log('📱 Page hidden during active session - potential iOS cancel');
+                            console.log('📱 Page hidden during confirmed active session');
+                            // Add delay to avoid false positives
                             setTimeout(() => {
-                                if (document.hidden) {
-                                    this.handleSessionEnd('ios_cancel');
+                                if (document.hidden && this.sessionStarted && !this.sessionEnded) {
+                                    console.log('📱 Confirmed: Page still hidden after delay');
+                                    this.handleSessionEnd('ios_background');
                                 }
-                            }, 1000);
+                            }, this.endDetectionDelay);
                         }
                     });
                     
-                    // Monitor for beforeunload (page closing)
-                    window.addEventListener('beforeunload', () => {
-                        if (this.sessionStarted && !this.sessionEnded) {
-                            console.log('🚪 Page unloading during active session');
-                            this.handleSessionEnd('page_unload');
-                        }
-                    });
-                    
-                    // Monitor for pagehide (iOS specific)
-                    window.addEventListener('pagehide', () => {
-                        if (this.sessionStarted && !this.sessionEnded) {
-                            console.log('📱 Page hide during active session - iOS specific');
-                            this.handleSessionEnd('ios_pagehide');
-                        }
-                    });
-                    
-                    // Auto-detect session start based on DOM changes
-                    this.detectSessionStart();
+                    // CONSERVATIVE: Delayed auto-detection
+                    setTimeout(() => {
+                        this.conservativeSessionDetection();
+                    }, this.startDetectionDelay);
                 },
                 
-                detectSessionStart() {
-                    const checkForSession = () => {
-                        if (this.sessionStarted) return;
-                        
-                        // Look for various indicators of an active session
-                        const indicators = [
-                            '[data-tavus-session]',
-                            '.tavus-conversation',
-                            '.tavus-video',
-                            '[class*="conversation"]',
-                            '[class*="video-call"]',
-                            'video[autoplay]',
-                            '.call-container',
-                            '.meeting-container'
-                        ];
-                        
-                        for (const selector of indicators) {
-                            if (document.querySelector(selector)) {
-                                console.log('🎬 Session detected via selector:', selector);
-                                this.handleSessionStart();
-                                return;
-                            }
-                        }
-                        
-                        // Check for video elements
-                        const videos = document.querySelectorAll('video');
-                        if (videos.length > 0) {
-                            for (const video of videos) {
-                                if (!video.paused || video.readyState > 0) {
-                                    console.log('🎬 Session detected via active video');
-                                    this.handleSessionStart();
-                                    return;
-                                }
-                            }
-                        }
-                        
-                        // Check for text content indicating active session
-                        const bodyText = document.body.innerText.toLowerCase();
-                        if (bodyText.includes('conversation') || 
-                            bodyText.includes('connected') || 
-                            bodyText.includes('speaking') ||
-                            bodyText.includes('listening')) {
-                            console.log('🎬 Session detected via text content');
-                            this.handleSessionStart();
-                            return;
-                        }
-                    };
+                conservativeSessionDetection() {
+                    if (this.sessionStarted) {
+                        console.log('🔧 Session already started, skipping detection');
+                        return;
+                    }
                     
-                    // Check immediately and then periodically
-                    checkForSession();
-                    const interval = setInterval(() => {
-                        checkForSession();
-                        if (this.sessionStarted) {
-                            clearInterval(interval);
-                        }
-                    }, 2000);
+                    console.log('🔍 Starting conservative session detection...');
                     
-                    // Stop checking after 30 seconds
-                    setTimeout(() => clearInterval(interval), 30000);
+                    // Look for very specific Tavus indicators
+                    const strongIndicators = [
+                        '[data-testid*="conversation"]',
+                        '[class*="tavus-conversation"]',
+                        '[class*="conversation-container"]',
+                        '.conversation-view',
+                        '#conversation-root'
+                    ];
+                    
+                    let foundStrongIndicator = false;
+                    for (const selector of strongIndicators) {
+                        if (document.querySelector(selector)) {
+                            console.log('🎬 Strong session indicator found:', selector);
+                            foundStrongIndicator = true;
+                            break;
+                        }
+                    }
+                    
+                    // Check for active video with audio
+                    const videos = document.querySelectorAll('video');
+                    let hasActiveVideo = false;
+                    
+                    videos.forEach(video => {
+                        if (video.readyState >= 2 && !video.paused && video.currentTime > 0) {
+                            console.log('🎬 Active video detected:', video);
+                            hasActiveVideo = true;
+                        }
+                    });
+                    
+                    // Check for microphone/camera access indicators
+                    const mediaIndicators = document.querySelectorAll('[class*="media"], [class*="camera"], [class*="microphone"], [class*="audio"]');
+                    const hasMediaIndicators = mediaIndicators.length > 0;
+                    
+                    // CONSERVATIVE: Require multiple indicators
+                    const indicatorCount = [foundStrongIndicator, hasActiveVideo, hasMediaIndicators].filter(Boolean).length;
+                    
+                    if (indicatorCount >= 2) {
+                        console.log('🎬 Multiple indicators found, starting session');
+                        this.handleSessionStart();
+                    } else {
+                        console.log('🔍 Insufficient indicators for session start:', {
+                            strongIndicator: foundStrongIndicator,
+                            activeVideo: hasActiveVideo,
+                            mediaIndicators: hasMediaIndicators,
+                            count: indicatorCount
+                        });
+                        
+                        // Try again after another delay
+                        setTimeout(() => {
+                            if (!this.sessionStarted) {
+                                this.conservativeSessionDetection();
+                            }
+                        }, 5000);
+                    }
                 },
                 
                 handleSessionStart() {
-                    if (this.sessionStarted) return;
+                    if (this.sessionStarted) {
+                        console.log('🔧 Session already started, ignoring duplicate start');
+                        return;
+                    }
+                    
+                    // Additional validation before starting
+                    const timeSinceLoad = Date.now() - this.pageLoadTime;
+                    if (timeSinceLoad < 5000) {
+                        console.log('🔧 Too soon after page load, delaying session start');
+                        setTimeout(() => this.handleSessionStart(), 2000);
+                        return;
+                    }
                     
                     this.sessionStarted = true;
-                    console.log('🎬 Session started');
+                    console.log('🎬 Session started (validated)');
                     
                     window.webkit.messageHandlers.sessionHandler.postMessage({
                         action: 'session_started',
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
+                        timeSinceLoad: timeSinceLoad
                     });
                 },
                 
                 handleSessionEnd(reason = 'unknown') {
-                    if (this.sessionEnded) return;
+                    if (this.sessionEnded) {
+                        console.log('🔧 Session already ended, ignoring duplicate end');
+                        return;
+                    }
+                    
+                    if (!this.sessionStarted) {
+                        console.log('🔧 Session never started, ignoring end event');
+                        return;
+                    }
                     
                     this.sessionEnded = true;
-                    console.log('🏁 Session ended, reason:', reason);
+                    console.log('🏁 Session ended (validated), reason:', reason);
                     
                     window.webkit.messageHandlers.sessionHandler.postMessage({
                         action: 'session_ended',
@@ -180,10 +198,14 @@ struct TavusWebView: UIViewRepresentable {
                 }
             };
             
-            // Initialize session monitor
+            // Initialize session monitor when DOM is ready
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => sessionMonitor.init());
+                document.addEventListener('DOMContentLoaded', () => {
+                    console.log('📄 DOM loaded, initializing session monitor');
+                    sessionMonitor.init();
+                });
             } else {
+                console.log('📄 DOM already loaded, initializing session monitor');
                 sessionMonitor.init();
             }
             
@@ -192,7 +214,7 @@ struct TavusWebView: UIViewRepresentable {
                 console.error('🚨 JavaScript error:', event.error);
             });
             
-            console.log('✅ Enhanced session monitoring initialized');
+            console.log('✅ Conservative session monitoring initialized');
             """,
             injectionTime: .atDocumentEnd,
             forMainFrameOnly: true
@@ -218,6 +240,7 @@ struct TavusWebView: UIViewRepresentable {
         let parent: TavusWebView
         private var sessionStarted = false
         private var sessionEnded = false
+        private var pageLoadTime = Date()
         
         init(_ parent: TavusWebView) {
             self.parent = parent
@@ -225,26 +248,33 @@ struct TavusWebView: UIViewRepresentable {
         
         // MARK: - WKNavigationDelegate
         
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            print("🌐 WebView started loading")
+            pageLoadTime = Date()
+        }
+        
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             print("✅ Tavus WebView loaded successfully")
             
-            // Additional JavaScript injection after page load
+            // CONSERVATIVE: Minimal JavaScript injection
             let js = """
             console.log('📱 Tavus WebView ready for iOS');
+            console.log('🔧 Page URL:', window.location.href);
+            console.log('🔧 Page title:', document.title);
             
-            // Force session detection after a delay
+            // Log page content for debugging
             setTimeout(() => {
-                if (typeof sessionMonitor !== 'undefined') {
-                    sessionMonitor.detectSessionStart();
-                }
-            }, 3000);
+                console.log('🔧 Page content loaded');
+                console.log('🔧 Body classes:', document.body.className);
+                console.log('🔧 Video elements:', document.querySelectorAll('video').length);
+            }, 2000);
             """
             
             webView.evaluateJavaScript(js) { result, error in
                 if let error = error {
                     print("❌ JavaScript injection error: \(error)")
                 } else {
-                    print("✅ Additional JavaScript injected successfully")
+                    print("✅ Minimal JavaScript injected successfully")
                 }
             }
         }
@@ -253,13 +283,14 @@ struct TavusWebView: UIViewRepresentable {
             print("❌ Tavus WebView failed to load: \(error)")
         }
         
-        // ENHANCED: Handle navigation actions (back button, etc.)
+        // CONSERVATIVE: Only handle explicit navigation away
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             
-            // Check if user is navigating away during active session
-            if sessionStarted && !sessionEnded && navigationAction.navigationType == .other {
-                print("🔄 Navigation detected during active session")
-                handleSessionEnd(reason: "navigation_away")
+            // Only trigger session end for user-initiated navigation
+            if sessionStarted && !sessionEnded && 
+               navigationAction.navigationType == .linkActivated {
+                print("🔄 User navigated away during active session")
+                handleSessionEnd(reason: "user_navigation")
             }
             
             decisionHandler(.allow)
@@ -268,7 +299,6 @@ struct TavusWebView: UIViewRepresentable {
         // MARK: - WKUIDelegate
         
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
-            // Grant camera and microphone permissions
             print("🎥 Media capture permission requested for: \(type)")
             decisionHandler(.grant)
         }
@@ -297,10 +327,19 @@ struct TavusWebView: UIViewRepresentable {
             
             let reason = body["reason"] as? String ?? "unknown"
             let timestamp = body["timestamp"] as? Double ?? Date().timeIntervalSince1970 * 1000
+            let timeSinceLoad = body["timeSinceLoad"] as? Double
+            
+            print("📨 Received session message: \(action), reason: \(reason)")
             
             DispatchQueue.main.async {
                 switch action {
                 case "session_started":
+                    // CONSERVATIVE: Additional validation
+                    let currentTime = Date().timeIntervalSince(self.pageLoadTime)
+                    if currentTime < 5.0 {
+                        print("🔧 Session start too soon after page load (\(currentTime)s), ignoring")
+                        return
+                    }
                     self.handleSessionStart()
                 case "session_ended":
                     self.handleSessionEnd(reason: reason)
@@ -313,15 +352,21 @@ struct TavusWebView: UIViewRepresentable {
         // MARK: - Session Management
         
         private func handleSessionStart() {
-            guard !sessionStarted else { return }
+            guard !sessionStarted else { 
+                print("🔧 Session already started, ignoring duplicate")
+                return 
+            }
             
             sessionStarted = true
-            print("🎬 Tavus session started (iOS)")
+            print("🎬 Tavus session started (iOS) - Validated")
             parent.onSessionStart()
         }
         
         private func handleSessionEnd(reason: String) {
-            guard sessionStarted && !sessionEnded else { return }
+            guard sessionStarted && !sessionEnded else { 
+                print("🔧 Invalid session end state - started: \(sessionStarted), ended: \(sessionEnded)")
+                return 
+            }
             
             sessionEnded = true
             print("🏁 Tavus session ended (iOS) - Reason: \(reason)")

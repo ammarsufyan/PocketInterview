@@ -23,6 +23,7 @@ struct TavusInterviewView: View {
     @State private var isSessionActive = false
     @State private var showingApiKeyTest = false
     @State private var sessionEndReason: String = "manual"
+    @State private var hasSessionStarted = false // Track if session has actually started
     
     private var categoryColor: Color {
         category == "Technical" ? .blue : .purple
@@ -134,19 +135,17 @@ struct TavusInterviewView: View {
                 }
             }
         }
-        // ENHANCED: Handle app lifecycle changes
+        // ENHANCED: Handle app lifecycle changes more conservatively
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
-            // App going to background during active session
-            if isSessionActive {
-                print("📱 App going to background during active session")
-                // Don't end immediately, wait for app to return
+            if isSessionActive && hasSessionStarted {
+                print("📱 App going to background during confirmed active session")
+                // Don't end immediately, just log
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            // App returning from background
-            if isSessionActive {
+            if isSessionActive && hasSessionStarted {
                 print("📱 App returned from background")
-                // Session might have ended while in background
+                // Check if session is still active
             }
         }
     }
@@ -163,17 +162,45 @@ struct TavusInterviewView: View {
     // MARK: - Session Management Methods
     
     private func handleSessionStart() {
-        sessionStartTime = Date()
-        isSessionActive = true
-        print("🎬 Session started at: \(sessionStartTime)")
+        // CONSERVATIVE: Additional validation before starting session
+        guard !hasSessionStarted else {
+            print("🔧 Session already started, ignoring duplicate start")
+            return
+        }
+        
+        print("🎬 Session start requested")
+        
+        // Add a small delay to ensure this is a real session start
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            if !self.hasSessionStarted {
+                self.sessionStartTime = Date()
+                self.isSessionActive = true
+                self.hasSessionStarted = true
+                print("🎬 Session confirmed started at: \(self.sessionStartTime)")
+            }
+        }
     }
     
     private func handleSessionEnd(reason: String) {
-        print("🏁 Session ended - Reason: \(reason)")
+        // CONSERVATIVE: Only end if session was actually started
+        guard hasSessionStarted && isSessionActive else {
+            print("🔧 Session end ignored - not in active state")
+            return
+        }
         
-        // Automatically end interview when session ends
-        DispatchQueue.main.async {
-            self.endInterview(reason: reason)
+        print("🏁 Session end requested - Reason: \(reason)")
+        
+        // Add a small delay to avoid immediate end after start
+        let sessionDuration = Date().timeIntervalSince(sessionStartTime)
+        if sessionDuration < 10.0 {
+            print("🔧 Session too short (\(sessionDuration)s), delaying end")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                if self.isSessionActive {
+                    self.endInterview(reason: reason)
+                }
+            }
+        } else {
+            endInterview(reason: reason)
         }
     }
     
@@ -198,6 +225,12 @@ struct TavusInterviewView: View {
     }
     
     private func endInterview(reason: String = "manual") {
+        guard hasSessionStarted else {
+            print("🔧 Cannot end interview - session never started")
+            dismiss()
+            return
+        }
+        
         let actualDuration = Int(Date().timeIntervalSince(sessionStartTime) / 60)
         
         print("📊 Interview ended:")
@@ -225,6 +258,7 @@ struct TavusInterviewView: View {
         
         // Reset session state
         isSessionActive = false
+        hasSessionStarted = false
         
         // Dismiss the view
         dismiss()
