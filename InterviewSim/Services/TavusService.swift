@@ -178,10 +178,14 @@ class TavusService: ObservableObject {
         
         let shortContext = generateShortInstructions(for: data.category, cvContext: data.cvContext)
         
+        // Generate webhook URL for transcript callbacks
+        let webhookUrl = generateWebhookUrl()
+        
         let payload = TavusCreateConversationPayload(
             replicaId: TavusConfig.defaultReplicaId,
             conversationName: data.sessionName,
             conversationalContext: shortContext,
+            callbackUrl: webhookUrl, // Added callback_url parameter
             properties: TavusConversationProperties(
                 maxCallDuration: data.duration * 60,
                 enableRecording: false,
@@ -343,6 +347,14 @@ class TavusService: ObservableObject {
         return baseInstructions
     }
     
+    private func generateWebhookUrl() -> String {
+        // Get Supabase URL from environment
+        let supabaseUrl = EnvironmentConfig.shared.supabaseURL ?? "https://your-project.supabase.co"
+        
+        // Construct webhook URL for the edge function
+        return "\(supabaseUrl)/functions/v1/tavus-transcript-webhook"
+    }
+    
     func clearSession() {
         conversationUrl = nil
         sessionId = nil
@@ -417,12 +429,14 @@ struct TavusCreateConversationPayload: Codable {
     let replicaId: String
     let conversationName: String
     let conversationalContext: String
+    let callbackUrl: String // Added callback_url parameter
     let properties: TavusConversationProperties
     
     enum CodingKeys: String, CodingKey {
         case replicaId = "replica_id"
         case conversationName = "conversation_name"
         case conversationalContext = "conversational_context"
+        case callbackUrl = "callback_url" // Maps to callback_url in JSON
         case properties
     }
 }
