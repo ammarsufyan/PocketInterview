@@ -75,7 +75,7 @@ class TavusService: ObservableObject {
         }
     }
     
-    // MARK: - API Calls (FIXED: Corrected Payload Structure)
+    // MARK: - API Calls (FIXED: Correct Tavus API Payload Structure)
     
     private func createTavusConversation(data: TavusConversationRequest) async throws -> TavusConversationResponse {
         // FIXED: Use official Tavus API endpoint
@@ -94,17 +94,22 @@ class TavusService: ObservableObject {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        // FIXED: Changed from Bearer to x-api-key header
+        // FIXED: Use x-api-key header as per Tavus documentation
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
         
-        // FIXED: Simplified payload structure based on Tavus API docs
+        // FIXED: Use correct Tavus API payload structure based on official documentation
         let payload = TavusCreateConversationPayload(
             replicaId: TavusConfig.defaultReplicaId,
             conversationName: data.sessionName,
-            customInstructions: generateInstructions(for: data.category, cvContext: data.cvContext),
-            maxDuration: data.duration * 60 // Convert minutes to seconds
+            conversationalContext: generateInstructions(for: data.category, cvContext: data.cvContext),
+            properties: TavusConversationProperties(
+                maxCallDuration: data.duration * 60, // Convert minutes to seconds
+                enableRecording: true,
+                enableClosedCaptions: true,
+                language: "english"
+            )
         )
         
         do {
@@ -242,7 +247,7 @@ class TavusService: ObservableObject {
             
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
-            // FIXED: Changed from Bearer to x-api-key header for testing
+            // FIXED: Use x-api-key header for testing
             request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             
@@ -297,19 +302,33 @@ struct TavusConversationResponse {
     let sessionId: String
 }
 
-// MARK: - API Models (FIXED: Simplified Payload Structure)
+// MARK: - API Models (FIXED: Based on Official Tavus API Documentation)
 
 struct TavusCreateConversationPayload: Codable {
     let replicaId: String
     let conversationName: String
-    let customInstructions: String
-    let maxDuration: Int
+    let conversationalContext: String
+    let properties: TavusConversationProperties
     
     enum CodingKeys: String, CodingKey {
         case replicaId = "replica_id"
         case conversationName = "conversation_name"
-        case customInstructions = "custom_instructions"
-        case maxDuration = "max_duration"
+        case conversationalContext = "conversational_context"
+        case properties
+    }
+}
+
+struct TavusConversationProperties: Codable {
+    let maxCallDuration: Int
+    let enableRecording: Bool
+    let enableClosedCaptions: Bool
+    let language: String
+    
+    enum CodingKeys: String, CodingKey {
+        case maxCallDuration = "max_call_duration"
+        case enableRecording = "enable_recording"
+        case enableClosedCaptions = "enable_closed_captions"
+        case language
     }
 }
 
