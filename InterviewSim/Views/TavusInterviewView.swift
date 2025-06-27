@@ -21,6 +21,7 @@ struct TavusInterviewView: View {
     @State private var showingEndConfirmation = false
     @State private var sessionStartTime = Date()
     @State private var isSessionActive = false
+    @State private var showingApiKeyTest = false
     
     private var categoryColor: Color {
         category == "Technical" ? .blue : .purple
@@ -30,7 +31,7 @@ struct TavusInterviewView: View {
         NavigationView {
             ZStack {
                 if tavusService.isLoading {
-                    TavusLoadingView(category: category) // FIXED: Renamed to avoid conflict
+                    TavusLoadingView(category: category)
                 } else if let conversationUrl = tavusService.conversationUrl {
                     TavusWebView(
                         url: conversationUrl,
@@ -43,7 +44,7 @@ struct TavusInterviewView: View {
                         }
                     )
                 } else if let errorMessage = tavusService.errorMessage {
-                    TavusErrorView( // FIXED: Renamed to avoid conflict
+                    TavusErrorView(
                         message: errorMessage,
                         categoryColor: categoryColor,
                         onRetry: {
@@ -51,12 +52,17 @@ struct TavusInterviewView: View {
                                 await startTavusSession()
                             }
                         },
+                        onTestApiKey: {
+                            Task {
+                                await testApiKey()
+                            }
+                        },
                         onCancel: {
                             dismiss()
                         }
                     )
                 } else {
-                    TavusPreparationView( // FIXED: Renamed to avoid conflict
+                    TavusPreparationView(
                         category: category,
                         sessionName: sessionName,
                         duration: duration,
@@ -113,6 +119,11 @@ struct TavusInterviewView: View {
             } message: {
                 Text("Are you sure you want to end the interview? Your progress will be saved.")
             }
+            .alert("API Key Test Result", isPresented: $showingApiKeyTest) {
+                Button("OK") { }
+            } message: {
+                Text("Check the console for detailed API key test results.")
+            }
         }
         .onAppear {
             // Auto-start if we have all required data
@@ -148,6 +159,13 @@ struct TavusInterviewView: View {
         }
     }
     
+    private func testApiKey() async {
+        print("🧪 Testing Tavus API Key...")
+        let isValid = await tavusService.testApiKey()
+        print("🧪 API Key Test Result: \(isValid ? "✅ Valid" : "❌ Invalid")")
+        showingApiKeyTest = true
+    }
+    
     private func endInterview() {
         let actualDuration = Int(Date().timeIntervalSince(sessionStartTime) / 60)
         
@@ -171,7 +189,7 @@ struct TavusInterviewView: View {
     }
 }
 
-// MARK: - Supporting Views (FIXED: All renamed to avoid conflicts)
+// MARK: - Supporting Views
 
 struct TavusLoadingView: View {
     let category: String
@@ -221,6 +239,7 @@ struct TavusErrorView: View {
     let message: String
     let categoryColor: Color
     let onRetry: () -> Void
+    let onTestApiKey: () -> Void
     let onCancel: () -> Void
     
     var body: some View {
@@ -257,6 +276,26 @@ struct TavusErrorView: View {
                     .frame(height: 52)
                     .background(categoryColor)
                     .cornerRadius(12)
+                }
+                
+                // ADDED: Test API Key Button for debugging
+                Button(action: onTestApiKey) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "key.fill")
+                            .font(.headline)
+                        Text("Test API Key")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                    }
+                    .foregroundColor(categoryColor)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(categoryColor.opacity(0.1))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(categoryColor, lineWidth: 1)
+                    )
                 }
                 
                 Button(action: onCancel) {
@@ -475,7 +514,7 @@ struct TipsCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(categoryColor.opacity(0.2), lineWidth: 1)
-        )
+            )
         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
 }

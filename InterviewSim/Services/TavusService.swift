@@ -29,7 +29,7 @@ class TavusService: ObservableObject {
         errorMessage = nil
         
         do {
-            // Debug: Print configuration
+            // Enhanced debug: Print configuration
             print("🔧 DEBUG: Tavus Configuration Check")
             envConfig.printLoadedVariables()
             
@@ -81,10 +81,13 @@ class TavusService: ObservableObject {
         // Get API key from environment with detailed debugging
         let apiKey = try TavusConfig.getApiKey()
         
-        print("🔑 DEBUG: API Key Info")
-        print("  - Length: \(apiKey.count)")
-        print("  - Prefix: \(String(apiKey.prefix(10)))...")
+        print("🔑 DEBUG: API Key Detailed Analysis")
+        print("  - Raw Length: \(apiKey.count)")
+        print("  - First 15 chars: \(String(apiKey.prefix(15)))...")
+        print("  - Last 10 chars: ...\(String(apiKey.suffix(10)))")
         print("  - Contains underscore: \(apiKey.contains("_"))")
+        print("  - Contains dash: \(apiKey.contains("-"))")
+        print("  - Is alphanumeric: \(apiKey.allSatisfy { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" })")
         print("🌐 DEBUG: Request URL: \(url)")
         
         var request = URLRequest(url: url)
@@ -93,7 +96,7 @@ class TavusService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
         
-        // Create the conversation payload - UPDATED FOR TAVUS API
+        // UPDATED: Use correct Tavus API payload structure
         let payload = TavusAPIPayload(
             conversationName: data.sessionName,
             conversationProperties: TavusConversationProperties(
@@ -129,6 +132,17 @@ class TavusService: ObservableObject {
         
         if let responseString = String(data: responseData, encoding: .utf8) {
             print("  - Body: \(responseString)")
+        }
+        
+        // ENHANCED: Better error handling for 401
+        if httpResponse.statusCode == 401 {
+            print("🚨 401 UNAUTHORIZED - API Key Issues:")
+            print("  - Check if API key is complete and valid")
+            print("  - Verify API key format matches Tavus requirements")
+            print("  - Ensure no extra spaces or characters in .env file")
+            print("  - Current API key preview: \(String(apiKey.prefix(15)))...")
+            
+            throw TavusError.apiErrorWithMessage(401, "Invalid API key. Please check your TAVUS_API_KEY in .env file.")
         }
         
         guard httpResponse.statusCode == 200 || httpResponse.statusCode == 201 else {
@@ -173,6 +187,38 @@ class TavusService: ObservableObject {
     
     func checkConfiguration() -> Bool {
         return TavusConfig.validateConfiguration()
+    }
+    
+    // MARK: - Test API Key Function
+    
+    func testApiKey() async -> Bool {
+        do {
+            let apiKey = try TavusConfig.getApiKey()
+            let baseURL = envConfig.tavusBaseURL
+            
+            // Test with a simple API call (like getting account info)
+            guard let url = URL(string: "\(baseURL)/account") else {
+                print("❌ Invalid test URL")
+                return false
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            let (_, response) = try await URLSession.shared.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                print("🧪 API Key Test Result: Status \(httpResponse.statusCode)")
+                return httpResponse.statusCode != 401
+            }
+            
+            return false
+        } catch {
+            print("❌ API Key test failed: \(error)")
+            return false
+        }
     }
 }
 
