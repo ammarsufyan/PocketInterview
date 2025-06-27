@@ -135,7 +135,7 @@ class TavusService: ObservableObject {
         // FIXED: Generate shorter, concise conversational context
         let shortContext = generateShortInstructions(for: data.category, cvContext: data.cvContext)
         
-        // FIXED: Use correct Tavus API payload structure based on official documentation
+        // ENHANCED: Use correct Tavus API payload structure with timeout properties
         let payload = TavusCreateConversationPayload(
             replicaId: TavusConfig.defaultReplicaId,
             conversationName: data.sessionName,
@@ -144,7 +144,9 @@ class TavusService: ObservableObject {
                 maxCallDuration: data.duration * 60, // Convert minutes to seconds
                 enableRecording: true,
                 enableClosedCaptions: true,
-                language: "english"
+                language: "english",
+                participantLeftTimeout: 10,  // NEW: 10 seconds timeout when participant leaves
+                participantAbsentTimeout: 60 // NEW: 60 seconds timeout if no one joins
             )
         )
         
@@ -158,6 +160,8 @@ class TavusService: ObservableObject {
             print("  - URL: \(endpoint)")
             print("  - Replica ID: \(TavusConfig.defaultReplicaId)")
             print("  - Context Length: \(shortContext.count) characters")
+            print("  - Participant Left Timeout: 10 seconds")
+            print("  - Participant Absent Timeout: 60 seconds")
             print("  - Headers: \(request.allHTTPHeaderFields ?? [:])")
             if let bodyString = String(data: jsonData, encoding: .utf8) {
                 print("  - Body: \(bodyString)")
@@ -448,7 +452,7 @@ struct TavusConversationResponse {
     let sessionId: String
 }
 
-// MARK: - API Models (FIXED: Correct Tavus API Payload Structure)
+// MARK: - API Models (ENHANCED: Added Timeout Properties)
 
 struct TavusCreateConversationPayload: Codable {
     let replicaId: String
@@ -469,12 +473,16 @@ struct TavusConversationProperties: Codable {
     let enableRecording: Bool
     let enableClosedCaptions: Bool
     let language: String
+    let participantLeftTimeout: Int    // NEW: Timeout when participant leaves (seconds)
+    let participantAbsentTimeout: Int  // NEW: Timeout when no one joins (seconds)
     
     enum CodingKeys: String, CodingKey {
         case maxCallDuration = "max_call_duration"
         case enableRecording = "enable_recording"
         case enableClosedCaptions = "enable_closed_captions"
         case language
+        case participantLeftTimeout = "participant_left_timeout"
+        case participantAbsentTimeout = "participant_absent_timeout"
     }
 }
 
