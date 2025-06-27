@@ -124,26 +124,16 @@ class InterviewHistoryManager: ObservableObject {
     ) async -> Bool {
         
         do {
-            // FIXED: Use proper dictionary approach instead of AnyJSON
-            var updates: [String: Any] = [:]
-            
-            if let score = score {
-                updates["score"] = score
-            }
-            if let questionsAnswered = questionsAnswered {
-                updates["questions_answered"] = questionsAnswered
-            }
-            if let sessionData = sessionData {
-                // Convert to JSON string for storage
-                if let jsonData = try? JSONSerialization.data(withJSONObject: sessionData),
-                   let jsonString = String(data: jsonData, encoding: .utf8) {
-                    updates["session_data"] = jsonString
-                }
-            }
+            // FIXED: Create a proper Codable struct for updates
+            let updateData = SessionUpdateData(
+                score: score,
+                questionsAnswered: questionsAnswered,
+                sessionData: sessionData
+            )
             
             let response: InterviewSession = try await supabase
                 .from("interview_sessions")
-                .update(updates)
+                .update(updateData)
                 .eq("id", value: sessionId)
                 .select()
                 .single()
@@ -301,6 +291,36 @@ struct InterviewSessionInsert: Codable {
             self.sessionData = jsonString
         } else {
             self.sessionData = "{}"
+        }
+    }
+}
+
+// FIXED: New struct specifically for updates that avoids encoding issues
+struct SessionUpdateData: Codable {
+    let score: Int?
+    let questionsAnswered: Int?
+    let sessionData: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case score
+        case questionsAnswered = "questions_answered"
+        case sessionData = "session_data"
+    }
+    
+    init(score: Int?, questionsAnswered: Int?, sessionData: [String: Any]?) {
+        self.score = score
+        self.questionsAnswered = questionsAnswered
+        
+        // Convert sessionData to JSON string if provided
+        if let sessionData = sessionData {
+            if let jsonData = try? JSONSerialization.data(withJSONObject: sessionData),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                self.sessionData = jsonString
+            } else {
+                self.sessionData = nil
+            }
+        } else {
+            self.sessionData = nil
         }
     }
 }
