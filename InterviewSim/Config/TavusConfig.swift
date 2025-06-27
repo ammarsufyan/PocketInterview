@@ -8,19 +8,20 @@
 import Foundation
 
 struct TavusConfig {
-    // MARK: - API Configuration (Using Environment Variables)
+    // MARK: - API Configuration (HARDCODED FOR TESTING)
     
-    /// Tavus API key from environment variables
+    /// Hardcoded Tavus API key for testing
     static var apiKey: String? {
-        return EnvironmentConfig.shared.tavusApiKey
+        // HARDCODED API KEY - REMOVE IN PRODUCTION
+        return "3d52ddd842e64285b8982713be1e3896"
     }
     
-    /// Tavus API base URL from environment variables
+    /// Tavus API base URL
     static var baseURL: String {
-        return EnvironmentConfig.shared.tavusBaseURL
+        return "https://tavusapi.com/v2"
     }
     
-    // MARK: - Conversation Settings (FIXED: Explicit type annotations)
+    // MARK: - Conversation Settings
     
     /// Default conversation properties
     static let defaultConversationProperties: [String: Any] = [
@@ -115,23 +116,20 @@ struct TavusConfig {
     }
     
     static func validateConfiguration() -> Bool {
-        let isValid = EnvironmentConfig.shared.validateTavusConfiguration()
-        
-        if !isValid {
-            print("❌ Tavus Configuration Validation Failed")
-            print("📋 Required Environment Variables:")
-            print("  - TAVUS_API_KEY: \(apiKey != nil ? "✅ Found" : "❌ Missing")")
-            print("  - TAVUS_BASE_URL: \(baseURL.isEmpty ? "❌ Missing" : "✅ Found")")
-            
-            if let apiKey = apiKey {
-                print("🔑 API Key Debug Info:")
-                print("  - Length: \(apiKey.count)")
-                print("  - Starts with expected prefix: \(apiKey.hasPrefix("3d52ddd") ? "✅" : "❌")")
-                print("  - Contains underscore: \(apiKey.contains("_") ? "✅" : "❌")")
-            }
+        guard let apiKey = apiKey, !apiKey.isEmpty else {
+            print("❌ TAVUS_API_KEY not found")
+            return false
         }
         
-        return isValid
+        // Validate API key format
+        if apiKey.count < 10 {
+            print("⚠️ Warning: API key seems too short (\(apiKey.count) characters)")
+        }
+        
+        print("✅ Tavus configuration is valid")
+        print("  - API Key: \(String(apiKey.prefix(10)))... (length: \(apiKey.count))")
+        print("  - Base URL: \(baseURL)")
+        return true
     }
     
     // MARK: - Safe Configuration Access
@@ -141,7 +139,7 @@ struct TavusConfig {
             throw TavusConfigError.missingApiKey
         }
         
-        // Validate API key format (Tavus keys typically have specific format)
+        // Validate API key format
         if apiKey.count < 10 {
             print("⚠️ Warning: API key seems too short (\(apiKey.count) characters)")
         }
@@ -160,7 +158,7 @@ struct TavusConfig {
     /// Supported conversation languages
     static let supportedLanguages: [String] = ["en", "es", "fr", "de", "it", "pt"]
     
-    /// Default conversation settings (FIXED: Explicit type annotations)
+    /// Default conversation settings
     static let defaultSettings: [String: Any] = [
         "auto_start": true as Bool,
         "show_controls": true as Bool,
@@ -168,7 +166,7 @@ struct TavusConfig {
         "theme": "professional" as String
     ]
     
-    // MARK: - Replica Configuration (UPDATED WITH YOUR REPLICA ID)
+    // MARK: - Replica Configuration
     
     /// Your actual replica ID from Tavus dashboard
     static let defaultReplicaId = "rf4703150052"
@@ -187,24 +185,6 @@ struct TavusConfig {
         
         return isValidFormat
     }
-    
-    /// Instructions for replica setup (updated)
-    static let replicaSetupInstructions = """
-    REPLICA SETUP COMPLETED ✅
-    
-    Current Replica ID: rf4703150052
-    
-    This replica ID has been configured and should work with your Tavus account.
-    If you need to change it:
-    
-    1. Go to https://platform.tavus.io/replicas
-    2. Select a different replica or create a new one
-    3. Copy the replica ID
-    4. Update TavusConfig.defaultReplicaId with the new ID
-    
-    Note: The replica represents the AI interviewer that will conduct the interview.
-    Make sure this replica ID exists in your Tavus account.
-    """
 }
 
 // MARK: - Configuration Errors
@@ -219,9 +199,9 @@ enum TavusConfigError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingApiKey:
-            return "Tavus API key not found. Please add TAVUS_API_KEY to your .env file."
+            return "Tavus API key not found. Please check your configuration."
         case .invalidConfiguration:
-            return "Invalid Tavus configuration. Please check your environment variables."
+            return "Invalid Tavus configuration. Please check your settings."
         case .networkError:
             return "Network error occurred while connecting to Tavus API."
         case .invalidResponse:
@@ -231,33 +211,3 @@ enum TavusConfigError: Error, LocalizedError {
         }
     }
 }
-
-// MARK: - Setup Instructions (UPDATED)
-
-/*
- TAVUS ENVIRONMENT SETUP INSTRUCTIONS:
- 
- ✅ REPLICA ID CONFIGURED: rf4703150052
- 
- 1. Create a .env file in your project root with:
-    TAVUS_API_KEY=your_actual_api_key_here
-    TAVUS_BASE_URL=https://tavusapi.com/v2
- 
- 2. Your Tavus API Key should be working now
-    - Make sure it's the complete key from https://platform.tavus.io/api-keys
-    - The key should be in format: 3d52ddd842e6428...
- 
- 3. Replica ID is already configured: rf4703150052
-    - This should match a replica in your Tavus dashboard
-    - Verify at: https://platform.tavus.io/replicas
- 
- 4. Test the configuration:
-    TavusConfig.validateConfiguration()
-    TavusConfig.validateReplicaId()
- 
- SECURITY NOTES:
- - Never commit .env file to version control
- - Add .env to your .gitignore file
- - Use different keys for development and production
- - Consider using Xcode build configurations for different environments
- */
