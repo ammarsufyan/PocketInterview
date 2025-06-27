@@ -81,17 +81,17 @@ class InterviewHistoryManager: ObservableObject {
     ) async -> InterviewSession? {
         
         do {
-            // Get current user
-            let user = try await supabase.auth.user
+            // Get current user - FIXED: Call the function and access user property
+            let currentUser = try await supabase.auth.user
             
             let newSession = InterviewSessionInsert(
-                userId: user.id,
+                userId: currentUser.id,
                 category: category,
                 sessionName: sessionName,
                 score: score,
                 durationMinutes: durationMinutes,
                 questionsAnswered: questionsAnswered,
-                sessionData: AnyCodable(sessionData)
+                sessionData: sessionData
             )
             
             let response: InterviewSession = try await supabase
@@ -132,7 +132,7 @@ class InterviewHistoryManager: ObservableObject {
                 updates["questions_answered"] = questionsAnswered
             }
             if let sessionData = sessionData {
-                updates["session_data"] = AnyCodable(sessionData)
+                updates["session_data"] = sessionData
             }
             
             let response: InterviewSession = try await supabase
@@ -267,7 +267,7 @@ struct InterviewSessionInsert: Codable {
     let score: Int?
     let durationMinutes: Int
     let questionsAnswered: Int
-    let sessionData: AnyCodable
+    let sessionData: [String: Any]
     
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -277,6 +277,23 @@ struct InterviewSessionInsert: Codable {
         case durationMinutes = "duration_minutes"
         case questionsAnswered = "questions_answered"
         case sessionData = "session_data"
+    }
+    
+    // FIXED: Custom encoding for sessionData
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(userId, forKey: .userId)
+        try container.encode(category, forKey: .category)
+        try container.encode(sessionName, forKey: .sessionName)
+        try container.encodeIfPresent(score, forKey: .score)
+        try container.encode(durationMinutes, forKey: .durationMinutes)
+        try container.encode(questionsAnswered, forKey: .questionsAnswered)
+        
+        // Convert [String: Any] to JSON data
+        let jsonData = try JSONSerialization.data(withJSONObject: sessionData)
+        let jsonString = String(data: jsonData, encoding: .utf8) ?? "{}"
+        try container.encode(jsonString, forKey: .sessionData)
     }
 }
 
