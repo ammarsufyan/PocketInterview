@@ -81,7 +81,7 @@ class InterviewHistoryManager: ObservableObject {
     ) async -> InterviewSession? {
         
         do {
-            // FIXED: Get current user session properly
+            // Get current user session properly
             let currentSession = try await supabase.auth.session
             let userId = currentSession.user.id
             
@@ -124,19 +124,20 @@ class InterviewHistoryManager: ObservableObject {
     ) async -> Bool {
         
         do {
-            var updates: [String: AnyJSON] = [:]
+            // FIXED: Use proper dictionary approach instead of AnyJSON
+            var updates: [String: Any] = [:]
             
             if let score = score {
-                updates["score"] = AnyJSON.number(Double(score))
+                updates["score"] = score
             }
             if let questionsAnswered = questionsAnswered {
-                updates["questions_answered"] = AnyJSON.number(Double(questionsAnswered))
+                updates["questions_answered"] = questionsAnswered
             }
             if let sessionData = sessionData {
                 // Convert to JSON string for storage
                 if let jsonData = try? JSONSerialization.data(withJSONObject: sessionData),
                    let jsonString = String(data: jsonData, encoding: .utf8) {
-                    updates["session_data"] = AnyJSON.string(jsonString)
+                    updates["session_data"] = jsonString
                 }
             }
             
@@ -265,7 +266,7 @@ class InterviewHistoryManager: ObservableObject {
 
 // MARK: - Helper Structs
 
-// FIXED: Simplified InterviewSessionInsert struct
+// Simplified InterviewSessionInsert struct
 struct InterviewSessionInsert: Codable {
     let userId: UUID
     let category: String
@@ -285,7 +286,7 @@ struct InterviewSessionInsert: Codable {
         case sessionData = "session_data"
     }
     
-    // FIXED: Initialize with proper JSON encoding
+    // Initialize with proper JSON encoding
     init(userId: UUID, category: String, sessionName: String, score: Int?, durationMinutes: Int, questionsAnswered: Int, sessionData: [String: Any]) {
         self.userId = userId
         self.category = category
@@ -304,7 +305,7 @@ struct InterviewSessionInsert: Codable {
     }
 }
 
-// FIXED: Completely rewritten SafeAnyCodable to avoid encoding issues
+// Completely rewritten SafeAnyCodable to avoid encoding issues
 struct SafeAnyCodable: Codable {
     private let jsonString: String
     
