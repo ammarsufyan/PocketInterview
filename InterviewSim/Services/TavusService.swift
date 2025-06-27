@@ -75,7 +75,7 @@ class TavusService: ObservableObject {
         }
     }
     
-    // MARK: - API Calls (FIXED: Using x-api-key header instead of Bearer)
+    // MARK: - API Calls (FIXED: Corrected Payload Structure)
     
     private func createTavusConversation(data: TavusConversationRequest) async throws -> TavusConversationResponse {
         // FIXED: Use official Tavus API endpoint
@@ -99,18 +99,12 @@ class TavusService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
         
-        // FIXED: Use correct Tavus API payload structure with YOUR replica ID
+        // FIXED: Simplified payload structure based on Tavus API docs
         let payload = TavusCreateConversationPayload(
+            replicaId: TavusConfig.defaultReplicaId,
             conversationName: data.sessionName,
-            replicaId: TavusConfig.defaultReplicaId, // Now using your actual replica ID: rf4703150052
-            properties: TavusConversationProperties(
-                maxDuration: data.duration * 60, // Convert minutes to seconds
-                language: "en",
-                conversationType: "interview",
-                enableRecording: true,
-                enableTranscription: true,
-                customInstructions: generateInstructions(for: data.category, cvContext: data.cvContext)
-            )
+            customInstructions: generateInstructions(for: data.category, cvContext: data.cvContext),
+            maxDuration: data.duration * 60 // Convert minutes to seconds
         )
         
         do {
@@ -303,35 +297,19 @@ struct TavusConversationResponse {
     let sessionId: String
 }
 
-// MARK: - API Models (FIXED: Based on Official Tavus API Documentation)
+// MARK: - API Models (FIXED: Simplified Payload Structure)
 
 struct TavusCreateConversationPayload: Codable {
-    let conversationName: String
     let replicaId: String
-    let properties: TavusConversationProperties
-    
-    enum CodingKeys: String, CodingKey {
-        case conversationName = "conversation_name"
-        case replicaId = "replica_id"
-        case properties
-    }
-}
-
-struct TavusConversationProperties: Codable {
-    let maxDuration: Int
-    let language: String
-    let conversationType: String
-    let enableRecording: Bool
-    let enableTranscription: Bool
+    let conversationName: String
     let customInstructions: String
+    let maxDuration: Int
     
     enum CodingKeys: String, CodingKey {
-        case maxDuration = "max_duration"
-        case language
-        case conversationType = "conversation_type"
-        case enableRecording = "enable_recording"
-        case enableTranscription = "enable_transcription"
+        case replicaId = "replica_id"
+        case conversationName = "conversation_name"
         case customInstructions = "custom_instructions"
+        case maxDuration = "max_duration"
     }
 }
 

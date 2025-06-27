@@ -713,7 +713,7 @@ struct CVPickerView: View {
     }
 }
 
-// MARK: - Session Setup View (FIXED: Session Name Input Issue)
+// MARK: - Session Setup View (FIXED: Session Name Input Persistence)
 struct SessionSetupView: View {
     let category: String
     let onSessionStart: (String, Int) -> Void
@@ -765,7 +765,7 @@ struct SessionSetupView: View {
                     .padding(.top, 20)
                     
                     VStack(spacing: 24) {
-                        // Session Name Input - FIXED: Proper TextField styling
+                        // Session Name Input - FIXED: Better text field styling and persistence
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Text("Session Name")
@@ -794,6 +794,12 @@ struct SessionSetupView: View {
                                     )
                                     .focused($isTextFieldFocused)
                                     .submitLabel(.done)
+                                    .onSubmit {
+                                        // Keep focus if name is empty
+                                        if sessionName.isEmpty {
+                                            isTextFieldFocused = true
+                                        }
+                                    }
                                 
                                 Text(placeholderText)
                                     .font(.caption)
@@ -849,12 +855,12 @@ struct SessionSetupView: View {
                                 .font(.headline)
                                 .fontWeight(.semibold)
                         }
-                        .foregroundColor(sessionName.isEmpty ? .secondary : .white)
+                        .foregroundColor(sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .secondary : .white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
                         .background(
                             Group {
-                                if sessionName.isEmpty {
+                                if sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                     Color(.systemGray4)
                                 } else {
                                     LinearGradient(
@@ -867,18 +873,18 @@ struct SessionSetupView: View {
                         )
                         .cornerRadius(16)
                         .shadow(
-                            color: sessionName.isEmpty ? Color.clear : categoryColor.opacity(0.3),
-                            radius: sessionName.isEmpty ? 0 : 8,
+                            color: sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.clear : categoryColor.opacity(0.3),
+                            radius: sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0 : 8,
                             x: 0,
                             y: 4
                         )
-                        .scaleEffect(sessionName.isEmpty ? 0.98 : 1.0)
+                        .scaleEffect(sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.98 : 1.0)
                     }
-                    .disabled(sessionName.isEmpty)
-                    .animation(.easeInOut(duration: 0.2), value: sessionName.isEmpty)
+                    .disabled(sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .animation(.easeInOut(duration: 0.2), value: sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     .padding(.horizontal, 20)
                     
-                    if sessionName.isEmpty {
+                    if sessionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text("Please enter a session name to continue")
                             .font(.caption)
                             .foregroundColor(.red)
@@ -915,8 +921,11 @@ struct SessionSetupView: View {
     }
     
     private func startTavusInterview() {
+        let trimmedName = sessionName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+        
         // Pass session data to parent and start Tavus interview
-        onSessionStart(sessionName, selectedDuration)
+        onSessionStart(trimmedName, selectedDuration)
         dismiss()
     }
 }
