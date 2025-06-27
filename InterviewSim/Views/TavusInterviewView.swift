@@ -25,6 +25,10 @@ struct TavusInterviewView: View {
     @State private var isEndingSession = false
     @State private var isShowingAlert = false
     
+    // FIXED: Add state to control when to show preparation view
+    @State private var showPreparationView = true
+    @State private var hasAttemptedStart = false
+    
     private var categoryColor: Color {
         sessionData.category == "Technical" ? .blue : .purple
     }
@@ -32,7 +36,28 @@ struct TavusInterviewView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                if tavusService.isLoading {
+                // FIXED: Show preparation view first, then loading, then WebView
+                if showPreparationView {
+                    TavusPreparationView(
+                        category: sessionData.category,
+                        sessionName: sessionData.sessionName,
+                        duration: sessionData.duration,
+                        categoryColor: categoryColor,
+                        onStart: {
+                            print("🚀 User clicked Start AI Interview")
+                            showPreparationView = false
+                            hasAttemptedStart = true
+                            
+                            Task {
+                                await startTavusSession()
+                            }
+                        },
+                        onCancel: {
+                            print("🚫 User cancelled from preparation view")
+                            onBackToSetup()
+                        }
+                    )
+                } else if tavusService.isLoading {
                     TavusLoadingView(category: sessionData.category)
                 } else if let conversationUrl = tavusService.conversationUrl {
                     TavusWebView(
@@ -49,6 +74,7 @@ struct TavusInterviewView: View {
                         message: errorMessage,
                         categoryColor: categoryColor,
                         onRetry: {
+                            print("🔄 Retrying Tavus session creation")
                             Task {
                                 await startTavusSession()
                             }
@@ -59,24 +85,13 @@ struct TavusInterviewView: View {
                             }
                         },
                         onCancel: {
-                            dismiss()
+                            print("🚫 User cancelled from error view")
+                            onBackToSetup()
                         }
                     )
-                } else {
-                    TavusPreparationView(
-                        category: sessionData.category,
-                        sessionName: sessionData.sessionName,
-                        duration: sessionData.duration,
-                        categoryColor: categoryColor,
-                        onStart: {
-                            Task {
-                                await startTavusSession()
-                            }
-                        },
-                        onCancel: {
-                            dismiss()
-                        }
-                    )
+                } else if hasAttemptedStart {
+                    // FIXED: Show loading if we attempted to start but no URL yet
+                    TavusLoadingView(category: sessionData.category)
                 }
                 
                 // Loading overlay when ending session
@@ -115,6 +130,7 @@ struct TavusInterviewView: View {
                         .disabled(isEndingSession || isShowingAlert)
                     } else {
                         Button("Back to Setup") {
+                            print("🔙 Back to Setup button pressed")
                             onBackToSetup()
                         }
                         .foregroundColor(categoryColor)
@@ -155,15 +171,23 @@ struct TavusInterviewView: View {
             print("  - Category: '\(sessionData.category)'")
             print("  - Session Name: '\(sessionData.sessionName)'")
             print("  - Duration: \(sessionData.duration)")
-            print("  - CV Context: \(cvContext != nil ? "Provided" : "None")")
+            print("  - CV Context: \(cvContext != nil ? "Provided (\(cvContext?.count ?? 0) chars)" : "None")")
             print("  - SessionData Valid: \(sessionData.isValid)")
+            print("  - Show Preparation View: \(showPreparationView)")
             
-            if sessionData.isValid {
+            // FIXED: Don't auto-start session, let user click the button
+            if !sessionData.isValid {
+                print("❌ SessionData is invalid")
+                // Could show an error or go back to setup
+            }
+        }
+        // FIXED: Handle app lifecycle to prevent duplicate sessions
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.willResignActiveNotification)) { _ in
+            if tavusService.isLoading && !hasSessionStarted {
+                print("📱 App going to background during session creation - cancelling")
                 Task {
-                    await startTavusSession()
+                    await tavusService.clearSession()
                 }
-            } else {
-                print("❌ SessionData is invalid, not starting session")
             }
         }
     }
@@ -181,18 +205,19 @@ struct TavusInterviewView: View {
     
     private func handleSessionStart() {
         guard !hasSessionStarted else {
-            print("🔧 Session already started")
+            print("🔧 Session already started, ignoring duplicate")
             return
         }
         
         print("🎬 Session start confirmed")
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            if !self.hasSessionStarted {
+        // FIXED: More conservative session start validation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            if !self.hasSessionStarted && self.tavusService.conversationUrl != nil {
                 self.sessionStartTime = Date()
                 self.isSessionActive = true
                 self.hasSessionStarted = true
-                print("🎬 Session officially started")
+                print("🎬 Session officially started at: \(self.sessionStartTime)")
             }
         }
     }
@@ -200,6 +225,9 @@ struct TavusInterviewView: View {
     private func handleSessionEnd(reason: String) {
         guard hasSessionStarted && isSessionActive && !isEndingSession else {
             print("🔧 Session end ignored - invalid state")
+            print("  - hasSessionStarted: \(hasSessionStarted)")
+            print("  - isSessionActive: \(isSessionActive)")
+            print("  - isEndingSession: \(isEndingSession)")
             return
         }
         
@@ -210,7 +238,28 @@ struct TavusInterviewView: View {
         }
     }
     
+    // FIXED: Enhanced session creation with duplicate prevention
     private func startTavusSession() async {
+        // FIXED: Prevent multiple simultaneous session creation attempts
+        guard !tavusService.isLoading else {
+            print("🔧 Session creation already in progress, ignoring duplicate request")
+            return
+        }
+        
+        guard sessionData.isValid else {
+            print("❌ Cannot start session - invalid session data")
+            print("  - Category: '\(sessionData.category)'")
+            print("  - Session Name: '\(sessionData.sessionName)'")
+            print("  - Duration: \(sessionData.duration)")
+            return
+        }
+        
+        print("🚀 DEBUG: Starting Tavus session creation")
+        print("  - Category: '\(sessionData.category)'")
+        print("  - Session Name: '\(sessionData.sessionName)'")
+        print("  - Duration: \(sessionData.duration)")
+        print("  - CV Context Length: \(cvContext?.count ?? 0)")
+        
         let success = await tavusService.createConversationSession(
             category: sessionData.category,
             sessionName: sessionData.sessionName,
@@ -218,8 +267,13 @@ struct TavusInterviewView: View {
             cvContext: cvContext
         )
         
-        if !success {
+        if success {
+            print("✅ Tavus session created successfully")
+            print("  - Conversation URL: \(tavusService.conversationUrl ?? "None")")
+            print("  - Session ID: \(tavusService.sessionId ?? "None")")
+        } else {
             print("❌ Failed to create Tavus session")
+            print("  - Error: \(tavusService.errorMessage ?? "Unknown error")")
         }
     }
     
@@ -234,6 +288,9 @@ struct TavusInterviewView: View {
     private func endInterviewWithAPI(reason: String = "manual") async {
         guard hasSessionStarted && !isEndingSession else {
             print("🔧 Cannot end - invalid state")
+            print("  - hasSessionStarted: \(hasSessionStarted)")
+            print("  - isEndingSession: \(isEndingSession)")
+            
             if !hasSessionStarted {
                 dismiss()
             }
@@ -244,6 +301,7 @@ struct TavusInterviewView: View {
         
         print("🔚 Ending interview...")
         print("  - Reason: \(reason)")
+        print("  - Session ID: \(tavusService.sessionId ?? "None")")
         
         // Step 1: End Tavus conversation
         let apiSuccess = await tavusService.endConversationSession()
@@ -264,8 +322,10 @@ struct TavusInterviewView: View {
             questionsAnswered: 0,
             sessionData: [
                 "tavus_session_id": tavusService.sessionId ?? "",
+                "conversation_url": tavusService.conversationUrl ?? "",
                 "end_reason": reason,
-                "api_end_success": apiSuccess
+                "api_end_success": apiSuccess,
+                "actual_duration_seconds": Int(Date().timeIntervalSince(sessionStartTime))
             ]
         )
         
@@ -274,11 +334,13 @@ struct TavusInterviewView: View {
         hasSessionStarted = false
         isEndingSession = false
         isShowingAlert = false
+        showPreparationView = true // Reset for next time
+        hasAttemptedStart = false
         
         // Step 5: Clear service
         tavusService.clearSession()
         
-        print("✅ Interview end completed")
+        print("✅ Interview end process completed")
         
         // Step 6: Dismiss
         dismiss()
@@ -393,7 +455,7 @@ struct TavusErrorView: View {
                 }
                 
                 Button(action: onCancel) {
-                    Text("Cancel")
+                    Text("Back to Setup")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -463,7 +525,10 @@ struct TavusPreparationView: View {
                     .padding(.horizontal, 20)
                 
                 VStack(spacing: 12) {
-                    Button(action: onStart) {
+                    Button(action: {
+                        print("🎯 Start AI Interview button pressed")
+                        onStart()
+                    }) {
                         HStack(spacing: 12) {
                             Image(systemName: "play.circle.fill")
                                 .font(.title2)
@@ -491,7 +556,10 @@ struct TavusPreparationView: View {
                         )
                     }
                     
-                    Button(action: onCancel) {
+                    Button(action: {
+                        print("🚫 Cancel button pressed from preparation view")
+                        onCancel()
+                    }) {
                         Text("Cancel")
                             .font(.subheadline)
                             .foregroundColor(.secondary)

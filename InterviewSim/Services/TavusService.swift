@@ -17,6 +17,9 @@ class TavusService: ObservableObject {
     
     private let envConfig = EnvironmentConfig.shared
     
+    // FIXED: Add state to prevent duplicate session creation
+    private var isCreatingSession = false
+    
     // MARK: - Create Conversation Session
     
     func createConversationSession(
@@ -25,8 +28,19 @@ class TavusService: ObservableObject {
         duration: Int,
         cvContext: String? = nil
     ) async -> Bool {
+        // FIXED: Prevent duplicate session creation
+        guard !isCreatingSession else {
+            print("🔧 Session creation already in progress, ignoring duplicate request")
+            return false
+        }
+        
+        isCreatingSession = true
         isLoading = true
         errorMessage = nil
+        
+        defer {
+            isCreatingSession = false
+        }
         
         do {
             // ENHANCED: Validate session name first
@@ -411,6 +425,10 @@ class TavusService: ObservableObject {
         conversationUrl = nil
         sessionId = nil
         errorMessage = nil
+        isLoading = false
+        isCreatingSession = false // FIXED: Reset creation flag
+        
+        print("🧹 TavusService session cleared")
     }
     
     // MARK: - Configuration Check
