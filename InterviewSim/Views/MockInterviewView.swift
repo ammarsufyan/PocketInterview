@@ -624,21 +624,90 @@ struct CVPickerView: View {
         }
     }
     
+    // FIXED: Enhanced file handling with proper security scoped resource access
     private func handleFileSelection(result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
-            guard let url = urls.first else { return }
+            guard let url = urls.first else { 
+                cvExtractor.extractionError = "No file selected"
+                return 
+            }
+            
+            print("📁 Selected file: \(url.lastPathComponent)")
+            print("📁 File URL: \(url)")
+            
+            // CRITICAL: Start accessing security scoped resource
+            guard url.startAccessingSecurityScopedResource() else {
+                cvExtractor.extractionError = "Cannot access the selected file. Please try selecting the file again."
+                print("❌ Failed to start accessing security scoped resource")
+                return
+            }
+            
+            // Ensure we stop accessing the resource when done
+            defer {
+                url.stopAccessingSecurityScopedResource()
+                print("✅ Stopped accessing security scoped resource")
+            }
             
             do {
+                // Check if file exists and is readable
+                guard FileManager.default.fileExists(atPath: url.path) else {
+                    throw NSError(domain: "FileError", code: 404, userInfo: [NSLocalizedDescriptionKey: "File not found at path: \(url.path)"])
+                }
+                
+                // Get file attributes to check size
+                let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+                let fileSize = attributes[.size] as? Int64 ?? 0
+                
+                print("📊 File size: \(fileSize) bytes")
+                
+                // Check file size (10MB limit)
+                let maxSize: Int64 = 10 * 1024 * 1024 // 10MB
+                guard fileSize <= maxSize else {
+                    throw NSError(domain: "FileError", code: 413, userInfo: [NSLocalizedDescriptionKey: "File is too large. Maximum size is 10MB."])
+                }
+                
+                // Read file data
                 let data = try Data(contentsOf: url)
                 let fileName = url.lastPathComponent
                 
+                print("✅ Successfully read file: \(fileName) (\(data.count) bytes)")
+                
+                // Clear any previous errors
+                DispatchQueue.main.async {
+                    self.cvExtractor.extractionError = nil
+                }
+                
+                // Extract text from document
                 cvExtractor.extractTextFromDocument(data: data, fileName: fileName)
+                
             } catch {
-                cvExtractor.extractionError = "Failed to read file: \(error.localizedDescription)"
+                print("❌ Error reading file: \(error)")
+                
+                // Provide user-friendly error messages
+                let errorMessage: String
+                if let nsError = error as NSError? {
+                    switch nsError.code {
+                    case NSFileReadNoPermissionError:
+                        errorMessage = "Permission denied. Please ensure the file is accessible and try again."
+                    case NSFileReadNoSuchFileError:
+                        errorMessage = "File not found. Please select a valid file."
+                    case 413:
+                        errorMessage = nsError.localizedDescription
+                    default:
+                        errorMessage = "Failed to read file: \(nsError.localizedDescription)"
+                    }
+                } else {
+                    errorMessage = "Failed to read file: \(error.localizedDescription)"
+                }
+                
+                DispatchQueue.main.async {
+                    self.cvExtractor.extractionError = errorMessage
+                }
             }
             
         case .failure(let error):
+            print("❌ File selection failed: \(error)")
             cvExtractor.extractionError = "Failed to select file: \(error.localizedDescription)"
         }
     }
