@@ -29,6 +29,17 @@ class TavusService: ObservableObject {
         errorMessage = nil
         
         do {
+            // ENHANCED: Validate session name first
+            let trimmedSessionName = sessionName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedSessionName.isEmpty else {
+                throw TavusConfigError.invalidConfiguration
+            }
+            
+            print("🔧 DEBUG: Session Name Validation")
+            print("  - Original: '\(sessionName)'")
+            print("  - Trimmed: '\(trimmedSessionName)'")
+            print("  - Length: \(trimmedSessionName.count)")
+            
             // Enhanced debug: Print configuration
             print("🔧 DEBUG: Tavus Configuration Check")
             envConfig.printLoadedVariables()
@@ -45,7 +56,7 @@ class TavusService: ObservableObject {
             
             let conversationData = TavusConversationRequest(
                 category: category,
-                sessionName: sessionName,
+                sessionName: trimmedSessionName, // Use trimmed name
                 duration: duration,
                 cvContext: cvContext
             )
@@ -58,7 +69,7 @@ class TavusService: ObservableObject {
             print("✅ Tavus conversation created successfully")
             print("🔗 Conversation URL: \(response.conversationUrl)")
             print("🆔 Session ID: \(response.sessionId)")
-            print("📝 Session Name: \(sessionName)")
+            print("📝 Session Name Used: '\(trimmedSessionName)'")
             
             isLoading = false
             return true
@@ -136,14 +147,20 @@ class TavusService: ObservableObject {
         // FIXED: Generate shorter, concise conversational context
         let shortContext = generateShortInstructions(for: data.category, cvContext: data.cvContext)
         
+        // ENHANCED: Debug session name before creating payload
+        print("🔧 DEBUG: Pre-Payload Session Name Check")
+        print("  - Session Name: '\(data.sessionName)'")
+        print("  - Is Empty: \(data.sessionName.isEmpty)")
+        print("  - Character Count: \(data.sessionName.count)")
+        
         // ENHANCED: Use user's session name directly in conversation_name
         let payload = TavusCreateConversationPayload(
             replicaId: TavusConfig.defaultReplicaId,
-            conversationName: data.sessionName, // FIXED: Use actual user input
+            conversationName: data.sessionName, // CRITICAL: Use exact user input
             conversationalContext: shortContext,
             properties: TavusConversationProperties(
                 maxCallDuration: data.duration * 60, // Convert minutes to seconds
-                enableRecording: false,
+                enableRecording: false, // Disable recording for privacy
                 enableClosedCaptions: true,
                 language: "english",
                 participantLeftTimeout: 10,  // 10 seconds timeout when participant leaves
@@ -155,20 +172,30 @@ class TavusService: ObservableObject {
             let jsonData = try JSONEncoder().encode(payload)
             request.httpBody = jsonData
             
-            // Debug: Print request details with session name
-            print("📤 DEBUG: Request Details")
+            // ENHANCED: Detailed payload debugging
+            print("📤 DEBUG: Complete Request Analysis")
             print("  - Method: \(request.httpMethod ?? "Unknown")")
             print("  - URL: \(endpoint)")
             print("  - Replica ID: \(TavusConfig.defaultReplicaId)")
-            print("  - Session Name: '\(data.sessionName)'") // ENHANCED: Show actual session name
+            print("  - Session Name in Payload: '\(data.sessionName)'")
             print("  - Context Length: \(shortContext.count) characters")
             print("  - Participant Left Timeout: 10 seconds")
             print("  - Participant Absent Timeout: 60 seconds")
             print("  - Headers: \(request.allHTTPHeaderFields ?? [:])")
             
-            // ENHANCED: Show payload for debugging
+            // CRITICAL: Show exact JSON payload being sent
             if let bodyString = String(data: jsonData, encoding: .utf8) {
-                print("  - Payload: \(bodyString)")
+                print("📦 EXACT JSON PAYLOAD:")
+                print(bodyString)
+                
+                // ENHANCED: Parse and verify the JSON contains our session name
+                if let jsonObject = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] {
+                    if let conversationName = jsonObject["conversation_name"] as? String {
+                        print("✅ Verified conversation_name in JSON: '\(conversationName)'")
+                    } else {
+                        print("❌ conversation_name NOT FOUND in JSON payload!")
+                    }
+                }
             }
             
             let (responseData, response) = try await URLSession.shared.data(for: request)
@@ -182,7 +209,7 @@ class TavusService: ObservableObject {
             print("  - Headers: \(httpResponse.allHeaderFields)")
             
             if let responseString = String(data: responseData, encoding: .utf8) {
-                print("  - Body: \(responseString)")
+                print("  - Response Body: \(responseString)")
             }
             
             // Handle different status codes
@@ -210,10 +237,13 @@ class TavusService: ObservableObject {
                 print("  - Session Name: '\(data.sessionName)'")
                 print("  - Context Length: \(shortContext.count) characters")
                 print("  - Duration: \(data.duration) minutes")
+                
+                // ENHANCED: Try to parse specific error from Tavus
                 if let errorData = try? JSONDecoder().decode(TavusErrorResponse.self, from: responseData) {
-                    throw TavusError.apiErrorWithMessage(400, errorData.message)
+                    print("  - Tavus Error: \(errorData.message)")
+                    throw TavusError.apiErrorWithMessage(400, "Tavus API Error: \(errorData.message)")
                 } else {
-                    throw TavusError.apiErrorWithMessage(400, "Invalid request payload. Session name: '\(data.sessionName)'")
+                    throw TavusError.apiErrorWithMessage(400, "Invalid request. Session name: '\(data.sessionName)'")
                 }
                 
             default:
@@ -228,6 +258,7 @@ class TavusService: ObservableObject {
             
         } catch let encodingError as EncodingError {
             print("❌ JSON Encoding Error: \(encodingError)")
+            print("  - Session Name: '\(data.sessionName)'")
             throw TavusError.decodingError
         } catch {
             print("❌ Network Error: \(error)")
@@ -318,12 +349,20 @@ class TavusService: ObservableObject {
     private func parseSuccessResponse(_ data: Data) throws -> TavusConversationResponse {
         do {
             let tavusResponse = try JSONDecoder().decode(TavusAPIResponse.self, from: data)
+            
+            // ENHANCED: Log the response to verify session name
+            print("✅ Parsed Tavus Response:")
+            print("  - Conversation ID: \(tavusResponse.conversationId)")
+            print("  - Conversation URL: \(tavusResponse.conversationUrl)")
+            print("  - Status: \(tavusResponse.status)")
+            
             return TavusConversationResponse(
                 conversationUrl: tavusResponse.conversationUrl,
                 sessionId: tavusResponse.conversationId
             )
         } catch {
             print("❌ Failed to parse Tavus response: \(error)")
+            print("❌ Raw response data: \(String(data: data, encoding: .utf8) ?? "Unable to decode")")
             throw TavusError.decodingError
         }
     }
