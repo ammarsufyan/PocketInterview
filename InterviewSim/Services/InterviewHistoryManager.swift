@@ -81,9 +81,9 @@ class InterviewHistoryManager: ObservableObject {
     ) async -> InterviewSession? {
         
         do {
-            // FIXED: Get current user properly
-            let currentUser = try await supabase.auth.user
-            let userId = currentUser.id
+            // FIXED: Get current user session properly
+            let currentSession = try await supabase.auth.session
+            let userId = currentSession.user.id
             
             let newSession = InterviewSessionInsert(
                 userId: userId,
@@ -124,16 +124,20 @@ class InterviewHistoryManager: ObservableObject {
     ) async -> Bool {
         
         do {
-            var updates: [String: Any] = [:]
+            var updates: [String: AnyJSON] = [:]
             
             if let score = score {
-                updates["score"] = score
+                updates["score"] = AnyJSON.number(Double(score))
             }
             if let questionsAnswered = questionsAnswered {
-                updates["questions_answered"] = questionsAnswered
+                updates["questions_answered"] = AnyJSON.number(Double(questionsAnswered))
             }
             if let sessionData = sessionData {
-                updates["session_data"] = sessionData
+                // Convert to JSON string for storage
+                if let jsonData = try? JSONSerialization.data(withJSONObject: sessionData),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    updates["session_data"] = AnyJSON.string(jsonString)
+                }
             }
             
             let response: InterviewSession = try await supabase
@@ -227,7 +231,7 @@ class InterviewHistoryManager: ObservableObject {
                 score: 78,
                 durationMinutes: 45,
                 questionsAnswered: 12,
-                sessionData: AnyCodable([:]),
+                sessionData: SafeAnyCodable([:]),
                 createdAt: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!,
                 updatedAt: Calendar.current.date(byAdding: .minute, value: -30, to: Date())!
             ),
@@ -239,7 +243,7 @@ class InterviewHistoryManager: ObservableObject {
                 score: 85,
                 durationMinutes: 35,
                 questionsAnswered: 10,
-                sessionData: AnyCodable([:]),
+                sessionData: SafeAnyCodable([:]),
                 createdAt: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!,
                 updatedAt: Calendar.current.date(byAdding: .hour, value: -2, to: Date())!
             ),
@@ -251,7 +255,7 @@ class InterviewHistoryManager: ObservableObject {
                 score: 92,
                 durationMinutes: 30,
                 questionsAnswered: 8,
-                sessionData: AnyCodable([:]),
+                sessionData: SafeAnyCodable([:]),
                 createdAt: Calendar.current.date(byAdding: .day, value: -1, to: Date())!,
                 updatedAt: Calendar.current.date(byAdding: .day, value: -1, to: Date())!
             )
@@ -300,54 +304,47 @@ struct InterviewSessionInsert: Codable {
     }
 }
 
-// FIXED: Simplified AnyCodable implementation
-struct AnyCodable: Codable {
-    let value: Any
+// FIXED: Completely rewritten SafeAnyCodable to avoid encoding issues
+struct SafeAnyCodable: Codable {
+    private let jsonString: String
     
     init(_ value: Any) {
-        self.value = value
+        if let data = try? JSONSerialization.data(withJSONObject: value),
+           let string = String(data: data, encoding: .utf8) {
+            self.jsonString = string
+        } else {
+            self.jsonString = "{}"
+        }
     }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         
-        if let intValue = try? container.decode(Int.self) {
-            value = intValue
-        } else if let doubleValue = try? container.decode(Double.self) {
-            value = doubleValue
-        } else if let stringValue = try? container.decode(String.self) {
-            value = stringValue
-        } else if let boolValue = try? container.decode(Bool.self) {
-            value = boolValue
-        } else if let arrayValue = try? container.decode([AnyCodable].self) {
-            value = arrayValue.map { $0.value }
-        } else if let dictValue = try? container.decode([String: AnyCodable].self) {
-            value = dictValue.mapValues { $0.value }
+        if let string = try? container.decode(String.self) {
+            self.jsonString = string
+        } else if let dict = try? container.decode([String: String].self) {
+            if let data = try? JSONSerialization.data(withJSONObject: dict),
+               let string = String(data: data, encoding: .utf8) {
+                self.jsonString = string
+            } else {
+                self.jsonString = "{}"
+            }
         } else {
-            value = [:]
+            self.jsonString = "{}"
         }
     }
     
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
-        
-        switch value {
-        case let intValue as Int:
-            try container.encode(intValue)
-        case let doubleValue as Double:
-            try container.encode(doubleValue)
-        case let stringValue as String:
-            try container.encode(stringValue)
-        case let boolValue as Bool:
-            try container.encode(boolValue)
-        case let arrayValue as [Any]:
-            let codableArray = arrayValue.map { AnyCodable($0) }
-            try container.encode(codableArray)
-        case let dictValue as [String: Any]:
-            let codableDict = dictValue.mapValues { AnyCodable($0) }
-            try container.encode(codableDict)
-        default:
-            try container.encode([String: String]())
+        try container.encode(jsonString)
+    }
+    
+    // Helper to get the original value back
+    var value: Any {
+        guard let data = jsonString.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data) else {
+            return [:]
         }
+        return object
     }
 }

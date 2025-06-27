@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 
 struct InterviewSession: Identifiable, Codable, Equatable {
     let id: UUID
@@ -15,7 +16,7 @@ struct InterviewSession: Identifiable, Codable, Equatable {
     let score: Int?
     let durationMinutes: Int
     let questionsAnswered: Int
-    let sessionData: AnyCodable
+    let sessionData: SafeAnyCodable
     let createdAt: Date
     let updatedAt: Date
     
@@ -101,5 +102,3 @@ extension InterviewSession {
         return "\(score)%"
     }
 }
-
-import SwiftUI
