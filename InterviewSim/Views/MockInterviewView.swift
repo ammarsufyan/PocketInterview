@@ -713,10 +713,10 @@ struct CVPickerView: View {
     }
 }
 
-// MARK: - Session Setup View (UPDATED TO PASS DATA TO TAVUS)
+// MARK: - Session Setup View (FIXED: Session Name Input Issue)
 struct SessionSetupView: View {
     let category: String
-    let onSessionStart: (String, Int) -> Void // Updated to pass session data
+    let onSessionStart: (String, Int) -> Void
     @Environment(\.dismiss) private var dismiss
     
     @State private var sessionName = ""
@@ -765,7 +765,7 @@ struct SessionSetupView: View {
                     .padding(.top, 20)
                     
                     VStack(spacing: 24) {
-                        // Session Name Input - MAIN INPUT FIELD
+                        // Session Name Input - FIXED: Proper TextField styling
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Text("Session Name")
@@ -780,8 +780,18 @@ struct SessionSetupView: View {
                             
                             VStack(alignment: .leading, spacing: 8) {
                                 TextField("Enter session name...", text: $sessionName)
-                                    .textFieldStyle(RoundedBorderTextFieldStyle())
                                     .font(.subheadline)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(12)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(
+                                                sessionName.isEmpty ? Color.clear : categoryColor.opacity(0.5),
+                                                lineWidth: 1
+                                            )
+                                    )
                                     .focused($isTextFieldFocused)
                                     .submitLabel(.done)
                                 
@@ -796,7 +806,7 @@ struct SessionSetupView: View {
                                 .foregroundColor(.secondary)
                         }
                         
-                        // Duration Selection - IMPROVED DESIGN
+                        // Duration Selection
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Duration")
                                 .font(.headline)
@@ -827,7 +837,7 @@ struct SessionSetupView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // Start Button - UPDATED TO CALL TAVUS
+                    // Start Button
                     Button(action: {
                         startTavusInterview()
                     }) {

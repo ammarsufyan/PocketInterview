@@ -15,6 +15,8 @@ class TavusService: ObservableObject {
     @Published var conversationUrl: String?
     @Published var sessionId: String?
     
+    private let envConfig = EnvironmentConfig.shared
+    
     // MARK: - Create Conversation Session
     
     func createConversationSession(
@@ -27,6 +29,10 @@ class TavusService: ObservableObject {
         errorMessage = nil
         
         do {
+            // Enhanced debug: Print configuration
+            print("🔧 DEBUG: Tavus Configuration Check")
+            envConfig.printLoadedVariables()
+            
             // Validate configuration first
             guard TavusConfig.validateConfiguration() else {
                 throw TavusConfigError.invalidConfiguration
@@ -69,18 +75,18 @@ class TavusService: ObservableObject {
         }
     }
     
-    // MARK: - API Calls
+    // MARK: - API Calls (FIXED: Based on Official Tavus API Documentation)
     
     private func createTavusConversation(data: TavusConversationRequest) async throws -> TavusConversationResponse {
-        // Use official Tavus API endpoint
+        // FIXED: Use official Tavus API endpoint
         let endpoint = "https://tavusapi.com/v2/conversations"
         
         let apiKey = try TavusConfig.getApiKey()
         
-        print("🔑 DEBUG: Using hardcoded API Key")
-        print("  - API Key: \(String(apiKey.prefix(15)))...")
-        print("  - API Key Length: \(apiKey.count)")
-        print("  - Replica ID: \(TavusConfig.defaultReplicaId)")
+        print("🔑 DEBUG: API Key Detailed Analysis")
+        print("  - Raw Length: \(apiKey.count)")
+        print("  - First 15 chars: \(String(apiKey.prefix(15)))...")
+        print("  - Last 10 chars: ...\(String(apiKey.suffix(10)))")
         
         guard let url = URL(string: endpoint) else {
             throw TavusError.invalidURL
@@ -92,10 +98,10 @@ class TavusService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
         
-        // Use correct Tavus API payload structure
+        // FIXED: Use correct Tavus API payload structure with YOUR replica ID
         let payload = TavusCreateConversationPayload(
             conversationName: data.sessionName,
-            replicaId: TavusConfig.defaultReplicaId,
+            replicaId: TavusConfig.defaultReplicaId, // Now using your actual replica ID: rf4703150052
             properties: TavusConversationProperties(
                 maxDuration: data.duration * 60, // Convert minutes to seconds
                 language: "en",
@@ -114,6 +120,7 @@ class TavusService: ObservableObject {
             print("📤 DEBUG: Request Details")
             print("  - Method: \(request.httpMethod ?? "Unknown")")
             print("  - URL: \(endpoint)")
+            print("  - Replica ID: \(TavusConfig.defaultReplicaId)")
             print("  - Headers: \(request.allHTTPHeaderFields ?? [:])")
             if let bodyString = String(data: jsonData, encoding: .utf8) {
                 print("  - Body: \(bodyString)")
@@ -141,10 +148,10 @@ class TavusService: ObservableObject {
                 
             case 401:
                 print("🚨 401 UNAUTHORIZED - API Key Issues:")
-                print("  - Hardcoded API Key: \(String(apiKey.prefix(15)))...")
-                print("  - API Key Length: \(apiKey.count)")
-                print("  - Check if this API key is valid in Tavus dashboard")
-                throw TavusError.apiErrorWithMessage(401, "Invalid API key. The hardcoded API key might be expired or invalid.")
+                print("  - Check if API key is complete and valid")
+                print("  - Verify API key format matches Tavus requirements")
+                print("  - Current API key preview: \(String(apiKey.prefix(15)))...")
+                throw TavusError.apiErrorWithMessage(401, "Invalid API key. Please check your TAVUS_API_KEY in .env file.")
                 
             case 404:
                 print("🚨 404 NOT FOUND - Possible Issues:")
@@ -219,7 +226,7 @@ class TavusService: ObservableObject {
         return TavusConfig.validateConfiguration() && TavusConfig.validateReplicaId()
     }
     
-    // MARK: - Test API Key Function
+    // MARK: - Test API Key Function (ENHANCED)
     
     func testApiKey() async -> Bool {
         do {
@@ -228,8 +235,8 @@ class TavusService: ObservableObject {
             // Test with official Tavus API endpoint
             let testEndpoint = "https://tavusapi.com/v2/replicas"
             
-            print("🧪 Testing Hardcoded Tavus API Key...")
-            print("🔑 API key: \(String(apiKey.prefix(15)))...")
+            print("🧪 Testing Tavus API Key...")
+            print("🔑 Current API key preview: \(String(apiKey.prefix(15)))...")
             print("🌐 Testing endpoint: \(testEndpoint)")
             print("🎭 Using replica ID: \(TavusConfig.defaultReplicaId)")
             
@@ -251,11 +258,11 @@ class TavusService: ObservableObject {
                     
                     switch httpResponse.statusCode {
                     case 200, 201:
-                        print("✅ Hardcoded API Key is valid!")
+                        print("✅ API Key is valid!")
                         print("🎭 Replica ID validation: \(TavusConfig.validateReplicaId() ? "✅ Valid" : "⚠️ Check format")")
                         return true
                     case 401:
-                        print("❌ Invalid hardcoded API key. Please check if the key is correct.")
+                        print("❌ Invalid API key. Please check your TAVUS_API_KEY in .env file.")
                         return false
                     case 404:
                         print("⚠️ Endpoint not found, but API key might be valid")
@@ -294,7 +301,7 @@ struct TavusConversationResponse {
     let sessionId: String
 }
 
-// MARK: - API Models
+// MARK: - API Models (FIXED: Based on Official Tavus API Documentation)
 
 struct TavusCreateConversationPayload: Codable {
     let conversationName: String
