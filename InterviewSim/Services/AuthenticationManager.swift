@@ -35,8 +35,8 @@ class AuthenticationManager: ObservableObject {
             self.currentUser = session.user
             self.isAuthenticated = session.user != nil
             
-            if let user = session.user {
-                await fetchUserProfile(userId: user.id.uuidString)
+            if session.user != nil {
+                await fetchUserProfile(userId: session.user.id.uuidString)
             }
         } catch {
             print("Error checking initial auth state: \(error)")
@@ -144,10 +144,10 @@ class AuthenticationManager: ObservableObject {
             if response.user != nil && response.session == nil {
                 // User created but needs email confirmation
                 self.errorMessage = "Please check your email and confirm your account before signing in."
-            } else if let user = response.user, response.session != nil {
+            } else if response.user != nil && response.session != nil {
                 // User is automatically signed in, create profile
-                await createUserProfile(userId: user.id.uuidString, email: email, fullName: fullName)
-                self.currentUser = user
+                await createUserProfile(userId: response.user.id.uuidString, email: email, fullName: fullName)
+                self.currentUser = response.user
                 self.isAuthenticated = true
             }
         } catch {
@@ -170,8 +170,8 @@ class AuthenticationManager: ObservableObject {
             self.currentUser = response.user
             self.isAuthenticated = true
             
-            if let user = response.user {
-                await fetchUserProfile(userId: user.id.uuidString)
+            if response.user != nil {
+                await fetchUserProfile(userId: response.user.id.uuidString)
             }
         } catch {
             self.errorMessage = handleAuthError(error)
