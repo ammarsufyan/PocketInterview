@@ -1,3 +1,4 @@
+```swift
 //
 //  HistoryView.swift
 //  InterviewSim
@@ -295,6 +296,7 @@ struct HistoryStatItem: View {
     }
 }
 
+// MARK: - 🔥 CLEANED UP History Session Card
 struct HistorySessionCard: View {
     let session: InterviewSession
     let hasTranscript: Bool
@@ -314,10 +316,9 @@ struct HistorySessionCard: View {
                     .cornerRadius(12)
                     .symbolRenderingMode(.hierarchical)
                 
-                // Score Badge (if available)
+                // Score Badge (if available) - MOVED to top-right corner
                 if let score = session.score {
                     VStack {
-                        Spacer()
                         HStack {
                             Spacer()
                             Text("\(score)")
@@ -328,15 +329,16 @@ struct HistorySessionCard: View {
                                 .padding(.vertical, 2)
                                 .background(session.scoreColor)
                                 .cornerRadius(8)
-                                .offset(x: 8, y: 8)
                         }
+                        Spacer()
                     }
+                    .offset(x: 8, y: -8)
                 }
             }
             
-            // Session Info
+            // Session Info - SIMPLIFIED
             VStack(alignment: .leading, spacing: 8) {
-                // Session Name and Score
+                // Session Name and Main Info
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(session.sessionName)
@@ -345,6 +347,7 @@ struct HistorySessionCard: View {
                             .foregroundColor(.primary)
                             .lineLimit(1)
                         
+                        // SIMPLIFIED: Only show category and status
                         HStack(spacing: 8) {
                             Text(session.category)
                                 .font(.caption)
@@ -363,40 +366,18 @@ struct HistorySessionCard: View {
                                 .padding(.vertical, 2)
                                 .background(session.statusColor.opacity(0.1))
                                 .cornerRadius(4)
-                            
-                            // AI Scored Badge
-                            if hasScoreDetails {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "brain.head.profile")
-                                        .font(.caption2)
-                                    Text("AI Scored")
-                                        .font(.caption2)
-                                        .fontWeight(.medium)
-                                }
-                                .foregroundColor(.purple)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(Color.purple.opacity(0.1))
-                                .cornerRadius(4)
-                            }
                         }
                     }
                     
                     Spacer()
                     
+                    // Score Display - SIMPLIFIED
                     VStack(alignment: .trailing, spacing: 4) {
-                        // Overall Score Display
                         if let score = session.score {
-                            VStack(spacing: 2) {
-                                Text("\(score)%")
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(session.scoreColor)
-                                
-                                Text("Overall")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
+                            Text("\(score)%")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundColor(session.scoreColor)
                         } else {
                             Text("No Score")
                                 .font(.caption)
@@ -409,21 +390,11 @@ struct HistorySessionCard: View {
                     }
                 }
                 
-                // Session Details
+                // SIMPLIFIED: Only show duration and date
                 HStack(spacing: 16) {
                     Label(session.durationText, systemImage: "clock")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
-                    Label("\(session.questionsAnswered) questions", systemImage: "questionmark.circle")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    if hasTranscript {
-                        Label("Transcript", systemImage: "text.bubble")
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                    }
                     
                     Spacer()
                     
@@ -1074,3 +1045,4 @@ struct NoTranscriptCard: View {
 #Preview {
     HistoryView()
 }
+```
