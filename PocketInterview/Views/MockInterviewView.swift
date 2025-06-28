@@ -39,6 +39,8 @@ struct MockInterviewView: View {
                                     .foregroundColor(.secondary)
                                     .lineLimit(2)
                             }
+                            
+                            Spacer()
                         }
                     }
                     .padding(.horizontal, 20)
