@@ -81,24 +81,128 @@ struct TavusConfig {
     /// Create personalized context for the conversation
     static func createPersonalizedContext(
         category: String,
+        sessionName: String,
+        durationMinutes: Int,
         cvContext: String?
     ) -> String? {
-        // If CV context is provided, create a brief personalized context
-        guard let cvContext = cvContext, !cvContext.isEmpty else {
-            return nil // Let the persona handle the conversation without additional context
+        var contextParts: [String] = []
+        
+        // Add session information
+        contextParts.append("SESSION INFORMATION:")
+        contextParts.append("- Interview Type: \(category)")
+        contextParts.append("- Session Name: \(sessionName)")
+        contextParts.append("- Duration: \(durationMinutes) minutes")
+        contextParts.append("- Interviewer: \(getInterviewerName(for: category))")
+        
+        // Add duration-specific instructions
+        let durationInstructions = createDurationInstructions(for: durationMinutes, category: category)
+        contextParts.append("")
+        contextParts.append("DURATION GUIDELINES:")
+        contextParts.append(durationInstructions)
+        
+        // Add CV context if provided
+        if let cvContext = cvContext, !cvContext.isEmpty {
+            contextParts.append("")
+            contextParts.append("CANDIDATE BACKGROUND:")
+            
+            // Limit CV context to avoid overwhelming the persona
+            let maxLength = 1500
+            let truncatedContext = cvContext.count > maxLength ? 
+                String(cvContext.prefix(maxLength)) + "..." : 
+                cvContext
+            
+            contextParts.append(truncatedContext)
+            contextParts.append("")
+            contextParts.append("Please tailor your questions based on their background and experience level.")
         }
         
-        // Create a concise context based on CV information
-        let contextPrefix = "CANDIDATE BACKGROUND:\n"
-        let contextSuffix = "\n\nPlease tailor your questions based on their background and experience level."
+        // Add category-specific instructions
+        let categoryInstructions = createCategoryInstructions(for: category)
+        contextParts.append("")
+        contextParts.append("INTERVIEW GUIDELINES:")
+        contextParts.append(categoryInstructions)
         
-        // Limit context to avoid overwhelming the persona
-        let maxLength = 2000
-        let truncatedContext = cvContext.count > maxLength ? 
-            String(cvContext.prefix(maxLength)) + "..." : 
-            cvContext
-        
-        return contextPrefix + truncatedContext + contextSuffix
+        return contextParts.joined(separator: "\n")
+    }
+    
+    /// Create duration-specific instructions for the AI interviewer
+    private static func createDurationInstructions(for minutes: Int, category: String) -> String {
+        switch minutes {
+        case 15:
+            return """
+            - This is a SHORT 15-minute session
+            - Focus on 3-4 key questions maximum
+            - Keep questions concise and direct
+            - Allow time for meaningful answers
+            - Prioritize the most important \(category.lowercased()) topics
+            """
+            
+        case 30:
+            return """
+            - This is a STANDARD 30-minute session
+            - Plan for 5-7 well-structured questions
+            - Balance breadth and depth in your questioning
+            - Allow sufficient time for detailed responses
+            - Include both foundational and advanced \(category.lowercased()) topics
+            """
+            
+        case 45:
+            return """
+            - This is an EXTENDED 45-minute session
+            - Plan for 7-10 comprehensive questions
+            - Dive deeper into complex topics
+            - Allow time for follow-up questions
+            - Cover both breadth and significant depth in \(category.lowercased()) areas
+            """
+            
+        case 60:
+            return """
+            - This is a COMPREHENSIVE 60-minute session
+            - Plan for 10-12 thorough questions
+            - Explore topics in great detail
+            - Include multiple follow-up questions
+            - Cover extensive \(category.lowercased()) ground with deep exploration
+            """
+            
+        default:
+            return """
+            - Session duration: \(minutes) minutes
+            - Adjust question count and depth accordingly
+            - Ensure proper pacing throughout the interview
+            - Focus on quality over quantity of questions
+            """
+        }
+    }
+    
+    /// Create category-specific instructions
+    private static func createCategoryInstructions(for category: String) -> String {
+        switch category {
+        case "Technical":
+            return """
+            - Start with easier questions and gradually increase difficulty
+            - Ask candidates to explain their thought process
+            - Include coding problems appropriate for the time available
+            - Focus on problem-solving approach, not just correct answers
+            - Ask about trade-offs and optimization when relevant
+            """
+            
+        case "Behavioral":
+            return """
+            - Use the STAR method (Situation, Task, Action, Result) framework
+            - Ask for specific examples from their experience
+            - Probe for details about challenges and learnings
+            - Focus on leadership, teamwork, and problem-solving scenarios
+            - Ask follow-up questions to understand their decision-making process
+            """
+            
+        default:
+            return """
+            - Maintain a professional yet friendly tone
+            - Ask clear, specific questions
+            - Allow time for thoughtful responses
+            - Provide constructive feedback when appropriate
+            """
+        }
     }
     
     static func validateConfiguration() -> Bool {

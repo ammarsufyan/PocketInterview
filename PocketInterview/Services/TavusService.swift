@@ -165,9 +165,11 @@ class TavusService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("PocketInterview/1.0", forHTTPHeaderField: "User-Agent")
         
-        // Create personalized context if CV data is available
+        // 🔥 UPDATED: Create enhanced personalized context with duration info
         let conversationalContext = TavusConfig.createPersonalizedContext(
             category: data.category,
+            sessionName: data.sessionName,
+            durationMinutes: data.duration,
             cvContext: sanitizeText(data.cvContext)
         )
         
