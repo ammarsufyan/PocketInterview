@@ -16,13 +16,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		85B233C52E099323008315FC /* InterviewSim.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InterviewSim.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		85B233C52E099323008315FC /* PocketInterview.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PocketInterview.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		85B233C72E099323008315FC /* InterviewSim */ = {
+		85B233C72E099323008315FC /* PocketInterview */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = InterviewSim;
+			path = PocketInterview;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -54,7 +54,7 @@
 		85B233BC2E099323008315FC = {
 			isa = PBXGroup;
 			children = (
-				85B233C72E099323008315FC /* InterviewSim */,
+				85B233C72E099323008315FC /* PocketInterview */,
 				708F7C202E0CE4160041D18B /* Frameworks */,
 				85B233C62E099323008315FC /* Products */,
 			);
@@ -63,7 +63,7 @@
 		85B233C62E099323008315FC /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				85B233C52E099323008315FC /* InterviewSim.app */,
+				85B233C52E099323008315FC /* PocketInterview.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -71,9 +71,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		85B233C42E099323008315FC /* InterviewSim */ = {
+		85B233C42E099323008315FC /* PocketInterview */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 85B233D02E099324008315FC /* Build configuration list for PBXNativeTarget "InterviewSim" */;
+			buildConfigurationList = 85B233D02E099324008315FC /* Build configuration list for PBXNativeTarget "PocketInterview" */;
 			buildPhases = (
 				85B233C12E099323008315FC /* Sources */,
 				85B233C22E099323008315FC /* Frameworks */,
@@ -84,9 +84,9 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				85B233C72E099323008315FC /* InterviewSim */,
+				85B233C72E099323008315FC /* PocketInterview */,
 			);
-			name = InterviewSim;
+			name = PocketInterview;
 			packageProductDependencies = (
 				708F7C162E0C3F250041D18B /* Auth */,
 				708F7C182E0C3F250041D18B /* Functions */,
@@ -96,7 +96,7 @@
 				708F7C212E0CE4160041D18B /* Supabase */,
 			);
 			productName = InterviewSim;
-			productReference = 85B233C52E099323008315FC /* InterviewSim.app */;
+			productReference = 85B233C52E099323008315FC /* PocketInterview.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -114,7 +114,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 85B233C02E099323008315FC /* Build configuration list for PBXProject "InterviewSim" */;
+			buildConfigurationList = 85B233C02E099323008315FC /* Build configuration list for PBXProject "PocketInterview" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -131,7 +131,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				85B233C42E099323008315FC /* InterviewSim */,
+				85B233C42E099323008315FC /* PocketInterview */,
 			);
 		};
 /* End PBXProject section */
@@ -297,7 +297,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "";
-				INFOPLIST_KEY_CFBundleDisplayName = InterviewSim;
+				INFOPLIST_KEY_CFBundleDisplayName = PocketInterview;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Please turn on your camera for interview.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Please turn on your microphone for interview";
@@ -311,7 +311,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.ammarsufyan.interviewsim;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ammarsufyan.pocketinterview;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -338,7 +338,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "";
-				INFOPLIST_KEY_CFBundleDisplayName = InterviewSim;
+				INFOPLIST_KEY_CFBundleDisplayName = PocketInterview;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Please turn on your camera for interview.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Please turn on your microphone for interview";
@@ -352,7 +352,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.ammarsufyan.interviewsim;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ammarsufyan.pocketinterview;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -367,7 +367,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		85B233C02E099323008315FC /* Build configuration list for PBXProject "InterviewSim" */ = {
+		85B233C02E099323008315FC /* Build configuration list for PBXProject "PocketInterview" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				85B233CE2E099324008315FC /* Debug */,
@@ -376,7 +376,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		85B233D02E099324008315FC /* Build configuration list for PBXNativeTarget "InterviewSim" */ = {
+		85B233D02E099324008315FC /* Build configuration list for PBXNativeTarget "PocketInterview" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				85B233D12E099324008315FC /* Debug */,

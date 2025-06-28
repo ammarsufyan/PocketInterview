@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct InterviewSimApp: App {
+struct PocketInterviewApp: App {
     var body: some Scene {
         WindowGroup {
             SplashScreenView()
