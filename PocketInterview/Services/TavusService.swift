@@ -177,8 +177,8 @@ class TavusService: ObservableObject {
             callbackUrl: webhookUrl,
             properties: TavusConversationProperties(
                 maxCallDuration: data.duration * 60,
-                participantLeftTimeout: 60,
-                participantAbsentTimeout: 300,
+                participantLeftTimeout: 10,
+                participantAbsentTimeout: 60,
                 enableRecording: false,
                 enableClosedCaptions: true,
                 language: "english"
