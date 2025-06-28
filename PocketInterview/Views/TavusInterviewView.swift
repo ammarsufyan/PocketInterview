@@ -7,6 +7,7 @@
 
 import SwiftUI
 import WebKit
+import SafariServices
 
 struct TavusInterviewView: View {
     @ObservedObject var sessionData: SessionData
@@ -27,6 +28,8 @@ struct TavusInterviewView: View {
     
     @State private var showPreparationView = true
     @State private var hasAttemptedStart = false
+    @State private var showingSafari = false
+    @State private var useWebView = true // Toggle between WebView and Safari
     
     private var categoryColor: Color {
         sessionData.category == "Technical" ? .blue : .purple
@@ -59,6 +62,15 @@ struct TavusInterviewView: View {
                                 await startTavusSession()
                             }
                         },
+                        onStartWithSafari: {
+                            showPreparationView = false
+                            hasAttemptedStart = true
+                            useWebView = false
+                            
+                            Task {
+                                await startTavusSession()
+                            }
+                        },
                         onCancel: {
                             onBackToSetup()
                         }
@@ -69,15 +81,23 @@ struct TavusInterviewView: View {
                         interviewerName: interviewerName
                     )
                 } else if let conversationUrl = tavusService.conversationUrl {
-                    TavusWebView(
-                        url: conversationUrl,
-                        onSessionStart: {
-                            handleSessionStart()
-                        },
-                        onSessionEnd: {
-                            handleSessionEnd(reason: "tavus_end")
-                        }
-                    )
+                    if useWebView {
+                        TavusWebView(
+                            url: conversationUrl,
+                            onSessionStart: {
+                                handleSessionStart()
+                            },
+                            onSessionEnd: {
+                                handleSessionEnd(reason: "tavus_end")
+                            }
+                        )
+                    } else {
+                        // Safari will be presented as sheet
+                        Color.clear
+                            .onAppear {
+                                showingSafari = true
+                            }
+                    }
                 } else if let errorMessage = tavusService.errorMessage {
                     TavusErrorView(
                         message: errorMessage,
@@ -166,6 +186,21 @@ struct TavusInterviewView: View {
                 }
             } message: {
                 Text("Are you sure you want to end the interview? Your progress will be saved.")
+            }
+            .sheet(isPresented: $showingSafari) {
+                if let conversationUrl = tavusService.conversationUrl {
+                    SafariWebView(url: conversationUrl) {
+                        showingSafari = false
+                        // Handle session end when Safari is dismissed
+                        if hasSessionStarted && isSessionActive {
+                            Task {
+                                await endInterviewWithAPI(reason: "safari_closed")
+                            }
+                        } else {
+                            dismiss()
+                        }
+                    }
+                }
             }
         }
         .onAppear {
@@ -283,6 +318,8 @@ struct TavusInterviewView: View {
         showPreparationView = true
         hasAttemptedStart = false
         showingEndConfirmation = false
+        showingSafari = false
+        useWebView = true
         
         sessionStartTime = Date()
         sessionEndReason = "manual"
@@ -400,6 +437,7 @@ struct TavusPreparationView: View {
     let interviewerName: String
     let interviewerDescription: String
     let onStart: () -> Void
+    let onStartWithSafari: () -> Void
     let onCancel: () -> Void
     
     var body: some View {
@@ -465,6 +503,7 @@ struct TavusPreparationView: View {
                     .padding(.horizontal, 20)
                 
                 VStack(spacing: 12) {
+                    // WebView Option (Default)
                     Button(action: {
                         onStart()
                     }) {
@@ -472,7 +511,7 @@ struct TavusPreparationView: View {
                             Image(systemName: "play.circle.fill")
                                 .font(.title2)
                             
-                            Text("Start Interview with \(interviewerName)")
+                            Text("Start Interview (In-App)")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                         }
@@ -494,6 +533,34 @@ struct TavusPreparationView: View {
                             y: 4
                         )
                     }
+                    
+                    // Safari Option (Better Performance)
+                    Button(action: {
+                        onStartWithSafari()
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "safari.fill")
+                                .font(.title2)
+                            
+                            Text("Start Interview (Safari)")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(categoryColor)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Color(.systemBackground))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(categoryColor, lineWidth: 2)
+                        )
+                        .cornerRadius(16)
+                    }
+                    
+                    Text("Safari option uses less battery and performs better")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
                     
                     Button(action: {
                         onCancel()
