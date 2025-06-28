@@ -304,38 +304,16 @@ struct HistorySessionCard: View {
     
     var body: some View {
         HStack(spacing: 16) {
-            // Category Icon with Score Badge
-            ZStack {
-                // Main Category Icon
-                Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
-                    .font(.title2)
-                    .foregroundColor(session.categoryColor)
-                    .frame(width: 48, height: 48)
-                    .background(session.categoryColor.opacity(0.1))
-                    .cornerRadius(12)
-                    .symbolRenderingMode(.hierarchical)
-                
-                // Score Badge (if available) - MOVED to top-right corner
-                if let score = session.score {
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Text("\(score)")
-                                .font(.caption2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(session.scoreColor)
-                                .cornerRadius(8)
-                        }
-                        Spacer()
-                    }
-                    .offset(x: 8, y: -8)
-                }
-            }
+            // Category Icon (no score badge)
+            Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
+                .font(.title2)
+                .foregroundColor(session.categoryColor)
+                .frame(width: 48, height: 48)
+                .background(session.categoryColor.opacity(0.1))
+                .cornerRadius(12)
+                .symbolRenderingMode(.hierarchical)
             
-            // Session Info - SIMPLIFIED
+            // Session Info - CLEANED UP
             VStack(alignment: .leading, spacing: 8) {
                 // Session Name and Main Info
                 HStack {
@@ -370,7 +348,7 @@ struct HistorySessionCard: View {
                     
                     Spacer()
                     
-                    // Score Display - SIMPLIFIED
+                    // Score Display - CLEANED UP
                     VStack(alignment: .trailing, spacing: 4) {
                         if let score = session.score {
                             Text("\(score)%")
@@ -389,12 +367,8 @@ struct HistorySessionCard: View {
                     }
                 }
                 
-                // SIMPLIFIED: Only show duration and date
+                // SIMPLIFIED: Only show date/time (removed duration)
                 HStack(spacing: 16) {
-                    Label(session.durationText, systemImage: "clock")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
                     Spacer()
                     
                     VStack(alignment: .trailing, spacing: 1) {
