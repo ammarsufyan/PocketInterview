@@ -10,6 +10,7 @@ import SwiftUI
 struct HistoryView: View {
     @StateObject private var historyManager = InterviewHistoryManager()
     @StateObject private var transcriptManager = TranscriptManager()
+    @StateObject private var scoreDetailsManager = ScoreDetailsManager()
     @State private var selectedFilter = "All"
     @State private var searchText = ""
     @State private var showingDeleteAlert = false
@@ -91,6 +92,7 @@ struct HistoryView: View {
                     SessionsList(
                         sessions: filteredSessions,
                         transcriptManager: transcriptManager,
+                        scoreDetailsManager: scoreDetailsManager,
                         onDelete: { session in
                             sessionToDelete = session
                             showingDeleteAlert = true
@@ -103,6 +105,7 @@ struct HistoryView: View {
             .refreshable {
                 await historyManager.refreshSessions()
                 await transcriptManager.refreshTranscripts()
+                await scoreDetailsManager.refreshScoreDetails()
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -111,6 +114,7 @@ struct HistoryView: View {
                             Task {
                                 await historyManager.refreshSessions()
                                 await transcriptManager.refreshTranscripts()
+                                await scoreDetailsManager.refreshScoreDetails()
                             }
                         }
                         
@@ -151,6 +155,7 @@ struct HistoryView: View {
                 Task {
                     await historyManager.loadSessions()
                     await transcriptManager.loadTranscripts()
+                    await scoreDetailsManager.loadScoreDetails()
                 }
             }
         }
@@ -175,6 +180,7 @@ struct LoadingView: View {
 struct SessionsList: View {
     let sessions: [InterviewSession]
     @ObservedObject var transcriptManager: TranscriptManager
+    @ObservedObject var scoreDetailsManager: ScoreDetailsManager
     let onDelete: (InterviewSession) -> Void
     
     var body: some View {
@@ -183,11 +189,13 @@ struct SessionsList: View {
                 ForEach(sessions) { session in
                     NavigationLink(destination: SessionDetailView(
                         session: session,
-                        transcriptManager: transcriptManager
+                        transcriptManager: transcriptManager,
+                        scoreDetailsManager: scoreDetailsManager
                     )) {
                         HistorySessionCard(
                             session: session,
                             hasTranscript: transcriptManager.hasTranscript(for: session.conversationId),
+                            hasScoreDetails: scoreDetailsManager.hasScoreDetails(for: session.conversationId),
                             onDelete: {
                                 onDelete(session)
                             }
@@ -290,18 +298,41 @@ struct HistoryStatItem: View {
 struct HistorySessionCard: View {
     let session: InterviewSession
     let hasTranscript: Bool
+    let hasScoreDetails: Bool
     let onDelete: () -> Void
     
     var body: some View {
         HStack(spacing: 16) {
-            // Category Icon
-            Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
-                .font(.title2)
-                .foregroundColor(session.categoryColor)
-                .frame(width: 48, height: 48)
-                .background(session.categoryColor.opacity(0.1))
-                .cornerRadius(12)
-                .symbolRenderingMode(.hierarchical)
+            // Category Icon with Score Badge
+            ZStack {
+                // Main Category Icon
+                Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
+                    .font(.title2)
+                    .foregroundColor(session.categoryColor)
+                    .frame(width: 48, height: 48)
+                    .background(session.categoryColor.opacity(0.1))
+                    .cornerRadius(12)
+                    .symbolRenderingMode(.hierarchical)
+                
+                // Score Badge (if available)
+                if let score = session.score {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            Text("\(score)")
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(session.scoreColor)
+                                .cornerRadius(8)
+                                .offset(x: 8, y: 8)
+                        }
+                    }
+                }
+            }
             
             // Session Info
             VStack(alignment: .leading, spacing: 8) {
@@ -332,16 +363,45 @@ struct HistorySessionCard: View {
                                 .padding(.vertical, 2)
                                 .background(session.statusColor.opacity(0.1))
                                 .cornerRadius(4)
+                            
+                            // AI Scored Badge
+                            if hasScoreDetails {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "brain.head.profile")
+                                        .font(.caption2)
+                                    Text("AI Scored")
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                }
+                                .foregroundColor(.purple)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.purple.opacity(0.1))
+                                .cornerRadius(4)
+                            }
                         }
                     }
                     
                     Spacer()
                     
                     VStack(alignment: .trailing, spacing: 4) {
-                        Text(session.scoreText)
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundColor(session.scoreColor)
+                        // Overall Score Display
+                        if let score = session.score {
+                            VStack(spacing: 2) {
+                                Text("\(score)%")
+                                    .font(.title3)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(session.scoreColor)
+                                
+                                Text("Overall")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        } else {
+                            Text("No Score")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                         
                         Image(systemName: "chevron.right")
                             .font(.caption)
@@ -358,6 +418,12 @@ struct HistorySessionCard: View {
                     Label("\(session.questionsAnswered) questions", systemImage: "questionmark.circle")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    
+                    if hasTranscript {
+                        Label("Transcript", systemImage: "text.bubble")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
                     
                     Spacer()
                     
@@ -423,8 +489,11 @@ struct EmptyStateView: View {
 struct SessionDetailView: View {
     let session: InterviewSession
     @ObservedObject var transcriptManager: TranscriptManager
+    @ObservedObject var scoreDetailsManager: ScoreDetailsManager
     @State private var transcript: InterviewTranscript?
+    @State private var scoreDetails: ScoreDetails?
     @State private var isLoadingTranscript = false
+    @State private var isLoadingScoreDetails = false
     
     private var categoryColor: Color {
         session.categoryColor
@@ -462,7 +531,7 @@ struct SessionDetailView: View {
                 VStack(spacing: 16) {
                     // Score Card
                     DetailCard(
-                        title: "Score",
+                        title: "Overall Score",
                         value: session.scoreText,
                         icon: "star.fill",
                         color: session.scoreColor
@@ -493,6 +562,18 @@ struct SessionDetailView: View {
                     )
                 }
                 .padding(.horizontal, 20)
+                
+                // Score Details Section
+                if let scoreDetails = scoreDetails {
+                    ScoreDetailsCard(
+                        scoreDetails: scoreDetails,
+                        categoryColor: categoryColor
+                    )
+                    .padding(.horizontal, 20)
+                } else if !isLoadingScoreDetails {
+                    NoScoreDetailsCard()
+                        .padding(.horizontal, 20)
+                }
                 
                 // Transcript Section
                 VStack(alignment: .leading, spacing: 16) {
@@ -530,6 +611,7 @@ struct SessionDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             loadTranscript()
+            loadScoreDetails()
         }
     }
     
@@ -552,6 +634,29 @@ struct SessionDetailView: View {
             await MainActor.run {
                 self.transcript = loadedTranscript
                 self.isLoadingTranscript = false
+            }
+        }
+    }
+    
+    private func loadScoreDetails() {
+        // Check if score details are already loaded locally
+        if let conversationId = session.conversationId,
+           let localScoreDetails = scoreDetailsManager.getLocalScoreDetails(for: conversationId) {
+            self.scoreDetails = localScoreDetails
+            return
+        }
+        
+        // Load from server
+        guard let conversationId = session.conversationId else { return }
+        
+        isLoadingScoreDetails = true
+        
+        Task {
+            let loadedScoreDetails = await scoreDetailsManager.getScoreDetails(for: conversationId)
+            
+            await MainActor.run {
+                self.scoreDetails = loadedScoreDetails
+                self.isLoadingScoreDetails = false
             }
         }
     }
@@ -594,9 +699,213 @@ struct DetailCard: View {
     }
 }
 
+struct ScoreDetailsCard: View {
+    let scoreDetails: ScoreDetails
+    let categoryColor: Color
+    @State private var isExpanded = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack(spacing: 12) {
+                    Image(systemName: "brain.head.profile")
+                        .font(.title3)
+                        .foregroundColor(categoryColor)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("AI Score Breakdown")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        
+                        if let overallScore = scoreDetails.weightedScore {
+                            Text("Overall: \(overallScore)%")
+                                .font(.caption)
+                                .foregroundColor(scoreDetails.overallColor)
+                                .fontWeight(.medium)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // Score Overview (Always Visible)
+            HStack(spacing: 16) {
+                ScoreItem(
+                    title: "Substance",
+                    score: scoreDetails.substanceScore,
+                    color: scoreDetails.substanceColor,
+                    weight: "50%"
+                )
+                
+                ScoreItem(
+                    title: "Clarity",
+                    score: scoreDetails.clarityScore,
+                    color: scoreDetails.clarityColor,
+                    weight: "30%"
+                )
+                
+                ScoreItem(
+                    title: "Grammar",
+                    score: scoreDetails.grammarScore,
+                    color: scoreDetails.grammarColor,
+                    weight: "20%"
+                )
+            }
+            
+            // Detailed Breakdown (Expandable)
+            if isExpanded {
+                VStack(spacing: 16) {
+                    Divider()
+                    
+                    VStack(spacing: 12) {
+                        if let substanceScore = scoreDetails.substanceScore,
+                           let substanceReason = scoreDetails.substanceReason {
+                            ScoreDetailRow(
+                                title: "Substance (\(substanceScore)%)",
+                                reason: substanceReason,
+                                color: scoreDetails.substanceColor
+                            )
+                        }
+                        
+                        if let clarityScore = scoreDetails.clarityScore,
+                           let clarityReason = scoreDetails.clarityReason {
+                            ScoreDetailRow(
+                                title: "Clarity (\(clarityScore)%)",
+                                reason: clarityReason,
+                                color: scoreDetails.clarityColor
+                            )
+                        }
+                        
+                        if let grammarScore = scoreDetails.grammarScore,
+                           let grammarReason = scoreDetails.grammarReason {
+                            ScoreDetailRow(
+                                title: "Grammar (\(grammarScore)%)",
+                                reason: grammarReason,
+                                color: scoreDetails.grammarColor
+                            )
+                        }
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(20)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(categoryColor.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
+}
+
+struct ScoreItem: View {
+    let title: String
+    let score: Int?
+    let color: Color
+    let weight: String
+    
+    var body: some View {
+        VStack(spacing: 6) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fontWeight(.medium)
+            
+            if let score = score {
+                Text("\(score)%")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(color)
+            } else {
+                Text("N/A")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(.gray)
+            }
+            
+            Text(weight)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(color.opacity(0.1))
+        .cornerRadius(8)
+    }
+}
+
+struct ScoreDetailRow: View {
+    let title: String
+    let reason: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(color)
+            
+            Text(reason)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(color.opacity(0.05))
+        .cornerRadius(8)
+    }
+}
+
+struct NoScoreDetailsCard: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "brain.head.profile")
+                .font(.system(size: 40))
+                .foregroundColor(.secondary)
+                .symbolRenderingMode(.hierarchical)
+            
+            VStack(spacing: 8) {
+                Text("No AI Score Available")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                Text("This session doesn't have AI-generated scores yet. Scores are generated automatically after interview completion.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(32)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color(.systemGray4), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
+}
+
 struct TranscriptCard: View {
     let transcript: InterviewTranscript
-    let session: InterviewSession // FIXED: Added session parameter
+    let session: InterviewSession
     let categoryColor: Color
     @State private var isExpanded = false
     
