@@ -177,7 +177,7 @@ struct MockInterviewView: View {
             .sheet(isPresented: $showingExtractionResults) {
                 CVExtractionResultView(cvExtractor: cvExtractor, category: selectedCategory)
             }
-            .sheet(isPresented: $showingTavusInterview) {
+            .fullScreenCover(isPresented: $showingTavusInterview) {
                 TavusInterviewView(
                     sessionData: sessionData,
                     cvContext: cvExtractor.extractedText.isEmpty ? nil : cvExtractor.extractedText,
