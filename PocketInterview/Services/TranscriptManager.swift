@@ -51,8 +51,8 @@ class TranscriptManager: ObservableObject {
         errorMessage = nil
         
         do {
-            // Load transcripts for user's interview sessions
-            let response: [InterviewTranscript] = try await supabase
+            // FIXED: Load transcripts with proper query structure
+            let response: [TranscriptResponse] = try await supabase
                 .from("interview_transcripts")
                 .select("""
                     id,
@@ -69,8 +69,17 @@ class TranscriptManager: ObservableObject {
                 .execute()
                 .value
             
-            self.transcripts = response
-            print("✅ Loaded \(response.count) transcripts")
+            // FIXED: Convert response to proper InterviewTranscript objects
+            self.transcripts = response.compactMap { transcriptResponse in
+                return convertToInterviewTranscript(from: transcriptResponse)
+            }
+            
+            print("✅ Loaded \(self.transcripts.count) transcripts")
+            
+            // Debug: Print loaded transcripts
+            for transcript in self.transcripts {
+                print("📄 Transcript: \(transcript.conversationId) - \(transcript.messageCount) messages")
+            }
             
         } catch {
             self.errorMessage = "Failed to load transcripts"
@@ -85,7 +94,7 @@ class TranscriptManager: ObservableObject {
     
     func getTranscript(for conversationId: String) async -> InterviewTranscript? {
         do {
-            let response: InterviewTranscript = try await supabase
+            let response: TranscriptResponse = try await supabase
                 .from("interview_transcripts")
                 .select("""
                     id,
@@ -103,7 +112,9 @@ class TranscriptManager: ObservableObject {
                 .execute()
                 .value
             
-            return response
+            let transcript = convertToInterviewTranscript(from: response)
+            print("✅ Loaded transcript for conversation \(conversationId): \(transcript?.messageCount ?? 0) messages")
+            return transcript
             
         } catch {
             print("❌ Failed to load transcript for conversation \(conversationId): \(error)")
@@ -113,6 +124,7 @@ class TranscriptManager: ObservableObject {
     
     func getTranscriptForSession(_ session: InterviewSession) async -> InterviewTranscript? {
         guard let conversationId = session.conversationId else {
+            print("⚠️ No conversation ID for session: \(session.sessionName)")
             return nil
         }
         
@@ -131,11 +143,15 @@ class TranscriptManager: ObservableObject {
     
     func hasTranscript(for conversationId: String?) -> Bool {
         guard let conversationId = conversationId else { return false }
-        return transcripts.contains { $0.conversationId == conversationId }
+        let hasIt = transcripts.contains { $0.conversationId == conversationId }
+        print("🔍 Checking transcript for \(conversationId): \(hasIt)")
+        return hasIt
     }
     
     func getLocalTranscript(for conversationId: String) -> InterviewTranscript? {
-        return transcripts.first { $0.conversationId == conversationId }
+        let transcript = transcripts.first { $0.conversationId == conversationId }
+        print("🔍 Getting local transcript for \(conversationId): \(transcript != nil)")
+        return transcript
     }
     
     // MARK: - Analytics
@@ -159,6 +175,57 @@ class TranscriptManager: ObservableObject {
         )
     }
     
+    // MARK: - Data Conversion
+    
+    private func convertToInterviewTranscript(from response: TranscriptResponse) -> InterviewTranscript? {
+        // FIXED: Parse transcript_data from JSONB
+        guard let transcriptData = parseTranscriptData(response.transcriptData) else {
+            print("❌ Failed to parse transcript data for conversation: \(response.conversationId)")
+            return nil
+        }
+        
+        return InterviewTranscript(
+            id: response.id,
+            conversationId: response.conversationId,
+            transcriptData: transcriptData,
+            messageCount: response.messageCount,
+            userMessageCount: response.userMessageCount,
+            assistantMessageCount: response.assistantMessageCount,
+            webhookTimestamp: response.webhookTimestamp,
+            createdAt: response.createdAt,
+            updatedAt: response.updatedAt
+        )
+    }
+    
+    private func parseTranscriptData(_ jsonData: Any) -> [TranscriptMessage]? {
+        do {
+            // Convert to Data first
+            let data: Data
+            if let jsonData = jsonData as? Data {
+                data = jsonData
+            } else {
+                data = try JSONSerialization.data(withJSONObject: jsonData)
+            }
+            
+            // Parse as array of message dictionaries
+            let jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+            
+            return jsonArray?.compactMap { messageDict in
+                guard let roleString = messageDict["role"] as? String,
+                      let content = messageDict["content"] as? String,
+                      let role = TranscriptMessage.MessageRole(rawValue: roleString) else {
+                    return nil
+                }
+                
+                return TranscriptMessage(role: role, content: content)
+            }
+            
+        } catch {
+            print("❌ Error parsing transcript data: \(error)")
+            return nil
+        }
+    }
+    
     // MARK: - Sample Data (for development/testing)
     
     private func createSampleTranscripts() -> [InterviewTranscript] {
@@ -166,6 +233,89 @@ class TranscriptManager: ObservableObject {
             InterviewTranscript.sampleTechnicalTranscript(),
             InterviewTranscript.sampleBehavioralTranscript()
         ]
+    }
+}
+
+// MARK: - Helper Structs for Database Response
+
+private struct TranscriptResponse: Codable {
+    let id: UUID
+    let conversationId: String
+    let transcriptData: Any // This will be JSONB from database
+    let messageCount: Int
+    let userMessageCount: Int
+    let assistantMessageCount: Int
+    let webhookTimestamp: Date
+    let createdAt: Date
+    let updatedAt: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case conversationId = "conversation_id"
+        case transcriptData = "transcript_data"
+        case messageCount = "message_count"
+        case userMessageCount = "user_message_count"
+        case assistantMessageCount = "assistant_message_count"
+        case webhookTimestamp = "webhook_timestamp"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        id = try container.decode(UUID.self, forKey: .id)
+        conversationId = try container.decode(String.self, forKey: .conversationId)
+        messageCount = try container.decode(Int.self, forKey: .messageCount)
+        userMessageCount = try container.decode(Int.self, forKey: .userMessageCount)
+        assistantMessageCount = try container.decode(Int.self, forKey: .assistantMessageCount)
+        webhookTimestamp = try container.decode(Date.self, forKey: .webhookTimestamp)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        
+        // Handle JSONB data - it comes as Any from Supabase
+        transcriptData = try container.decode(AnyCodable.self, forKey: .transcriptData).value
+    }
+}
+
+// Helper for decoding Any type from JSONB
+private struct AnyCodable: Codable {
+    let value: Any
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        
+        if let intValue = try? container.decode(Int.self) {
+            value = intValue
+        } else if let doubleValue = try? container.decode(Double.self) {
+            value = doubleValue
+        } else if let stringValue = try? container.decode(String.self) {
+            value = stringValue
+        } else if let boolValue = try? container.decode(Bool.self) {
+            value = boolValue
+        } else if let arrayValue = try? container.decode([AnyCodable].self) {
+            value = arrayValue.map { $0.value }
+        } else if let dictValue = try? container.decode([String: AnyCodable].self) {
+            value = dictValue.mapValues { $0.value }
+        } else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode value")
+        }
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        
+        if let intValue = value as? Int {
+            try container.encode(intValue)
+        } else if let doubleValue = value as? Double {
+            try container.encode(doubleValue)
+        } else if let stringValue = value as? String {
+            try container.encode(stringValue)
+        } else if let boolValue = value as? Bool {
+            try container.encode(boolValue)
+        } else {
+            throw EncodingError.invalidValue(value, EncodingError.Context(codingPath: encoder.codingPath, debugDescription: "Cannot encode value"))
+        }
     }
 }
 

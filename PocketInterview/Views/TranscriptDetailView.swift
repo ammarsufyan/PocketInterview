@@ -9,7 +9,7 @@ import SwiftUI
 
 struct TranscriptDetailView: View {
     let transcript: InterviewTranscript
-    let session: InterviewSession?
+    let session: InterviewSession
     @Environment(\.dismiss) private var dismiss
     
     @State private var searchText = ""
@@ -56,7 +56,7 @@ struct TranscriptDetailView: View {
     }
     
     private var categoryColor: Color {
-        session?.categoryColor ?? .blue
+        session.categoryColor
     }
     
     var body: some View {
@@ -144,33 +144,31 @@ struct TranscriptDetailView: View {
 
 struct TranscriptStatsHeader: View {
     let transcript: InterviewTranscript
-    let session: InterviewSession?
+    let session: InterviewSession
     
     var body: some View {
         VStack(spacing: 16) {
             // Session Info
-            if let session = session {
-                HStack(spacing: 12) {
-                    Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
-                        .font(.title3)
-                        .foregroundColor(session.categoryColor)
+            HStack(spacing: 12) {
+                Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
+                    .font(.title3)
+                    .foregroundColor(session.categoryColor)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(session.sessionName)
+                        .font(.headline)
+                        .fontWeight(.semibold)
                     
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(session.sessionName)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        
-                        Text("\(session.category) Interview")
-                            .font(.caption)
-                            .foregroundColor(session.categoryColor)
-                    }
-                    
-                    Spacer()
-                    
-                    Text(session.formattedDate)
+                    Text("\(session.category) Interview")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(session.categoryColor)
                 }
+                
+                Spacer()
+                
+                Text(session.formattedDate)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             
             // Transcript Stats
@@ -365,6 +363,21 @@ struct EmptyTranscriptView: View {
 #Preview {
     TranscriptDetailView(
         transcript: InterviewTranscript.sampleTechnicalTranscript(),
-        session: nil
+        session: InterviewSession(
+            id: UUID(),
+            userId: UUID(),
+            category: "Technical",
+            sessionName: "Sample Session",
+            score: 85,
+            expectedDurationMinutes: 30,
+            actualDurationMinutes: 32,
+            questionsAnswered: 8,
+            createdAt: Date(),
+            updatedAt: Date(),
+            conversationId: "sample_conv_123",
+            completedTimestamp: Date(),
+            sessionStatus: "completed",
+            endReason: "manual"
+        )
     )
 }
