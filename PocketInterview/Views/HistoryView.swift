@@ -37,9 +37,9 @@ struct HistoryView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Header with Statistics Summary (REMOVED SUMMARY)
+                // Header with Statistics (NO SUMMARY)
                 VStack(spacing: 20) {
-                    // Statistics Overview (NO SUMMARY)
+                    // Statistics Overview (NO SUMMARY TEXT)
                     if !filteredSessions.isEmpty {
                         HistoryStatsView(sessions: filteredSessions)
                             .padding(.horizontal, 20)
@@ -239,6 +239,7 @@ struct HistoryFilterTab: View {
     }
 }
 
+// MARK: - 🔥 COMPLETELY REMOVED SUMMARY from HistoryStatsView
 struct HistoryStatsView: View {
     let sessions: [InterviewSession]
     
@@ -257,6 +258,7 @@ struct HistoryStatsView: View {
     }
     
     var body: some View {
+        // REMOVED: All summary text - just show the stats cards
         HStack(spacing: 16) {
             HistoryStatItem(title: "Avg Score", value: "\(averageScore)%", icon: "star.fill", color: .orange)
             HistoryStatItem(title: "Total Time", value: "\(totalDuration)m", icon: "clock.fill", color: .blue)
