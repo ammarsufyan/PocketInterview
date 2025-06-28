@@ -253,10 +253,11 @@ class TranscriptManager: ObservableObject {
 
 // MARK: - Helper Structs for Database Response
 
+// FIXED: Proper Codable implementation for TranscriptResponse
 private struct TranscriptResponse: Codable {
     let id: UUID
     let conversationId: String
-    let transcriptData: Any // This will be JSONB from database
+    let transcriptData: CodableAny // Changed from Any to CodableAny
     let messageCount: Int
     let userMessageCount: Int
     let assistantMessageCount: Int
@@ -275,27 +276,15 @@ private struct TranscriptResponse: Codable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        
-        id = try container.decode(UUID.self, forKey: .id)
-        conversationId = try container.decode(String.self, forKey: .conversationId)
-        messageCount = try container.decode(Int.self, forKey: .messageCount)
-        userMessageCount = try container.decode(Int.self, forKey: .userMessageCount)
-        assistantMessageCount = try container.decode(Int.self, forKey: .assistantMessageCount)
-        webhookTimestamp = try container.decode(Date.self, forKey: .webhookTimestamp)
-        createdAt = try container.decode(Date.self, forKey: .createdAt)
-        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
-        
-        // FIXED: Better handling of JSONB data from Supabase
-        transcriptData = try container.decode(AnyCodable.self, forKey: .transcriptData).value
-    }
 }
 
-// FIXED: Improved AnyCodable helper for decoding JSONB
-private struct AnyCodable: Codable {
+// FIXED: Proper Codable wrapper for Any type
+private struct CodableAny: Codable {
     let value: Any
+    
+    init(_ value: Any) {
+        self.value = value
+    }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
@@ -308,9 +297,9 @@ private struct AnyCodable: Codable {
             value = stringValue
         } else if let boolValue = try? container.decode(Bool.self) {
             value = boolValue
-        } else if let arrayValue = try? container.decode([AnyCodable].self) {
+        } else if let arrayValue = try? container.decode([CodableAny].self) {
             value = arrayValue.map { $0.value }
-        } else if let dictValue = try? container.decode([String: AnyCodable].self) {
+        } else if let dictValue = try? container.decode([String: CodableAny].self) {
             value = dictValue.mapValues { $0.value }
         } else if container.decodeNil() {
             value = NSNull()
@@ -330,10 +319,16 @@ private struct AnyCodable: Codable {
             try container.encode(stringValue)
         } else if let boolValue = value as? Bool {
             try container.encode(boolValue)
+        } else if let arrayValue = value as? [Any] {
+            let codableArray = arrayValue.map { CodableAny($0) }
+            try container.encode(codableArray)
+        } else if let dictValue = value as? [String: Any] {
+            let codableDict = dictValue.mapValues { CodableAny($0) }
+            try container.encode(codableDict)
         } else if value is NSNull {
             try container.encodeNil()
         } else {
-            throw EncodingError.invalidValue(value, EncodingError.Context(codingPath: encoder.codingPath, debugDescription: "Cannot encode value"))
+            throw EncodingError.invalidValue(value, EncodingError.Context(codingPath: encoder.codingPath, debugDescription: "Cannot encode value of type \(type(of: value))"))
         }
     }
 }
