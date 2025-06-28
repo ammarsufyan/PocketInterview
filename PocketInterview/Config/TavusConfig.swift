@@ -93,7 +93,7 @@ struct TavusConfig {
         let contextSuffix = "\n\nPlease tailor your questions based on their background and experience level."
         
         // Limit context to avoid overwhelming the persona
-        let maxLength = 1000
+        let maxLength = 2000
         let truncatedContext = cvContext.count > maxLength ? 
             String(cvContext.prefix(maxLength)) + "..." : 
             cvContext

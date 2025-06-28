@@ -166,9 +166,9 @@ class TavusService: ObservableObject {
         request.setValue("PocketInterview/1.0", forHTTPHeaderField: "User-Agent")
         
         // Create personalized context if CV data is available
-        let conversationalContext = TavusConfig.createPersonalizedContext(
+        var conversationalContext = TavusConfig.createPersonalizedContext(
             category: data.category,
-            cvContext: data.cvContext
+            cvContext: sanitizeText(data.cvContext)
         )
         
         // Create payload without replica_id (persona_id already defines the replica)
@@ -311,6 +311,28 @@ class TavusService: ObservableObject {
     private func generateWebhookUrl() -> String {
         let supabaseUrl = EnvironmentConfig.shared.supabaseURL ?? "https://your-project.supabase.co"
         return "\(supabaseUrl)/functions/v1/tavus-transcript-webhook"
+    }
+    
+    /// Sanitizes text to remove problematic characters for API requests
+    private func sanitizeText(_ text: String?) -> String? {
+        guard let text = text, !text.isEmpty else {
+            return nil
+        }
+        
+        // Remove null characters and other problematic characters
+        let sanitized = text
+            .replacingOccurrences(of: "\0", with: "")
+            .replacingOccurrences(of: "\u{0000}", with: "")
+            .replacingOccurrences(of: "\r", with: " ")
+            .replacingOccurrences(of: "\t", with: " ")
+        
+        // Limit length to avoid overwhelming the API
+        let maxLength = 2000
+        if sanitized.count > maxLength {
+            return String(sanitized.prefix(maxLength)) + "..."
+        }
+        
+        return sanitized
     }
     
     func clearSession() {

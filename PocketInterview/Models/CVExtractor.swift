@@ -40,12 +40,13 @@ class CVExtractor: ObservableObject {
             }
             
             await MainActor.run {
-                self.extractedText = extractedContent
+                // Sanitize the extracted text to remove null characters and other problematic characters
+                self.extractedText = sanitizeText(extractedContent)
                 self.isExtracting = false
             }
             
             // Start local analysis after extraction
-            await analyzeCV(text: extractedContent)
+            await analyzeCV(text: self.extractedText)
         }
     }
     
@@ -111,13 +112,13 @@ class CVExtractor: ObservableObject {
     
     private func extractNameFromFileName(_ fileName: String) -> String {
         let baseName = (fileName as NSString).deletingPathExtension
-        let cleanName = baseName.replacingOccurrences(of: "_", with: " ")
+        let cleanedUsername = baseName.replacingOccurrences(of: "_", with: " ")
                                 .replacingOccurrences(of: "-", with: " ")
                                 .replacingOccurrences(of: "CV", with: "")
                                 .replacingOccurrences(of: "Resume", with: "")
                                 .trimmingCharacters(in: .whitespacesAndNewlines)
         
-        return cleanName.isEmpty ? "John Doe" : cleanName
+        return cleanedUsername.isEmpty ? "John Doe" : cleanedUsername
     }
     
     private func generateTechnicalCV(name: String) -> String {
@@ -486,6 +487,15 @@ class CVExtractor: ObservableObject {
         analysis.achievements = extractAchievements(from: text)
         
         self.cvAnalysis = analysis
+    }
+    
+    /// Sanitizes text to remove problematic characters
+    private func sanitizeText(_ text: String) -> String {
+        return text
+            .replacingOccurrences(of: "\0", with: "")
+            .replacingOccurrences(of: "\u{0000}", with: "")
+            .replacingOccurrences(of: "\r", with: " ")
+            .replacingOccurrences(of: "\t", with: " ")
     }
     
     private func extractTechnicalSkills(from text: String) -> [String] {
