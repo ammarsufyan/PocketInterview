@@ -18,6 +18,7 @@ class TavusService: ObservableObject {
     
     private let envConfig = EnvironmentConfig.shared
     private var isCreatingSession = false
+    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Create Conversation Session
     
@@ -166,7 +167,7 @@ class TavusService: ObservableObject {
         request.setValue("PocketInterview/1.0", forHTTPHeaderField: "User-Agent")
         
         // Create personalized context if CV data is available
-        var conversationalContext = TavusConfig.createPersonalizedContext(
+        let sanitizedContext = TavusConfig.createPersonalizedContext(
             category: data.category,
             cvContext: sanitizeText(data.cvContext)
         )
@@ -175,7 +176,7 @@ class TavusService: ObservableObject {
         let payload = TavusCreateConversationPayload(
             personaId: TavusConfig.getPersonaId(for: data.category),
             conversationName: data.sessionName,
-            conversationalContext: conversationalContext,
+            conversationalContext: sanitizedContext,
             callbackUrl: generateWebhookUrl(),
             properties: TavusConversationProperties(
                 maxCallDuration: data.duration * 60,
