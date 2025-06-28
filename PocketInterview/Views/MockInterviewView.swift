@@ -51,7 +51,7 @@ struct MockInterviewView: View {
                             // Technical Category - Steve
                             CategoryCard(
                                 title: "Technical",
-                                description: "Practice with Steve, your technical interviewer specializing in coding challenges",
+                                description: "Practice with Steve",
                                 icon: "laptopcomputer",
                                 color: .blue,
                                 interviewerName: "Steve",
@@ -66,7 +66,7 @@ struct MockInterviewView: View {
                             // Behavioral Category - Lucy
                             CategoryCard(
                                 title: "Behavioral",
-                                description: "Practice with Lucy, your behavioral interviewer expert in STAR method",
+                                description: "Practice with Lucy",
                                 icon: "person.2.fill",
                                 color: .purple,
                                 interviewerName: "Lucy",
@@ -314,13 +314,13 @@ struct CVUploadCard: View {
         case "Technical":
             return isUploaded ? 
                 "\(interviewerName) will create personalized technical questions based on your skills and experience" :
-                "\(interviewerName) will analyze your technical background and tailor coding/problem-solving questions accordingly"
+                "\(interviewerName) will analyze your technical background"
         case "Behavioral":
             return isUploaded ?
                 "\(interviewerName) will create personalized behavioral questions based on your work experience and achievements" :
-                "\(interviewerName) will analyze your work history and create STAR-method questions based on your background"
+                "\(interviewerName) will analyze your background"
         default:
-            return "Your AI interviewer will analyze your background and tailor questions accordingly"
+            return "Your AI interviewer will analyze your background"
         }
     }
     
