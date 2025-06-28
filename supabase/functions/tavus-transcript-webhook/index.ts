@@ -338,13 +338,18 @@ serve(async (req: Request) => {
   }
 })
 
-// 🔥 FIXED: AI Scoring Function using proper fetch syntax
+// 🔥 UPDATED: AI Scoring Function using environment variable
 async function generateAIScoring(transcript: TranscriptMessage[]): Promise<LLMScoringResponse | null> {
   try {
-    // 🔥 FIXED: Use the exact API key you provided
-    const OPENROUTER_API_KEY = "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"
+    // 🔥 FIXED: Use environment variable instead of hardcoded API key
+    const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY')
     
-    console.log("🔑 Using OpenRouter API Key:", `${OPENROUTER_API_KEY.substring(0, 15)}...`)
+    if (!OPENROUTER_API_KEY) {
+      console.error("❌ OPENROUTER_API_KEY environment variable not found")
+      return null
+    }
+    
+    console.log("🔑 Using OpenRouter API Key from environment variable")
     
     // Format transcript for LLM analysis
     const transcriptText = transcript
@@ -369,7 +374,7 @@ I want the answer to be in json format
     console.log("🤖 Sending request to OpenRouter...")
     console.log("📝 Transcript length:", transcriptText.length, "characters")
 
-    // 🔥 FIXED: Use the exact fetch syntax you provided
+    // 🔥 SECURE: Use environment variable for API key
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
