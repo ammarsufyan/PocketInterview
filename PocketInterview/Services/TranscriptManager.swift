@@ -51,7 +51,7 @@ class TranscriptManager: ObservableObject {
         errorMessage = nil
         
         do {
-            // FIXED: Load transcripts with proper query structure
+            // FIXED: Simplified query to get raw JSONB data
             let response: [TranscriptResponse] = try await supabase
                 .from("interview_transcripts")
                 .select("""
@@ -178,7 +178,7 @@ class TranscriptManager: ObservableObject {
     // MARK: - Data Conversion
     
     private func convertToInterviewTranscript(from response: TranscriptResponse) -> InterviewTranscript? {
-        // FIXED: Parse transcript_data from JSONB
+        // FIXED: Parse transcript_data from JSONB with better error handling
         guard let transcriptData = parseTranscriptData(response.transcriptData) else {
             print("❌ Failed to parse transcript data for conversation: \(response.conversationId)")
             return nil
@@ -199,29 +199,44 @@ class TranscriptManager: ObservableObject {
     
     private func parseTranscriptData(_ jsonData: Any) -> [TranscriptMessage]? {
         do {
-            // Convert to Data first
-            let data: Data
-            if let jsonData = jsonData as? Data {
-                data = jsonData
+            print("🔍 Parsing transcript data of type: \(type(of: jsonData))")
+            
+            // Handle different data types from Supabase JSONB
+            let jsonArray: [[String: Any]]
+            
+            if let directArray = jsonData as? [[String: Any]] {
+                jsonArray = directArray
+                print("✅ Direct array conversion successful")
+            } else if let dataObject = jsonData as? Data {
+                jsonArray = try JSONSerialization.jsonObject(with: dataObject) as? [[String: Any]] ?? []
+                print("✅ Data object conversion successful")
             } else {
-                data = try JSONSerialization.data(withJSONObject: jsonData)
+                // Try to serialize and deserialize
+                let data = try JSONSerialization.data(withJSONObject: jsonData)
+                jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
+                print("✅ Serialization conversion successful")
             }
             
-            // Parse as array of message dictionaries
-            let jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]]
+            print("📊 Found \(jsonArray.count) messages in transcript data")
             
-            return jsonArray?.compactMap { messageDict in
+            let messages = jsonArray.compactMap { messageDict -> TranscriptMessage? in
                 guard let roleString = messageDict["role"] as? String,
                       let content = messageDict["content"] as? String,
                       let role = TranscriptMessage.MessageRole(rawValue: roleString) else {
+                    print("⚠️ Skipping invalid message: \(messageDict)")
                     return nil
                 }
                 
+                // Create message without ID (it will be generated automatically)
                 return TranscriptMessage(role: role, content: content)
             }
             
+            print("✅ Successfully parsed \(messages.count) transcript messages")
+            return messages
+            
         } catch {
             print("❌ Error parsing transcript data: \(error)")
+            print("❌ Raw data: \(jsonData)")
             return nil
         }
     }
@@ -273,12 +288,12 @@ private struct TranscriptResponse: Codable {
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
         
-        // Handle JSONB data - it comes as Any from Supabase
+        // FIXED: Better handling of JSONB data from Supabase
         transcriptData = try container.decode(AnyCodable.self, forKey: .transcriptData).value
     }
 }
 
-// Helper for decoding Any type from JSONB
+// FIXED: Improved AnyCodable helper for decoding JSONB
 private struct AnyCodable: Codable {
     let value: Any
     
@@ -297,6 +312,8 @@ private struct AnyCodable: Codable {
             value = arrayValue.map { $0.value }
         } else if let dictValue = try? container.decode([String: AnyCodable].self) {
             value = dictValue.mapValues { $0.value }
+        } else if container.decodeNil() {
+            value = NSNull()
         } else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode value")
         }
@@ -313,6 +330,8 @@ private struct AnyCodable: Codable {
             try container.encode(stringValue)
         } else if let boolValue = value as? Bool {
             try container.encode(boolValue)
+        } else if value is NSNull {
+            try container.encodeNil()
         } else {
             throw EncodingError.invalidValue(value, EncodingError.Context(codingPath: encoder.codingPath, debugDescription: "Cannot encode value"))
         }

@@ -65,10 +65,40 @@ struct TranscriptMessage: Codable, Identifiable, Equatable {
     let role: MessageRole
     let content: String
     
+    // FIXED: Custom initializer that generates UUID
     init(role: MessageRole, content: String) {
         self.id = UUID()
         self.role = role
         self.content = content
+    }
+    
+    // FIXED: Custom decoder that handles missing ID
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Try to decode ID, generate new one if missing
+        if let decodedId = try? container.decode(UUID.self, forKey: .id) {
+            self.id = decodedId
+        } else {
+            self.id = UUID()
+        }
+        
+        self.role = try container.decode(MessageRole.self, forKey: .role)
+        self.content = try container.decode(String.self, forKey: .content)
+    }
+    
+    // FIXED: Custom encoder
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(role, forKey: .role)
+        try container.encode(content, forKey: .content)
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case role
+        case content
     }
     
     enum MessageRole: String, Codable, CaseIterable {
