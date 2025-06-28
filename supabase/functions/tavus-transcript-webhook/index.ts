@@ -338,10 +338,13 @@ serve(async (req: Request) => {
   }
 })
 
-// 🔥 AI Scoring Function using OpenRouter
+// 🔥 FIXED: AI Scoring Function with proper OpenRouter authentication
 async function generateAIScoring(transcript: TranscriptMessage[]): Promise<LLMScoringResponse | null> {
   try {
-    const OPENROUTER_API_KEY = "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"
+    // 🔥 FIXED: Use environment variable for API key instead of hardcoded
+    const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') || "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"
+    
+    console.log("🔑 Using OpenRouter API Key:", OPENROUTER_API_KEY ? `${OPENROUTER_API_KEY.substring(0, 10)}...` : "NOT SET")
     
     // Format transcript for LLM analysis
     const transcriptText = transcript
@@ -364,31 +367,51 @@ I want the answer to be in json format
 }`
 
     console.log("🤖 Sending request to OpenRouter...")
+    console.log("📝 Transcript length:", transcriptText.length, "characters")
+
+    const requestBody = {
+      model: "deepseek/deepseek-r1-0528:free",
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ]
+    }
+
+    console.log("📤 Request body:", JSON.stringify(requestBody, null, 2))
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://your-app.com", // Optional: for analytics
+        "X-Title": "PocketInterview AI Scoring", // Optional: for analytics
       },
-      body: JSON.stringify({
-        model: "deepseek/deepseek-r1-0528:free",
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ]
-      })
+      body: JSON.stringify(requestBody)
     })
+
+    console.log("📥 OpenRouter response status:", response.status)
+    console.log("📥 OpenRouter response headers:", Object.fromEntries(response.headers.entries()))
 
     if (!response.ok) {
       const errorText = await response.text()
       console.error("❌ OpenRouter API error:", response.status, errorText)
+      
+      // Try to parse error response
+      try {
+        const errorJson = JSON.parse(errorText)
+        console.error("❌ Parsed error:", errorJson)
+      } catch {
+        console.error("❌ Raw error text:", errorText)
+      }
+      
       return null
     }
 
     const data = await response.json()
+    console.log("📥 OpenRouter response data:", JSON.stringify(data, null, 2))
     
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       console.error("❌ Invalid OpenRouter response structure:", data)
@@ -398,24 +421,42 @@ I want the answer to be in json format
     const content = data.choices[0].message.content
     console.log("🤖 Raw LLM response:", content)
 
-    // Extract JSON from the response
+    // Extract JSON from the response - improved parsing
+    let jsonString = content
+    
+    // Try to find JSON block first
     const jsonMatch = content.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      console.error("❌ No JSON found in LLM response")
+    if (jsonMatch) {
+      jsonString = jsonMatch[0]
+    }
+    
+    // Clean up the JSON string
+    jsonString = jsonString
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim()
+
+    console.log("🧹 Cleaned JSON string:", jsonString)
+
+    let scoringResult
+    try {
+      scoringResult = JSON.parse(jsonString)
+    } catch (parseError) {
+      console.error("❌ JSON parsing failed:", parseError)
+      console.error("❌ Failed to parse:", jsonString)
       return null
     }
 
-    const jsonString = jsonMatch[0]
-    const scoringResult = JSON.parse(jsonString)
+    console.log("📊 Parsed scoring result:", scoringResult)
 
     // Validate and sanitize the scoring result
     const validatedResult: LLMScoringResponse = {
-      clarity_score: Math.max(0, Math.min(100, parseInt(scoringResult.clarity_score) || 0)),
-      clarity_reason: (scoringResult.clarity_reason || "No reason provided").substring(0, 500),
-      grammar_score: Math.max(0, Math.min(100, parseInt(scoringResult.grammar_score) || 0)),
-      grammar_reason: (scoringResult.grammar_reason || "No reason provided").substring(0, 500),
-      substance_score: Math.max(0, Math.min(100, parseInt(scoringResult.substance_score) || 0)),
-      substance_reason: (scoringResult.substance_reason || "No reason provided").substring(0, 500)
+      clarity_score: Math.max(0, Math.min(100, parseInt(String(scoringResult.clarity_score)) || 0)),
+      clarity_reason: String(scoringResult.clarity_reason || "No reason provided").substring(0, 500),
+      grammar_score: Math.max(0, Math.min(100, parseInt(String(scoringResult.grammar_score)) || 0)),
+      grammar_reason: String(scoringResult.grammar_reason || "No reason provided").substring(0, 500),
+      substance_score: Math.max(0, Math.min(100, parseInt(String(scoringResult.substance_score)) || 0)),
+      substance_reason: String(scoringResult.substance_reason || "No reason provided").substring(0, 500)
     }
 
     console.log("✅ Validated scoring result:", validatedResult)
@@ -423,6 +464,7 @@ I want the answer to be in json format
 
   } catch (error) {
     console.error("❌ AI scoring error:", error)
+    console.error("❌ Error stack:", error.stack)
     return null
   }
 }
