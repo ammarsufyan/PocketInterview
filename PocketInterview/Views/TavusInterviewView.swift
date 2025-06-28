@@ -87,11 +87,6 @@ struct TavusInterviewView: View {
                                 await startTavusSession()
                             }
                         },
-                        onTestApiKey: {
-                            Task {
-                                await testApiKey()
-                            }
-                        },
                         onCancel: {
                             onBackToSetup()
                         }
@@ -247,10 +242,6 @@ struct TavusInterviewView: View {
         }
     }
     
-    private func testApiKey() async {
-        _ = await tavusService.testApiKey()
-    }
-    
     // MARK: - End Interview with API Call
     
     private func endInterviewWithAPI(reason: String = "manual") async {
@@ -350,7 +341,6 @@ struct TavusErrorView: View {
     let message: String
     let categoryColor: Color
     let onRetry: () -> Void
-    let onTestApiKey: () -> Void
     let onCancel: () -> Void
     
     var body: some View {
@@ -387,25 +377,6 @@ struct TavusErrorView: View {
                     .frame(height: 52)
                     .background(categoryColor)
                     .cornerRadius(12)
-                }
-                
-                Button(action: onTestApiKey) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "key.fill")
-                            .font(.headline)
-                        Text("Test API Key")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(categoryColor)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(categoryColor.opacity(0.1))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(categoryColor, lineWidth: 1)
-                    )
                 }
                 
                 Button(action: onCancel) {

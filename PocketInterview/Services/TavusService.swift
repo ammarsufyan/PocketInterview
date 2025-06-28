@@ -169,7 +169,7 @@ class TavusService: ObservableObject {
         let webhookUrl = generateWebhookUrl()
         let personaId = TavusConfig.getPersonaId(for: data.category)
         
-        // FIXED: Use correct Tavus API payload structure
+        // FIXED: Use correct Tavus API payload structure (no replica_id needed)
         let payload = TavusCreateConversationPayload(
             personaId: personaId,
             conversationName: data.sessionName,
@@ -189,11 +189,18 @@ class TavusService: ObservableObject {
             let jsonData = try JSONEncoder().encode(payload)
             request.httpBody = jsonData
             
+            // Debug: Print the payload being sent
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                print("🔧 Tavus API Payload: \(jsonString)")
+            }
+            
             let (responseData, response) = try await URLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw TavusError.invalidResponse
             }
+            
+            print("🌐 Tavus API Response Status: \(httpResponse.statusCode)")
             
             switch httpResponse.statusCode {
             case 200, 201:
@@ -209,7 +216,9 @@ class TavusService: ObservableObject {
                 if let errorData = try? JSONDecoder().decode(TavusErrorResponse.self, from: responseData) {
                     throw TavusError.apiErrorWithMessage(400, "Tavus API Error: \(errorData.message)")
                 } else {
-                    throw TavusError.apiErrorWithMessage(400, "Invalid request. Session name: '\(data.sessionName)'")
+                    let responseString = String(data: responseData, encoding: .utf8) ?? "Unknown error"
+                    print("❌ 400 Error Response: \(responseString)")
+                    throw TavusError.apiErrorWithMessage(400, "Invalid request. Response: \(responseString)")
                 }
                 
             default:
