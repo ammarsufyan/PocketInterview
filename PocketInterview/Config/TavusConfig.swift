@@ -94,12 +94,6 @@ struct TavusConfig {
         contextParts.append("- Duration: \(durationMinutes) minutes")
         contextParts.append("- Interviewer: \(getInterviewerName(for: category))")
         
-        // Add duration-specific instructions
-        let durationInstructions = createDurationInstructions(for: durationMinutes, category: category)
-        contextParts.append("")
-        contextParts.append("DURATION GUIDELINES:")
-        contextParts.append(durationInstructions)
-        
         // Add CV context if provided
         if let cvContext = cvContext, !cvContext.isEmpty {
             contextParts.append("")
@@ -123,55 +117,6 @@ struct TavusConfig {
         contextParts.append(categoryInstructions)
         
         return contextParts.joined(separator: "\n")
-    }
-    
-    /// Create duration-specific instructions for the AI interviewer
-    private static func createDurationInstructions(for minutes: Int, category: String) -> String {
-        switch minutes {
-        case 15:
-            return """
-            - This is a SHORT 15-minute session
-            - Focus on 3-4 key questions maximum
-            - Keep questions concise and direct
-            - Allow time for meaningful answers
-            - Prioritize the most important \(category.lowercased()) topics
-            """
-            
-        case 30:
-            return """
-            - This is a STANDARD 30-minute session
-            - Plan for 5-7 well-structured questions
-            - Balance breadth and depth in your questioning
-            - Allow sufficient time for detailed responses
-            - Include both foundational and advanced \(category.lowercased()) topics
-            """
-            
-        case 45:
-            return """
-            - This is an EXTENDED 45-minute session
-            - Plan for 7-10 comprehensive questions
-            - Dive deeper into complex topics
-            - Allow time for follow-up questions
-            - Cover both breadth and significant depth in \(category.lowercased()) areas
-            """
-            
-        case 60:
-            return """
-            - This is a COMPREHENSIVE 60-minute session
-            - Plan for 10-12 thorough questions
-            - Explore topics in great detail
-            - Include multiple follow-up questions
-            - Cover extensive \(category.lowercased()) ground with deep exploration
-            """
-            
-        default:
-            return """
-            - Session duration: \(minutes) minutes
-            - Adjust question count and depth accordingly
-            - Ensure proper pacing throughout the interview
-            - Focus on quality over quantity of questions
-            """
-        }
     }
     
     /// Create category-specific instructions
