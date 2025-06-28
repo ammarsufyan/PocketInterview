@@ -37,14 +37,8 @@ struct HistoryView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Header with Statistics (NO SUMMARY)
+                // Header with Search and Filters only
                 VStack(spacing: 20) {
-                    // Statistics Overview (NO SUMMARY TEXT)
-                    if !filteredSessions.isEmpty {
-                        HistoryStatsView(sessions: filteredSessions)
-                            .padding(.horizontal, 20)
-                    }
-                    
                     // Search Bar
                     HStack(spacing: 12) {
                         Image(systemName: "magnifyingglass")
@@ -236,64 +230,6 @@ struct HistoryFilterTab: View {
         }
         .scaleEffect(isSelected ? 1.05 : 1.0)
         .animation(.easeInOut(duration: 0.2), value: isSelected)
-    }
-}
-
-// MARK: - 🔥 COMPLETELY REMOVED SUMMARY from HistoryStatsView
-struct HistoryStatsView: View {
-    let sessions: [InterviewSession]
-    
-    var averageScore: Int {
-        let sessionsWithScores = sessions.compactMap { $0.score }
-        guard !sessionsWithScores.isEmpty else { return 0 }
-        return sessionsWithScores.reduce(0, +) / sessionsWithScores.count
-    }
-    
-    var totalDuration: Int {
-        sessions.reduce(0) { $0 + $1.duration }
-    }
-    
-    var totalQuestions: Int {
-        sessions.reduce(0) { $0 + $1.questionsAnswered }
-    }
-    
-    var body: some View {
-        // REMOVED: All summary text - just show the stats cards
-        HStack(spacing: 16) {
-            HistoryStatItem(title: "Avg Score", value: "\(averageScore)%", icon: "star.fill", color: .orange)
-            HistoryStatItem(title: "Total Time", value: "\(totalDuration)m", icon: "clock.fill", color: .blue)
-            HistoryStatItem(title: "Questions", value: "\(totalQuestions)", icon: "questionmark.circle.fill", color: .green)
-        }
-        .padding(20)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-    }
-}
-
-struct HistoryStatItem: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(color)
-                .symbolRenderingMode(.hierarchical)
-            
-            Text(value)
-                .font(.headline)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 
