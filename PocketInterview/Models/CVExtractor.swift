@@ -42,15 +42,6 @@ class CVExtractor: ObservableObject {
             await MainActor.run {
                 self.extractedText = extractedContent
                 self.isExtracting = false
-                
-                // Print extracted text for debugging
-                print("=== CV EXTRACTION RESULTS ===")
-                print("File: \(fileName)")
-                print("Type: \(fileExtension.uppercased())")
-                print("Text Length: \(extractedContent.count) characters")
-                print("=== EXTRACTED TEXT ===")
-                print(extractedContent)
-                print("=== END EXTRACTION ===")
             }
             
             // Start local analysis after extraction
@@ -495,19 +486,6 @@ class CVExtractor: ObservableObject {
         analysis.achievements = extractAchievements(from: text)
         
         self.cvAnalysis = analysis
-        
-        // Enhanced console output
-        print("=== 🔧 ENHANCED LOCAL ANALYSIS RESULTS ===")
-        print("📊 Technical Skills (\(analysis.technicalSkills.count)): \(analysis.technicalSkills)")
-        print("🤝 Soft Skills (\(analysis.softSkills.count)): \(analysis.softSkills)")
-        print("⏰ Years of Experience: \(analysis.yearsOfExperience)")
-        print("💼 Work Experience (\(analysis.workExperience.count)): \(analysis.workExperience)")
-        print("🎓 Education (\(analysis.education.count)): \(analysis.education)")
-        print("🚀 Projects (\(analysis.projects.count)): \(analysis.projects)")
-        print("🏆 Certifications (\(analysis.certifications.count)): \(analysis.certifications)")
-        print("⭐ Achievements (\(analysis.achievements.count)): \(analysis.achievements)")
-        print("📝 Summary: \(analysis.summary)")
-        print("=== END ENHANCED LOCAL ANALYSIS ===")
     }
     
     private func extractTechnicalSkills(from text: String) -> [String] {
@@ -871,7 +849,7 @@ class CVExtractor: ObservableObject {
     }
 }
 
-// MARK: - Enhanced CV Analysis Model (FIXED: Removed @MainActor and Equatable)
+// MARK: - Enhanced CV Analysis Model
 class CVAnalysis: ObservableObject {
     @Published var technicalSkills: [String] = []
     @Published var softSkills: [String] = []

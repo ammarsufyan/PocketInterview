@@ -165,9 +165,6 @@ class TavusService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("PocketInterview/1.0", forHTTPHeaderField: "User-Agent")
         
-        let webhookUrl = generateWebhookUrl()
-        let personaId = TavusConfig.getPersonaId(for: data.category)
-        
         // Create personalized context if CV data is available
         let conversationalContext = TavusConfig.createPersonalizedContext(
             category: data.category,
@@ -176,10 +173,10 @@ class TavusService: ObservableObject {
         
         // Create payload without replica_id (persona_id already defines the replica)
         let payload = TavusCreateConversationPayload(
-            personaId: personaId,
+            personaId: TavusConfig.getPersonaId(for: data.category),
             conversationName: data.sessionName,
             conversationalContext: conversationalContext,
-            callbackUrl: webhookUrl,
+            callbackUrl: generateWebhookUrl(),
             properties: TavusConversationProperties(
                 maxCallDuration: data.duration * 60,
                 participantLeftTimeout: 10,
