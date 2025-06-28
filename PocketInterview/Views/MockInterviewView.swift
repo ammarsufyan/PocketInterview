@@ -39,13 +39,6 @@ struct MockInterviewView: View {
                                     .foregroundColor(.secondary)
                                     .lineLimit(2)
                             }
-                            
-                            Spacer()
-                            
-                            Image(systemName: "person.crop.circle.fill")
-                                .font(.system(size: 44))
-                                .foregroundColor(.blue)
-                                .symbolRenderingMode(.hierarchical)
                         }
                     }
                     .padding(.horizontal, 20)
@@ -56,7 +49,6 @@ struct MockInterviewView: View {
                             // Technical Category - Steve
                             CategoryCard(
                                 title: "Technical",
-                                subtitle: "Technical & Problem Solving",
                                 description: "Practice with Steve, your technical interviewer specializing in coding challenges",
                                 icon: "laptopcomputer",
                                 color: .blue,
@@ -72,7 +64,6 @@ struct MockInterviewView: View {
                             // Behavioral Category - Lucy
                             CategoryCard(
                                 title: "Behavioral",
-                                subtitle: "Soft Skills & Experience",
                                 description: "Practice with Lucy, your behavioral interviewer expert in STAR method",
                                 icon: "person.2.fill",
                                 color: .purple,
@@ -230,7 +221,6 @@ class SessionData: ObservableObject {
 
 struct CategoryCard: View {
     let title: String
-    let subtitle: String
     let description: String
     let icon: String
     let color: Color
@@ -258,11 +248,6 @@ struct CategoryCard: View {
                             .fontWeight(.semibold)
                             .foregroundColor(isSelected ? .white : .primary)
                         
-                        Text(subtitle)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(isSelected ? .white.opacity(0.9) : .secondary)
-                        
                         Text(description)
                             .font(.caption)
                             .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
@@ -276,30 +261,6 @@ struct CategoryCard: View {
                         .font(.title3)
                         .foregroundColor(isSelected ? .white : .secondary)
                         .symbolRenderingMode(.hierarchical)
-                }
-                
-                // Interviewer Info
-                if isSelected {
-                    HStack(spacing: 12) {
-                        Image(systemName: "person.circle.fill")
-                            .font(.title3)
-                            .foregroundColor(.white.opacity(0.9))
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Your AI Interviewer")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.8))
-                            
-                            Text(interviewerName)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                        }
-                        
-                        Spacer()
-                    }
-                    .padding(.top, 8)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
             .padding(20)
@@ -350,12 +311,12 @@ struct CVUploadCard: View {
         switch category {
         case "Technical":
             return isUploaded ? 
-                "Steve will create personalized technical questions based on your skills and experience" :
-                "Steve will analyze your technical background and tailor coding/problem-solving questions accordingly"
+                "\(interviewerName) will create personalized technical questions based on your skills and experience" :
+                "\(interviewerName) will analyze your technical background and tailor coding/problem-solving questions accordingly"
         case "Behavioral":
             return isUploaded ?
-                "Lucy will create personalized behavioral questions based on your work experience and achievements" :
-                "Lucy will analyze your work history and create STAR-method questions based on your background"
+                "\(interviewerName) will create personalized behavioral questions based on your work experience and achievements" :
+                "\(interviewerName) will analyze your work history and create STAR-method questions based on your background"
         default:
             return "Your AI interviewer will analyze your background and tailor questions accordingly"
         }
@@ -507,6 +468,8 @@ struct StartInterviewButton: View {
                     .fontWeight(.semibold)
             }
             .foregroundColor(isEnabled ? .white : .secondary)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity)
             .frame(height: 56)
             .background(
@@ -698,6 +661,8 @@ struct SessionSetupView: View {
                                 .fontWeight(.semibold)
                         }
                         .foregroundColor(isSessionNameValid ? .white : .secondary)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
                         .background(

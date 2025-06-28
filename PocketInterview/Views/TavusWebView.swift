@@ -16,7 +16,8 @@ struct TavusWebView: UIViewRepresentable {
         
         // PERFORMANCE: Disable unnecessary features to reduce overhead
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
-        configuration.preferences.javaScriptEnabled = true
+        
+        // Note: JavaScript is enabled by default in WKWebView
         
         // PERFORMANCE: Optimize process pool for memory efficiency
         configuration.processPool = WKProcessPool()

@@ -166,7 +166,7 @@ class TavusService: ObservableObject {
         request.setValue("PocketInterview/1.0", forHTTPHeaderField: "User-Agent")
         
         // Create personalized context if CV data is available
-        var conversationalContext = TavusConfig.createPersonalizedContext(
+        let conversationalContext = TavusConfig.createPersonalizedContext(
             category: data.category,
             cvContext: sanitizeText(data.cvContext)
         )
@@ -224,7 +224,7 @@ class TavusService: ObservableObject {
                 }
             }
             
-        } catch let encodingError as EncodingError {
+        } catch _ as EncodingError {
             throw TavusError.decodingError
         } catch {
             throw error

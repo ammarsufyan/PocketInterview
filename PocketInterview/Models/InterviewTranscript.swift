@@ -61,9 +61,15 @@ struct InterviewTranscript: Identifiable, Codable, Equatable {
 }
 
 struct TranscriptMessage: Codable, Identifiable, Equatable {
-    let id = UUID()
+    let id: UUID
     let role: MessageRole
     let content: String
+    
+    init(role: MessageRole, content: String) {
+        self.id = UUID()
+        self.role = role
+        self.content = content
+    }
     
     enum MessageRole: String, Codable, CaseIterable {
         case user = "user"

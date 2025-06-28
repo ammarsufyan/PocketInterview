@@ -31,21 +31,6 @@ struct CVExtractionResultView: View {
                             Text("CV Analysis Complete")
                                 .font(.title2)
                                 .fontWeight(.bold)
-                            
-                            // Show local analysis indicator
-                            Text("Analyzed using Enhanced Local Analysis")
-                                .font(.subheadline)
-                                .foregroundColor(.orange)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 4)
-                                .background(Color.orange.opacity(0.1))
-                                .cornerRadius(8)
-                            
-                            Text("Here's what we extracted from your CV")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
                         }
                     }
                     .padding(.top, 20)

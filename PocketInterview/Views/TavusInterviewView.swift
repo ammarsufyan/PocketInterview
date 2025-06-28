@@ -39,10 +39,6 @@ struct TavusInterviewView: View {
         TavusConfig.getInterviewerName(for: sessionData.category)
     }
     
-    private var interviewerDescription: String {
-        TavusConfig.getInterviewerDescription(for: sessionData.category)
-    }
-    
     var body: some View {
         NavigationView {
             ZStack {
@@ -53,7 +49,6 @@ struct TavusInterviewView: View {
                         duration: sessionData.duration,
                         categoryColor: categoryColor,
                         interviewerName: interviewerName,
-                        interviewerDescription: interviewerDescription,
                         onStartWithSafari: {
                             showPreparationView = false
                             hasAttemptedStart = true
@@ -490,7 +485,6 @@ struct TavusPreparationView: View {
     let duration: Int
     let categoryColor: Color
     let interviewerName: String
-    let interviewerDescription: String
     let onStartWithSafari: () -> Void
     let onStartInApp: () -> Void
     let onCancel: () -> Void
@@ -513,12 +507,6 @@ struct TavusPreparationView: View {
                             .font(.title)
                             .foregroundColor(categoryColor)
                             .fontWeight(.bold)
-                        
-                        Text(interviewerDescription)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
                     }
                 }
                 .padding(.top, 40)
@@ -580,14 +568,9 @@ struct TavusPreparationView: View {
                                     Text("Start Interview (Safari)")
                                         .font(.headline)
                                         .fontWeight(.semibold)
-                                    
-                                    // Star Badge
-                                    Image(systemName: "star.fill")
-                                        .font(.caption)
-                                        .foregroundColor(.yellow)
                                 }
                                 
-                                Text("Recommended • Better Performance")
+                                Text("Recommended")
                                     .font(.caption)
                                     .fontWeight(.medium)
                                     .opacity(0.9)
@@ -601,6 +584,8 @@ struct TavusPreparationView: View {
                                 .foregroundColor(.white.opacity(0.8))
                         }
                         .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
                         .frame(maxWidth: .infinity)
                         .frame(height: 64)
                         .background(
@@ -643,7 +628,7 @@ struct TavusPreparationView: View {
                                     .font(.headline)
                                     .fontWeight(.semibold)
                                 
-                                Text("Alternative Option")
+                                Text("Alternative")
                                     .font(.caption)
                                     .fontWeight(.medium)
                                     .opacity(0.7)
@@ -656,6 +641,8 @@ struct TavusPreparationView: View {
                                 .foregroundColor(.blue)
                         }
                         .foregroundColor(.primary)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
                         .frame(maxWidth: .infinity)
                         .frame(height: 64)
                         .background(Color(.systemBackground))
