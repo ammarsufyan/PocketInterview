@@ -165,15 +165,20 @@ class TavusService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("PocketInterview/1.0", forHTTPHeaderField: "User-Agent")
         
-        let shortContext = generateShortInstructions(for: data.category, cvContext: data.cvContext)
         let webhookUrl = generateWebhookUrl()
         let personaId = TavusConfig.getPersonaId(for: data.category)
         
-        // FIXED: Use correct Tavus API payload structure (no replica_id needed)
+        // Create personalized context if CV data is available
+        let conversationalContext = TavusConfig.createPersonalizedContext(
+            category: data.category,
+            cvContext: data.cvContext
+        )
+        
+        // Create payload without replica_id (persona_id already defines the replica)
         let payload = TavusCreateConversationPayload(
             personaId: personaId,
             conversationName: data.sessionName,
-            conversationalContext: shortContext,
+            conversationalContext: conversationalContext,
             callbackUrl: webhookUrl,
             properties: TavusConversationProperties(
                 maxCallDuration: data.duration * 60,
@@ -189,18 +194,11 @@ class TavusService: ObservableObject {
             let jsonData = try JSONEncoder().encode(payload)
             request.httpBody = jsonData
             
-            // Debug: Print the payload being sent
-            if let jsonString = String(data: jsonData, encoding: .utf8) {
-                print("🔧 Tavus API Payload: \(jsonString)")
-            }
-            
             let (responseData, response) = try await URLSession.shared.data(for: request)
             
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw TavusError.invalidResponse
             }
-            
-            print("🌐 Tavus API Response Status: \(httpResponse.statusCode)")
             
             switch httpResponse.statusCode {
             case 200, 201:
@@ -217,7 +215,6 @@ class TavusService: ObservableObject {
                     throw TavusError.apiErrorWithMessage(400, "Tavus API Error: \(errorData.message)")
                 } else {
                     let responseString = String(data: responseData, encoding: .utf8) ?? "Unknown error"
-                    print("❌ 400 Error Response: \(responseString)")
                     throw TavusError.apiErrorWithMessage(400, "Invalid request. Response: \(responseString)")
                 }
                 
@@ -314,28 +311,6 @@ class TavusService: ObservableObject {
     
     // MARK: - Helper Methods
     
-    private func generateShortInstructions(for category: String, cvContext: String?) -> String {
-        let baseInstructions: String
-        
-        switch category {
-        case "Technical":
-            baseInstructions = TavusConfig.technicalInterviewPrompt
-        case "Behavioral":
-            baseInstructions = TavusConfig.behavioralInterviewPrompt
-        default:
-            baseInstructions = """
-            You are an experienced interviewer. Ask relevant questions about the candidate's background. 
-            Be encouraging and help them showcase their skills.
-            """
-        }
-        
-        return TavusConfig.createPersonalizedPrompt(
-            basePrompt: baseInstructions,
-            category: category,
-            cvContext: cvContext
-        )
-    }
-    
     private func generateWebhookUrl() -> String {
         let supabaseUrl = EnvironmentConfig.shared.supabaseURL ?? "https://your-project.supabase.co"
         return "\(supabaseUrl)/functions/v1/tavus-transcript-webhook"
@@ -374,7 +349,7 @@ struct TavusConversationResponse {
 struct TavusCreateConversationPayload: Codable {
     let personaId: String
     let conversationName: String
-    let conversationalContext: String
+    let conversationalContext: String?
     let callbackUrl: String
     let properties: TavusConversationProperties
     

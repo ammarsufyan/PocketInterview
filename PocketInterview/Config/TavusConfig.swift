@@ -68,116 +68,38 @@ struct TavusConfig {
     
     /// Default conversation properties
     static let defaultConversationProperties: [String: Any] = [
-        "max_duration": 3600 as Int, // 1 hour in seconds
-        "language": "en" as String,
-        "conversation_type": "interview" as String,
-        "enable_recording": true as Bool,
-        "enable_transcription": true as Bool
+        "max_call_duration": 3600 as Int, // 1 hour in seconds
+        "language": "english" as String,
+        "enable_recording": false as Bool,
+        "enable_closed_captions": true as Bool,
+        "participant_left_timeout": 10 as Int,
+        "participant_absent_timeout": 60 as Int
     ]
-    
-    // MARK: - Interview Templates
-    
-    static let technicalInterviewPrompt = """
-    You are Steve, an expert technical interviewer with years of experience in software engineering. 
-    Your role is to conduct a comprehensive technical interview that evaluates the candidate's:
-    
-    1. Technical Knowledge & Skills
-    2. Problem-Solving Approach
-    3. Code Quality & Best Practices
-    4. System Design Understanding
-    5. Communication Skills
-    
-    Your personality:
-    - Professional yet approachable
-    - Encouraging and supportive
-    - Detail-oriented and thorough
-    - Patient with explanations
-    
-    Guidelines:
-    - Start with a brief introduction: "Hi, I'm Steve, and I'll be your technical interviewer today"
-    - Ask questions that build upon each other logically
-    - Encourage the candidate to think out loud
-    - Provide hints if they get stuck, but let them work through problems
-    - Ask follow-up questions to dive deeper into their knowledge
-    - Be encouraging and constructive in your feedback
-    - Adapt the difficulty based on their responses
-    
-    Interview Structure:
-    1. Warm-up questions about their background (5 minutes)
-    2. Technical knowledge questions (10-15 minutes)
-    3. Coding/problem-solving challenge (15-20 minutes)
-    4. System design or architecture discussion (10-15 minutes)
-    5. Wrap-up and next steps (5 minutes)
-    """
-    
-    static let behavioralInterviewPrompt = """
-    You are Lucy, an experienced HR professional and behavioral interviewer with a warm, empathetic approach. 
-    Your role is to assess the candidate's:
-    
-    1. Past Work Experience & Achievements
-    2. Leadership & Teamwork Skills
-    3. Problem-Solving in Real Situations
-    4. Communication & Interpersonal Skills
-    5. Cultural Fit & Values Alignment
-    
-    Your personality:
-    - Warm and empathetic
-    - Excellent listener
-    - Insightful and perceptive
-    - Supportive and encouraging
-    
-    Guidelines:
-    - Start with a warm introduction: "Hello! I'm Lucy, and I'm excited to learn more about you today"
-    - Use the STAR method (Situation, Task, Action, Result) framework
-    - Ask for specific examples and concrete details
-    - Probe deeper when answers are too general
-    - Listen for evidence of growth and learning
-    - Assess both successes and how they handle challenges
-    - Be empathetic and create a comfortable environment
-    - Ask follow-up questions to understand their thought process
-    
-    Interview Structure:
-    1. Introduction and background overview (5 minutes)
-    2. Experience and achievements discussion (15-20 minutes)
-    3. Situational and behavioral questions (15-20 minutes)
-    4. Values and motivation exploration (5-10 minutes)
-    5. Questions from candidate and wrap-up (5 minutes)
-    """
     
     // MARK: - Helper Methods
     
-    static func createPersonalizedPrompt(
-        basePrompt: String,
+    /// Create personalized context for the conversation
+    static func createPersonalizedContext(
         category: String,
         cvContext: String?
-    ) -> String {
-        var prompt = basePrompt
-        
-        if let cvContext = cvContext, !cvContext.isEmpty {
-            prompt += """
-            
-            CANDIDATE BACKGROUND INFORMATION:
-            \(cvContext)
-            
-            PERSONALIZATION INSTRUCTIONS:
-            - Reference specific skills, technologies, and experiences from their background
-            - Ask questions that are relevant to their experience level
-            - Tailor the difficulty and focus areas based on their expertise
-            - Use their past projects and achievements as conversation starters
-            - Ask about specific technologies and frameworks they've mentioned
-            """
+    ) -> String? {
+        // If CV context is provided, create a brief personalized context
+        guard let cvContext = cvContext, !cvContext.isEmpty else {
+            return nil // Let the persona handle the conversation without additional context
         }
         
-        return prompt
+        // Create a concise context based on CV information
+        let contextPrefix = "CANDIDATE BACKGROUND:\n"
+        let contextSuffix = "\n\nPlease tailor your questions based on their background and experience level."
+        
+        // Limit context to avoid overwhelming the persona
+        let truncatedContext = String(cvContext.prefix(500))
+        
+        return contextPrefix + truncatedContext + contextSuffix
     }
     
     static func validateConfiguration() -> Bool {
         let isValid = EnvironmentConfig.shared.validateTavusConfiguration()
-        
-        if !isValid {
-            // Silent validation for production
-        }
-        
         return isValid
     }
     
@@ -200,7 +122,7 @@ struct TavusConfig {
     static let maxConversationDuration: Int = 3600 // 1 hour
     
     /// Supported conversation languages
-    static let supportedLanguages: [String] = ["en", "es", "fr", "de", "it", "pt"]
+    static let supportedLanguages: [String] = ["english", "spanish", "french", "german", "italian", "portuguese"]
     
     /// Default conversation settings
     static let defaultSettings: [String: Any] = [
