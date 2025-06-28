@@ -169,6 +169,7 @@ class TavusService: ObservableObject {
         let webhookUrl = generateWebhookUrl()
         let personaId = TavusConfig.getPersonaId(for: data.category)
         
+        // FIXED: Use correct Tavus API payload structure
         let payload = TavusCreateConversationPayload(
             personaId: personaId,
             conversationName: data.sessionName,
@@ -176,11 +177,11 @@ class TavusService: ObservableObject {
             callbackUrl: webhookUrl,
             properties: TavusConversationProperties(
                 maxCallDuration: data.duration * 60,
+                participantLeftTimeout: 60,
+                participantAbsentTimeout: 300,
                 enableRecording: false,
                 enableClosedCaptions: true,
-                language: "english",
-                participantLeftTimeout: 10,
-                participantAbsentTimeout: 60
+                language: "english"
             )
         )
         
@@ -343,46 +344,6 @@ class TavusService: ObservableObject {
     func checkConfiguration() -> Bool {
         return TavusConfig.validateConfiguration() && TavusConfig.validatePersonaIds()
     }
-    
-    func testApiKey() async -> Bool {
-        do {
-            let apiKey = try TavusConfig.getApiKey()
-            let testEndpoint = "https://tavusapi.com/v2/personas"
-            
-            guard let url = URL(string: testEndpoint) else {
-                return false
-            }
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            
-            do {
-                let (_, response) = try await URLSession.shared.data(for: request)
-                
-                if let httpResponse = response as? HTTPURLResponse {
-                    switch httpResponse.statusCode {
-                    case 200, 201:
-                        return true
-                    case 401:
-                        return false
-                    case 404:
-                        return true
-                    default:
-                        return false
-                    }
-                }
-            } catch {
-                return false
-            }
-            
-            return false
-            
-        } catch {
-            return false
-        }
-    }
 }
 
 // MARK: - Data Models
@@ -419,19 +380,19 @@ struct TavusCreateConversationPayload: Codable {
 
 struct TavusConversationProperties: Codable {
     let maxCallDuration: Int
+    let participantLeftTimeout: Int
+    let participantAbsentTimeout: Int
     let enableRecording: Bool
     let enableClosedCaptions: Bool
     let language: String
-    let participantLeftTimeout: Int
-    let participantAbsentTimeout: Int
     
     enum CodingKeys: String, CodingKey {
         case maxCallDuration = "max_call_duration"
+        case participantLeftTimeout = "participant_left_timeout"
+        case participantAbsentTimeout = "participant_absent_timeout"
         case enableRecording = "enable_recording"
         case enableClosedCaptions = "enable_closed_captions"
         case language
-        case participantLeftTimeout = "participant_left_timeout"
-        case participantAbsentTimeout = "participant_absent_timeout"
     }
 }
 
