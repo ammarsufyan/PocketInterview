@@ -35,6 +35,25 @@ interface TranscriptInsert {
   webhook_timestamp: string
 }
 
+interface LLMScoringResponse {
+  clarity_score: number
+  clarity_reason: string
+  grammar_score: number
+  grammar_reason: string
+  substance_score: number
+  substance_reason: string
+}
+
+interface ScoreDetailsInsert {
+  conversation_id: string
+  clarity_score: number
+  clarity_reason: string
+  grammar_score: number
+  grammar_reason: string
+  substance_score: number
+  substance_reason: string
+}
+
 serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -153,7 +172,7 @@ serve(async (req: Request) => {
     }
 
     // Insert or update transcript in database
-    const { data, error } = await supabase
+    const { data: transcriptData, error: transcriptError } = await supabase
       .from('interview_transcripts')
       .upsert(transcriptInsert, {
         onConflict: 'conversation_id',
@@ -161,12 +180,12 @@ serve(async (req: Request) => {
       })
       .select()
 
-    if (error) {
-      console.error("❌ Database error:", error)
+    if (transcriptError) {
+      console.error("❌ Database error:", transcriptError)
       return new Response(
         JSON.stringify({ 
           error: "Database error", 
-          details: error.message 
+          details: transcriptError.message 
         }),
         {
           status: 500,
@@ -177,9 +196,76 @@ serve(async (req: Request) => {
 
     console.log("✅ Transcript saved successfully:", {
       conversation_id: payload.conversation_id,
-      record_id: data?.[0]?.id,
+      record_id: transcriptData?.[0]?.id,
       filtered_messages: messageCount
     })
+
+    // 🔥 NEW: Generate AI scoring using OpenRouter LLM
+    let scoringResult: LLMScoringResponse | null = null
+    
+    try {
+      console.log("🤖 Starting AI scoring with OpenRouter...")
+      scoringResult = await generateAIScoring(filteredTranscript)
+      
+      if (scoringResult) {
+        console.log("✅ AI scoring completed:", {
+          clarity: scoringResult.clarity_score,
+          grammar: scoringResult.grammar_score,
+          substance: scoringResult.substance_score
+        })
+
+        // Insert score details into database
+        const scoreDetailsInsert: ScoreDetailsInsert = {
+          conversation_id: payload.conversation_id,
+          clarity_score: scoringResult.clarity_score,
+          clarity_reason: scoringResult.clarity_reason,
+          grammar_score: scoringResult.grammar_score,
+          grammar_reason: scoringResult.grammar_reason,
+          substance_score: scoringResult.substance_score,
+          substance_reason: scoringResult.substance_reason
+        }
+
+        const { data: scoreData, error: scoreError } = await supabase
+          .from('score_details')
+          .upsert(scoreDetailsInsert, {
+            onConflict: 'conversation_id',
+            ignoreDuplicates: false
+          })
+          .select()
+
+        if (scoreError) {
+          console.error("❌ Score details database error:", scoreError)
+        } else {
+          console.log("✅ Score details saved successfully:", {
+            conversation_id: payload.conversation_id,
+            score_record_id: scoreData?.[0]?.id
+          })
+
+          // Calculate overall score (average of the three scores)
+          const overallScore = Math.round(
+            (scoringResult.clarity_score + scoringResult.grammar_score + scoringResult.substance_score) / 3
+          )
+
+          // Update the interview session with overall score
+          const { error: sessionScoreError } = await supabase
+            .from('interview_sessions')
+            .update({ 
+              score: overallScore,
+              updated_at: new Date().toISOString()
+            })
+            .eq('conversation_id', payload.conversation_id)
+
+          if (sessionScoreError) {
+            console.warn("⚠️ Failed to update session with overall score:", sessionScoreError)
+          } else {
+            console.log("✅ Updated session with overall score:", overallScore)
+          }
+        }
+      }
+    } catch (scoringError) {
+      console.error("❌ AI scoring failed:", scoringError)
+      // Continue processing even if scoring fails
+    }
 
     // Update the interview session with transcript availability and question count
     const { error: sessionUpdateError } = await supabase
@@ -192,7 +278,6 @@ serve(async (req: Request) => {
 
     if (sessionUpdateError) {
       console.warn("⚠️ Failed to update session with transcript data:", sessionUpdateError)
-      // Don't fail the webhook for this - transcript is still saved
     } else {
       console.log("✅ Updated session with transcript data")
     }
@@ -206,7 +291,11 @@ serve(async (req: Request) => {
         total_messages: messageCount,
         user_messages: userMessageCount,
         assistant_messages: assistantMessageCount,
-        system_messages_excluded: rawTranscript.length - messageCount
+        system_messages_excluded: rawTranscript.length - messageCount,
+        ai_scoring_completed: scoringResult !== null,
+        overall_score: scoringResult ? Math.round(
+          (scoringResult.clarity_score + scoringResult.grammar_score + scoringResult.substance_score) / 3
+        ) : null
       }),
       {
         status: 200,
@@ -229,3 +318,92 @@ serve(async (req: Request) => {
     )
   }
 })
+
+// 🔥 NEW: AI Scoring Function using OpenRouter
+async function generateAIScoring(transcript: TranscriptMessage[]): Promise<LLMScoringResponse | null> {
+  try {
+    const OPENROUTER_API_KEY = "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"
+    
+    // Format transcript for LLM analysis
+    const transcriptText = transcript
+      .map(msg => `${msg.role}: ${msg.content}`)
+      .join('\n\n')
+
+    const prompt = `${transcriptText}
+
+Let's say you're a technical interviewer, where role user is the candidate, and role assistant is the interviewer. Based on this conversation how would you rate from 0-100 how this person answer clarity, grammar, and substance
+
+I want the answer to be in json format
+
+{
+"clarity_score" :
+"clarity_reason" :
+"grammar_score" :
+"grammar_reason" :
+"substance_score" :
+"substance_reason" :
+}`
+
+    console.log("🤖 Sending request to OpenRouter...")
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek/deepseek-r1-0528:free",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ]
+      })
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("❌ OpenRouter API error:", response.status, errorText)
+      return null
+    }
+
+    const data = await response.json()
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error("❌ Invalid OpenRouter response structure:", data)
+      return null
+    }
+
+    const content = data.choices[0].message.content
+    console.log("🤖 Raw LLM response:", content)
+
+    // Extract JSON from the response
+    const jsonMatch = content.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      console.error("❌ No JSON found in LLM response")
+      return null
+    }
+
+    const jsonString = jsonMatch[0]
+    const scoringResult = JSON.parse(jsonString)
+
+    // Validate and sanitize the scoring result
+    const validatedResult: LLMScoringResponse = {
+      clarity_score: Math.max(0, Math.min(100, parseInt(scoringResult.clarity_score) || 0)),
+      clarity_reason: (scoringResult.clarity_reason || "No reason provided").substring(0, 500),
+      grammar_score: Math.max(0, Math.min(100, parseInt(scoringResult.grammar_score) || 0)),
+      grammar_reason: (scoringResult.grammar_reason || "No reason provided").substring(0, 500),
+      substance_score: Math.max(0, Math.min(100, parseInt(scoringResult.substance_score) || 0)),
+      substance_reason: (scoringResult.substance_reason || "No reason provided").substring(0, 500)
+    }
+
+    console.log("✅ Validated scoring result:", validatedResult)
+    return validatedResult
+
+  } catch (error) {
+    console.error("❌ AI scoring error:", error)
+    return null
+  }
+}
