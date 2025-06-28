@@ -338,13 +338,13 @@ serve(async (req: Request) => {
   }
 })
 
-// 🔥 FIXED: AI Scoring Function with proper OpenRouter authentication
+// 🔥 FIXED: AI Scoring Function using proper fetch syntax
 async function generateAIScoring(transcript: TranscriptMessage[]): Promise<LLMScoringResponse | null> {
   try {
-    // 🔥 FIXED: Use environment variable for API key instead of hardcoded
-    const OPENROUTER_API_KEY = Deno.env.get('OPENROUTER_API_KEY') || "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"
+    // 🔥 FIXED: Use the exact API key you provided
+    const OPENROUTER_API_KEY = "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"
     
-    console.log("🔑 Using OpenRouter API Key:", OPENROUTER_API_KEY ? `${OPENROUTER_API_KEY.substring(0, 10)}...` : "NOT SET")
+    console.log("🔑 Using OpenRouter API Key:", `${OPENROUTER_API_KEY.substring(0, 15)}...`)
     
     // Format transcript for LLM analysis
     const transcriptText = transcript
@@ -353,7 +353,7 @@ async function generateAIScoring(transcript: TranscriptMessage[]): Promise<LLMSc
 
     const prompt = `${transcriptText}
 
-Let's say you're a technical interviewer, where role user is the candidate, and role assistant is the interviewer. Based on this conversation how would you rate from 0-100 how this person answer clarity, grammar, and substance
+Lets say youre a technical interviewer, where role user is the candidate, and role assistant is the interviewer. Based on this conversation how would you rate from 0-100 how this person answer clarity, grammar, and substance
 
 I want the answer to be in json format
 
@@ -369,27 +369,24 @@ I want the answer to be in json format
     console.log("🤖 Sending request to OpenRouter...")
     console.log("📝 Transcript length:", transcriptText.length, "characters")
 
-    const requestBody = {
-      model: "deepseek/deepseek-r1-0528:free",
-      messages: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ]
-    }
-
-    console.log("📤 Request body:", JSON.stringify(requestBody, null, 2))
-
+    // 🔥 FIXED: Use the exact fetch syntax you provided
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "HTTP-Referer": "https://your-app.com", // Optional: for analytics
-        "X-Title": "PocketInterview AI Scoring", // Optional: for analytics
+        "HTTP-Referer": "https://pocketinterview.app", // Your site URL for rankings
+        "X-Title": "PocketInterview AI Scoring", // Your site title for rankings
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify({
+        "model": "deepseek/deepseek-r1-0528:free",
+        "messages": [
+          {
+            "role": "user",
+            "content": prompt
+          }
+        ]
+      })
     })
 
     console.log("📥 OpenRouter response status:", response.status)
