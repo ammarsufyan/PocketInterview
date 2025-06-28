@@ -51,7 +51,7 @@ class TranscriptManager: ObservableObject {
         errorMessage = nil
         
         do {
-            // FIXED: Simplified query to get raw JSONB data
+            // FIXED: Use a simpler approach - get raw JSON data directly
             let response: [TranscriptResponse] = try await supabase
                 .from("interview_transcripts")
                 .select("""
@@ -178,7 +178,7 @@ class TranscriptManager: ObservableObject {
     // MARK: - Data Conversion
     
     private func convertToInterviewTranscript(from response: TranscriptResponse) -> InterviewTranscript? {
-        // FIXED: Parse transcript_data from JSONB with better error handling
+        // FIXED: Parse transcript_data from raw JSON with better error handling
         guard let transcriptData = parseTranscriptData(response.transcriptData) else {
             print("❌ Failed to parse transcript data for conversation: \(response.conversationId)")
             return nil
@@ -197,29 +197,40 @@ class TranscriptManager: ObservableObject {
         )
     }
     
-    private func parseTranscriptData(_ jsonData: Any) -> [TranscriptMessage]? {
+    private func parseTranscriptData(_ rawData: Any) -> [TranscriptMessage]? {
         do {
-            print("🔍 Parsing transcript data of type: \(type(of: jsonData))")
+            print("🔍 Parsing transcript data of type: \(type(of: rawData))")
             
             // Handle different data types from Supabase JSONB
-            let jsonArray: [[String: Any]]
+            let jsonData: Data
             
-            if let directArray = jsonData as? [[String: Any]] {
-                jsonArray = directArray
-                print("✅ Direct array conversion successful")
-            } else if let dataObject = jsonData as? Data {
-                jsonArray = try JSONSerialization.jsonObject(with: dataObject) as? [[String: Any]] ?? []
-                print("✅ Data object conversion successful")
+            if let dataObject = rawData as? Data {
+                jsonData = dataObject
+                print("✅ Using Data object directly")
+            } else if let stringData = rawData as? String {
+                guard let data = stringData.data(using: .utf8) else {
+                    print("❌ Failed to convert string to data")
+                    return nil
+                }
+                jsonData = data
+                print("✅ Converted string to data")
             } else {
-                // Try to serialize and deserialize
-                let data = try JSONSerialization.data(withJSONObject: jsonData)
-                jsonArray = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
-                print("✅ Serialization conversion successful")
+                // Try to serialize the object to JSON data
+                jsonData = try JSONSerialization.data(withJSONObject: rawData, options: [])
+                print("✅ Serialized object to JSON data")
             }
             
-            print("📊 Found \(jsonArray.count) messages in transcript data")
+            // Parse the JSON data
+            let jsonArray = try JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]]
             
-            let messages = jsonArray.compactMap { messageDict -> TranscriptMessage? in
+            guard let messageArray = jsonArray else {
+                print("❌ Failed to parse as array of dictionaries")
+                return nil
+            }
+            
+            print("📊 Found \(messageArray.count) messages in transcript data")
+            
+            let messages = messageArray.compactMap { messageDict -> TranscriptMessage? in
                 guard let roleString = messageDict["role"] as? String,
                       let content = messageDict["content"] as? String,
                       let role = TranscriptMessage.MessageRole(rawValue: roleString) else {
@@ -236,7 +247,7 @@ class TranscriptManager: ObservableObject {
             
         } catch {
             print("❌ Error parsing transcript data: \(error)")
-            print("❌ Raw data: \(jsonData)")
+            print("❌ Raw data type: \(type(of: rawData))")
             return nil
         }
     }
@@ -253,11 +264,11 @@ class TranscriptManager: ObservableObject {
 
 // MARK: - Helper Structs for Database Response
 
-// FIXED: Proper Codable implementation for TranscriptResponse
+// FIXED: Simplified TranscriptResponse without CodableAny wrapper
 private struct TranscriptResponse: Codable {
     let id: UUID
     let conversationId: String
-    let transcriptData: CodableAny // Changed from Any to CodableAny
+    let transcriptData: Any // Keep as Any but handle parsing manually
     let messageCount: Int
     let userMessageCount: Int
     let assistantMessageCount: Int
@@ -276,60 +287,48 @@ private struct TranscriptResponse: Codable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
-}
-
-// FIXED: Proper Codable wrapper for Any type
-private struct CodableAny: Codable {
-    let value: Any
     
-    init(_ value: Any) {
-        self.value = value
-    }
-    
+    // FIXED: Custom decoder that handles Any type properly
     init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
+        let container = try decoder.container(keyedBy: CodingKeys.self)
         
-        if let intValue = try? container.decode(Int.self) {
-            value = intValue
-        } else if let doubleValue = try? container.decode(Double.self) {
-            value = doubleValue
-        } else if let stringValue = try? container.decode(String.self) {
-            value = stringValue
-        } else if let boolValue = try? container.decode(Bool.self) {
-            value = boolValue
-        } else if let arrayValue = try? container.decode([CodableAny].self) {
-            value = arrayValue.map { $0.value }
-        } else if let dictValue = try? container.decode([String: CodableAny].self) {
-            value = dictValue.mapValues { $0.value }
-        } else if container.decodeNil() {
-            value = NSNull()
+        id = try container.decode(UUID.self, forKey: .id)
+        conversationId = try container.decode(String.self, forKey: .conversationId)
+        messageCount = try container.decode(Int.self, forKey: .messageCount)
+        userMessageCount = try container.decode(Int.self, forKey: .userMessageCount)
+        assistantMessageCount = try container.decode(Int.self, forKey: .assistantMessageCount)
+        webhookTimestamp = try container.decode(Date.self, forKey: .webhookTimestamp)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        
+        // Handle transcript_data as raw JSON
+        if let jsonArray = try? container.decode([[String: Any]].self, forKey: .transcriptData) {
+            transcriptData = jsonArray
+        } else if let jsonString = try? container.decode(String.self, forKey: .transcriptData) {
+            transcriptData = jsonString
         } else {
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode value")
+            // Try to decode as generic JSON
+            let jsonDecoder = JSONDecoder()
+            let jsonData = try container.decode(Data.self, forKey: .transcriptData)
+            transcriptData = jsonData
         }
     }
     
+    // FIXED: Custom encoder that doesn't try to encode Any type
     func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
+        var container = encoder.container(keyedBy: CodingKeys.self)
         
-        if let intValue = value as? Int {
-            try container.encode(intValue)
-        } else if let doubleValue = value as? Double {
-            try container.encode(doubleValue)
-        } else if let stringValue = value as? String {
-            try container.encode(stringValue)
-        } else if let boolValue = value as? Bool {
-            try container.encode(boolValue)
-        } else if let arrayValue = value as? [Any] {
-            let codableArray = arrayValue.map { CodableAny($0) }
-            try container.encode(codableArray)
-        } else if let dictValue = value as? [String: Any] {
-            let codableDict = dictValue.mapValues { CodableAny($0) }
-            try container.encode(codableDict)
-        } else if value is NSNull {
-            try container.encodeNil()
-        } else {
-            throw EncodingError.invalidValue(value, EncodingError.Context(codingPath: encoder.codingPath, debugDescription: "Cannot encode value of type \(type(of: value))"))
-        }
+        try container.encode(id, forKey: .id)
+        try container.encode(conversationId, forKey: .conversationId)
+        try container.encode(messageCount, forKey: .messageCount)
+        try container.encode(userMessageCount, forKey: .userMessageCount)
+        try container.encode(assistantMessageCount, forKey: .assistantMessageCount)
+        try container.encode(webhookTimestamp, forKey: .webhookTimestamp)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(updatedAt, forKey: .updatedAt)
+        
+        // Don't try to encode transcriptData as it's Any type
+        // This will be handled by the database layer
     }
 }
 
