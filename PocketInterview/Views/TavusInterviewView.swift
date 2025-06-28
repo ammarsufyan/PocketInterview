@@ -1,6 +1,6 @@
 //
 //  TavusInterviewView.swift
-//  InterviewSim
+//  PocketInterview
 //
 //  Created by Ammar Sufyan on 23/06/25.
 //
@@ -167,6 +167,7 @@ struct TavusInterviewView: View {
             Text("Are you sure you want to end the interview? Your progress will be saved.")
         }
         .ignoresSafeArea(.all, edges: .bottom) // Make the view fullscreen
+        .interactiveDismissDisabled() // Prevent swipe-down dismissal
         .onAppear {
             if !sessionData.isValid {
                 // Could show an error or go back to setup
@@ -182,7 +183,6 @@ struct TavusInterviewView: View {
         .onDisappear {
             resetAllState()
         }
-        .interactiveDismissDisabled() // Prevent swipe-down dismissal
     }
     
     // MARK: - Computed Properties
