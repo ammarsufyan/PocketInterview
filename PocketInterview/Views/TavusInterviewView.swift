@@ -1,3 +1,10 @@
+//
+//  TavusInterviewView.swift
+//  InterviewSim
+//
+//  Created by Ammar Sufyan on 23/06/25.
+//
+
 import SwiftUI
 import WebKit
 import SafariServices
@@ -186,6 +193,11 @@ struct TavusInterviewView: View {
                 if let conversationUrl = tavusService.conversationUrl {
                     SafariWebView(url: conversationUrl) {
                         showingSafari = false
+                        // 🔥 IMPORTANT: End conversation via API when Safari is dismissed
+                        Task {
+                            await endConversationViaAPI()
+                        }
+                        
                         // Handle session end when Safari is dismissed
                         if hasSessionStarted && isSessionActive {
                             Task {
@@ -269,6 +281,54 @@ struct TavusInterviewView: View {
         
         if !success {
             // Error handling is done in TavusService
+        }
+    }
+    
+    // MARK: - End Conversation via API
+    
+    private func endConversationViaAPI() async {
+        guard let sessionId = tavusService.sessionId else {
+            print("⚠️ No session ID available for ending conversation")
+            return
+        }
+        
+        do {
+            let apiKey = try TavusConfig.getApiKey()
+            let endpoint = "https://tavusapi.com/v2/conversations/\(sessionId)/end"
+            
+            guard let url = URL(string: endpoint) else {
+                print("❌ Invalid endpoint URL")
+                return
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("PocketInterview/1.0", forHTTPHeaderField: "User-Agent")
+            
+            let endPayload = [
+                "reason": "safari_closed"
+            ]
+            
+            let jsonData = try JSONSerialization.data(withJSONObject: endPayload)
+            request.httpBody = jsonData
+            
+            let (_, response) = try await URLSession.shared.data(for: request)
+            
+            if let httpResponse = response as? HTTPURLResponse {
+                switch httpResponse.statusCode {
+                case 200, 201, 204:
+                    print("✅ Conversation ended successfully via API")
+                case 404:
+                    print("⚠️ Conversation not found (already ended)")
+                default:
+                    print("⚠️ API returned status: \(httpResponse.statusCode)")
+                }
+            }
+            
+        } catch {
+            print("❌ Failed to end conversation via API: \(error)")
         }
     }
     
@@ -497,98 +557,210 @@ struct TavusPreparationView: View {
                 TipsCard(category: category, categoryColor: categoryColor)
                     .padding(.horizontal, 20)
                 
-                VStack(spacing: 16) {
-                    // PRIMARY: Safari Option (Recommended & Default)
+                VStack(spacing: 20) {
+                    // 🔥 IMPROVED: Primary Safari Button (Recommended)
                     Button(action: {
                         onStartWithSafari()
                     }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "safari.fill")
-                                .font(.title2)
+                        HStack(spacing: 16) {
+                            // Safari Icon with Glow Effect
+                            ZStack {
+                                Circle()
+                                    .fill(Color.white.opacity(0.2))
+                                    .frame(width: 44, height: 44)
+                                
+                                Image(systemName: "safari.fill")
+                                    .font(.title2)
+                                    .foregroundColor(.white)
+                            }
                             
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Start Interview (Safari)")
-                                    .font(.headline)
-                                    .fontWeight(.semibold)
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(spacing: 8) {
+                                    Text("Start Interview (Safari)")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                    
+                                    // Star Badge
+                                    Image(systemName: "star.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.yellow)
+                                        .shadow(color: .yellow.opacity(0.5), radius: 2)
+                                }
                                 
                                 Text("Recommended • Better Performance")
                                     .font(.caption)
+                                    .fontWeight(.medium)
                                     .opacity(0.9)
                             }
                             
                             Spacer()
                             
-                            Image(systemName: "star.fill")
-                                .font(.caption)
-                                .foregroundColor(.yellow)
+                            // Arrow Icon
+                            Image(systemName: "arrow.right.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.white.opacity(0.8))
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 64)
+                        .frame(height: 72)
                         .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
+                            ZStack {
+                                // Gradient Background
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        categoryColor,
+                                        categoryColor.opacity(0.8),
+                                        categoryColor.opacity(0.9)
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                                
+                                // Subtle Pattern Overlay
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.white.opacity(0.1),
+                                        Color.clear,
+                                        Color.black.opacity(0.05)
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            }
                         )
-                        .cornerRadius(16)
+                        .cornerRadius(20)
                         .shadow(
-                            color: categoryColor.opacity(0.3),
-                            radius: 8,
+                            color: categoryColor.opacity(0.4),
+                            radius: 12,
                             x: 0,
-                            y: 4
+                            y: 6
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color.white.opacity(0.3),
+                                            Color.clear
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
                         )
                     }
+                    .scaleEffect(1.0)
+                    .animation(.easeInOut(duration: 0.1), value: false)
                     
-                    // SECONDARY: In-App Option
+                    // 🔥 IMPROVED: Secondary In-App Button
                     Button(action: {
                         onStartInApp()
                     }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "app.fill")
-                                .font(.title2)
+                        HStack(spacing: 16) {
+                            // App Icon
+                            ZStack {
+                                Circle()
+                                    .fill(categoryColor.opacity(0.1))
+                                    .frame(width: 44, height: 44)
+                                
+                                Image(systemName: "app.fill")
+                                    .font(.title2)
+                                    .foregroundColor(categoryColor)
+                            }
                             
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text("Start Interview (In-App)")
                                     .font(.headline)
                                     .fontWeight(.semibold)
                                 
                                 Text("Alternative Option")
                                     .font(.caption)
+                                    .fontWeight(.medium)
                                     .opacity(0.7)
                             }
                             
                             Spacer()
+                            
+                            Image(systemName: "arrow.right")
+                                .font(.subheadline)
+                                .foregroundColor(categoryColor.opacity(0.6))
                         }
                         .foregroundColor(categoryColor)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Color(.systemBackground))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(categoryColor.opacity(0.5), lineWidth: 1.5)
+                        .frame(height: 64)
+                        .background(
+                            ZStack {
+                                Color(.systemBackground)
+                                
+                                // Subtle inner shadow effect
+                                RoundedRectangle(cornerRadius: 18)
+                                    .fill(categoryColor.opacity(0.02))
+                            }
                         )
-                        .cornerRadius(16)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18)
+                                .stroke(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            categoryColor.opacity(0.3),
+                                            categoryColor.opacity(0.1)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 2
+                                )
+                        )
+                        .cornerRadius(18)
+                        .shadow(
+                            color: Color.black.opacity(0.05),
+                            radius: 4,
+                            x: 0,
+                            y: 2
+                        )
                     }
                     
-                    // Performance Info
-                    VStack(spacing: 8) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "battery.100")
-                                .font(.caption)
-                                .foregroundColor(.green)
+                    // 🔥 IMPROVED: Performance Info Card
+                    VStack(spacing: 12) {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.green.opacity(0.1))
+                                    .frame(width: 32, height: 32)
+                                
+                                Image(systemName: "battery.100")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.green)
+                            }
                             
-                            Text("Safari uses less battery and performs better")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Safari uses less battery and performs better")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+                                
+                                Text("Recommended for the best interview experience")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
                         }
+                        .padding(16)
+                        .background(Color.green.opacity(0.05))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.green.opacity(0.2), lineWidth: 1)
+                        )
                         
                         Button(action: {
                             onCancel()
                         }) {
                             Text("Cancel")
                                 .font(.subheadline)
+                                .fontWeight(.medium)
                                 .foregroundColor(.secondary)
                         }
                     }
