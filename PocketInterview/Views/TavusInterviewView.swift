@@ -1,10 +1,3 @@
-//
-//  TavusInterviewView.swift
-//  InterviewSim
-//
-//  Created by Ammar Sufyan on 23/06/25.
-//
-
 import SwiftUI
 import WebKit
 import SafariServices
@@ -29,7 +22,7 @@ struct TavusInterviewView: View {
     @State private var showPreparationView = true
     @State private var hasAttemptedStart = false
     @State private var showingSafari = false
-    @State private var useWebView = true // Toggle between WebView and Safari
+    @State private var useSafari = true // DEFAULT: Safari untuk performance yang lebih baik
     
     private var categoryColor: Color {
         sessionData.category == "Technical" ? .blue : .purple
@@ -54,18 +47,19 @@ struct TavusInterviewView: View {
                         categoryColor: categoryColor,
                         interviewerName: interviewerName,
                         interviewerDescription: interviewerDescription,
-                        onStart: {
+                        onStartWithSafari: {
                             showPreparationView = false
                             hasAttemptedStart = true
+                            useSafari = true
                             
                             Task {
                                 await startTavusSession()
                             }
                         },
-                        onStartWithSafari: {
+                        onStartInApp: {
                             showPreparationView = false
                             hasAttemptedStart = true
-                            useWebView = false
+                            useSafari = false
                             
                             Task {
                                 await startTavusSession()
@@ -81,7 +75,14 @@ struct TavusInterviewView: View {
                         interviewerName: interviewerName
                     )
                 } else if let conversationUrl = tavusService.conversationUrl {
-                    if useWebView {
+                    if useSafari {
+                        // Safari akan ditampilkan sebagai sheet
+                        Color.clear
+                            .onAppear {
+                                showingSafari = true
+                            }
+                    } else {
+                        // In-App WebView (optimized)
                         TavusWebView(
                             url: conversationUrl,
                             onSessionStart: {
@@ -91,12 +92,6 @@ struct TavusInterviewView: View {
                                 handleSessionEnd(reason: "tavus_end")
                             }
                         )
-                    } else {
-                        // Safari will be presented as sheet
-                        Color.clear
-                            .onAppear {
-                                showingSafari = true
-                            }
                     }
                 } else if let errorMessage = tavusService.errorMessage {
                     TavusErrorView(
@@ -319,7 +314,7 @@ struct TavusInterviewView: View {
         hasAttemptedStart = false
         showingEndConfirmation = false
         showingSafari = false
-        useWebView = true
+        useSafari = true // Reset ke default Safari
         
         sessionStartTime = Date()
         sessionEndReason = "manual"
@@ -436,8 +431,8 @@ struct TavusPreparationView: View {
     let categoryColor: Color
     let interviewerName: String
     let interviewerDescription: String
-    let onStart: () -> Void
     let onStartWithSafari: () -> Void
+    let onStartInApp: () -> Void
     let onCancel: () -> Void
     
     var body: some View {
@@ -502,22 +497,34 @@ struct TavusPreparationView: View {
                 TipsCard(category: category, categoryColor: categoryColor)
                     .padding(.horizontal, 20)
                 
-                VStack(spacing: 12) {
-                    // WebView Option (Default)
+                VStack(spacing: 16) {
+                    // PRIMARY: Safari Option (Recommended & Default)
                     Button(action: {
-                        onStart()
+                        onStartWithSafari()
                     }) {
                         HStack(spacing: 12) {
-                            Image(systemName: "play.circle.fill")
+                            Image(systemName: "safari.fill")
                                 .font(.title2)
                             
-                            Text("Start Interview (In-App)")
-                                .font(.headline)
-                                .fontWeight(.semibold)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Start Interview (Safari)")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                Text("Recommended • Better Performance")
+                                    .font(.caption)
+                                    .opacity(0.9)
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "star.fill")
+                                .font(.caption)
+                                .foregroundColor(.yellow)
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 56)
+                        .frame(height: 64)
                         .background(
                             LinearGradient(
                                 gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
@@ -534,17 +541,25 @@ struct TavusPreparationView: View {
                         )
                     }
                     
-                    // Safari Option (Better Performance)
+                    // SECONDARY: In-App Option
                     Button(action: {
-                        onStartWithSafari()
+                        onStartInApp()
                     }) {
                         HStack(spacing: 12) {
-                            Image(systemName: "safari.fill")
+                            Image(systemName: "app.fill")
                                 .font(.title2)
                             
-                            Text("Start Interview (Safari)")
-                                .font(.headline)
-                                .fontWeight(.semibold)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Start Interview (In-App)")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                Text("Alternative Option")
+                                    .font(.caption)
+                                    .opacity(0.7)
+                            }
+                            
+                            Spacer()
                         }
                         .foregroundColor(categoryColor)
                         .frame(maxWidth: .infinity)
@@ -552,22 +567,30 @@ struct TavusPreparationView: View {
                         .background(Color(.systemBackground))
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .stroke(categoryColor, lineWidth: 2)
+                                .stroke(categoryColor.opacity(0.5), lineWidth: 1.5)
                         )
                         .cornerRadius(16)
                     }
                     
-                    Text("Safari option uses less battery and performs better")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                    
-                    Button(action: {
-                        onCancel()
-                    }) {
-                        Text("Cancel")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                    // Performance Info
+                    VStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "battery.100")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                            
+                            Text("Safari uses less battery and performs better")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Button(action: {
+                            onCancel()
+                        }) {
+                            Text("Cancel")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
                 .padding(.horizontal, 20)
