@@ -37,9 +37,9 @@ struct HistoryView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Header with Statistics Summary
+                // Header with Statistics Summary (REMOVED SUMMARY)
                 VStack(spacing: 20) {
-                    // Statistics Overview
+                    // Statistics Overview (NO SUMMARY)
                     if !filteredSessions.isEmpty {
                         HistoryStatsView(sessions: filteredSessions)
                             .padding(.horizontal, 20)
@@ -348,7 +348,7 @@ struct HistorySessionCard: View {
                     
                     Spacer()
                     
-                    // Score Display - CLEANED UP
+                    // Score Display - CLEANED UP with DASH for no score
                     VStack(alignment: .trailing, spacing: 4) {
                         if let score = session.score {
                             Text("\(score)%")
@@ -356,8 +356,9 @@ struct HistorySessionCard: View {
                                 .fontWeight(.bold)
                                 .foregroundColor(session.scoreColor)
                         } else {
-                            Text("No Score")
-                                .font(.caption)
+                            Text("-")
+                                .font(.title3)
+                                .fontWeight(.bold)
                                 .foregroundColor(.secondary)
                         }
                         
@@ -367,7 +368,7 @@ struct HistorySessionCard: View {
                     }
                 }
                 
-                // SIMPLIFIED: Only show date/time (removed duration)
+                // SIMPLIFIED: Only show date/time (removed duration and questions)
                 HStack(spacing: 16) {
                     Spacer()
                     
