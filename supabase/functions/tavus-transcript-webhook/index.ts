@@ -202,6 +202,7 @@ serve(async (req: Request) => {
 
     // 🔥 NEW: Generate AI scoring using OpenRouter LLM
     let scoringResult: LLMScoringResponse | null = null
+    let overallScore: number | null = null
     
     try {
       console.log("🤖 Starting AI scoring with OpenRouter...")
@@ -212,6 +213,21 @@ serve(async (req: Request) => {
           clarity: scoringResult.clarity_score,
           grammar: scoringResult.grammar_score,
           substance: scoringResult.substance_score
+        })
+
+        // 🔥 UPDATED: Calculate weighted overall score using your formula
+        // Formula: 0.5 * substance + 0.3 * clarity + 0.2 * grammar
+        overallScore = Math.round(
+          (0.5 * scoringResult.substance_score) + 
+          (0.3 * scoringResult.clarity_score) + 
+          (0.2 * scoringResult.grammar_score)
+        )
+
+        console.log("📊 Weighted score calculation:", {
+          substance_weighted: 0.5 * scoringResult.substance_score,
+          clarity_weighted: 0.3 * scoringResult.clarity_score,
+          grammar_weighted: 0.2 * scoringResult.grammar_score,
+          overall_score: overallScore
         })
 
         // Insert score details into database
@@ -241,12 +257,7 @@ serve(async (req: Request) => {
             score_record_id: scoreData?.[0]?.id
           })
 
-          // Calculate overall score (average of the three scores)
-          const overallScore = Math.round(
-            (scoringResult.clarity_score + scoringResult.grammar_score + scoringResult.substance_score) / 3
-          )
-
-          // Update the interview session with overall score
+          // 🔥 UPDATED: Update the interview session with weighted overall score
           const { error: sessionScoreError } = await supabase
             .from('interview_sessions')
             .update({ 
@@ -258,7 +269,7 @@ serve(async (req: Request) => {
           if (sessionScoreError) {
             console.warn("⚠️ Failed to update session with overall score:", sessionScoreError)
           } else {
-            console.log("✅ Updated session with overall score:", overallScore)
+            console.log("✅ Updated session with weighted overall score:", overallScore)
           }
         }
       }
@@ -293,9 +304,17 @@ serve(async (req: Request) => {
         assistant_messages: assistantMessageCount,
         system_messages_excluded: rawTranscript.length - messageCount,
         ai_scoring_completed: scoringResult !== null,
-        overall_score: scoringResult ? Math.round(
-          (scoringResult.clarity_score + scoringResult.grammar_score + scoringResult.substance_score) / 3
-        ) : null
+        overall_score: overallScore,
+        scoring_breakdown: scoringResult ? {
+          substance_score: scoringResult.substance_score,
+          clarity_score: scoringResult.clarity_score,
+          grammar_score: scoringResult.grammar_score,
+          weighted_calculation: {
+            substance_contribution: Math.round(0.5 * scoringResult.substance_score * 100) / 100,
+            clarity_contribution: Math.round(0.3 * scoringResult.clarity_score * 100) / 100,
+            grammar_contribution: Math.round(0.2 * scoringResult.grammar_score * 100) / 100
+          }
+        } : null
       }),
       {
         status: 200,
@@ -319,7 +338,7 @@ serve(async (req: Request) => {
   }
 })
 
-// 🔥 NEW: AI Scoring Function using OpenRouter
+// 🔥 AI Scoring Function using OpenRouter
 async function generateAIScoring(transcript: TranscriptMessage[]): Promise<LLMScoringResponse | null> {
   try {
     const OPENROUTER_API_KEY = "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"
