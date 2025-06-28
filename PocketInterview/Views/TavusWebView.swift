@@ -20,49 +20,53 @@ struct TavusWebView: UIViewRepresentable {
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
         
-        // Enable camera and microphone
-        configuration.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
-        configuration.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
+        // Optimize memory usage
+        configuration.websiteDataStore = .nonPersistent()
+        configuration.processPool = WKProcessPool()
+        
+        // Optimize performance
+        let preferences = WKPreferences()
+        preferences.javaScriptCanOpenWindowsAutomatically = false
+        configuration.preferences = preferences
+        
+        // Reduce memory footprint
+        configuration.limitsNavigationsToAppBoundDomains = false
         
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         
-        // FIXED: Prevent automatic reloads
+        // Prevent automatic reloads
         webView.allowsBackForwardNavigationGestures = false
         
-        // Allow camera and microphone access
+        // Add message handler for session events
         webView.configuration.userContentController.add(
             context.coordinator,
             name: "sessionHandler"
         )
         
-        // FIXED: Much simpler and more stable session monitoring
+        // Inject minimal JavaScript for session monitoring
         let script = WKUserScript(
             source: """
-            // STABLE: Simplified session monitoring to prevent reloads
+            // Simplified session monitoring
             const sessionMonitor = {
                 sessionStarted: false,
                 sessionEnded: false,
-                pageLoadTime: Date.now(),
-                startCheckInterval: null,
                 
                 init() {
-                    console.log('🔧 Stable session monitor initialized');
+                    console.log('Session monitor initialized');
                     
-                    // STABLE: Listen for Tavus-specific events only
+                    // Listen for Tavus-specific events
                     window.addEventListener('message', (event) => {
                         if (event.data && typeof event.data === 'object') {
                             const data = event.data;
                             
-                            // Check for conversation started events
                             if (data.type === 'conversation_started' || 
                                 data.event === 'conversation_started' ||
                                 data.action === 'session_started') {
                                 this.handleSessionStart();
                             }
                             
-                            // Check for conversation ended events
                             if (data.type === 'conversation_ended' || 
                                 data.event === 'conversation_ended' ||
                                 data.type === 'call_ended' ||
@@ -72,35 +76,25 @@ struct TavusWebView: UIViewRepresentable {
                         }
                     });
                     
-                    // STABLE: Simple periodic check instead of complex DOM monitoring
-                    this.startCheckInterval = setInterval(() => {
-                        this.checkSessionState();
-                    }, 5000); // Check every 5 seconds
+                    // Check for active video elements periodically
+                    setInterval(() => this.checkVideoElements(), 5000);
                     
-                    // REMOVED: Visibility change listener to prevent reload issues
+                    // Prevent page reloads
+                    window.addEventListener('beforeunload', (event) => {
+                        event.preventDefault();
+                        return '';
+                    });
                 },
                 
-                checkSessionState() {
-                    if (this.sessionStarted || this.sessionEnded) {
-                        return; // Already handled
-                    }
+                checkVideoElements() {
+                    if (this.sessionStarted || this.sessionEnded) return;
                     
-                    // Simple check for active video elements
                     const videos = document.querySelectorAll('video');
-                    let hasActiveVideo = false;
-                    
-                    videos.forEach(video => {
+                    for (const video of videos) {
                         if (video.readyState >= 2 && !video.paused && video.currentTime > 0) {
-                            hasActiveVideo = true;
+                            this.handleSessionStart();
+                            break;
                         }
-                    });
-                    
-                    // Check if enough time has passed since page load
-                    const timeSinceLoad = Date.now() - this.pageLoadTime;
-                    
-                    if (hasActiveVideo && timeSinceLoad > 10000) { // 10 seconds minimum
-                        console.log('🎬 Active video detected, starting session');
-                        this.handleSessionStart();
                     }
                 },
                 
@@ -108,13 +102,7 @@ struct TavusWebView: UIViewRepresentable {
                     if (this.sessionStarted) return;
                     
                     this.sessionStarted = true;
-                    console.log('🎬 Session started');
-                    
-                    // Clear the check interval
-                    if (this.startCheckInterval) {
-                        clearInterval(this.startCheckInterval);
-                        this.startCheckInterval = null;
-                    }
+                    console.log('Session started');
                     
                     window.webkit.messageHandlers.sessionHandler.postMessage({
                         action: 'session_started',
@@ -126,7 +114,7 @@ struct TavusWebView: UIViewRepresentable {
                     if (this.sessionEnded || !this.sessionStarted) return;
                     
                     this.sessionEnded = true;
-                    console.log('🏁 Session ended, reason:', reason);
+                    console.log('Session ended, reason:', reason);
                     
                     window.webkit.messageHandlers.sessionHandler.postMessage({
                         action: 'session_ended',
@@ -144,15 +132,6 @@ struct TavusWebView: UIViewRepresentable {
             } else {
                 sessionMonitor.init();
             }
-            
-            // STABLE: Prevent page reloads
-            window.addEventListener('beforeunload', (event) => {
-                console.log('🚫 Preventing page unload');
-                event.preventDefault();
-                return '';
-            });
-            
-            console.log('✅ Stable session monitoring initialized');
             """,
             injectionTime: .atDocumentEnd,
             forMainFrameOnly: true
@@ -164,11 +143,11 @@ struct TavusWebView: UIViewRepresentable {
     }
     
     func updateUIView(_ webView: WKWebView, context: Context) {
-        // FIXED: Only load if URL is different to prevent unnecessary reloads
+        // Only load if URL is different to prevent unnecessary reloads
         guard let newURL = URL(string: url) else { return }
         
         if webView.url != newURL {
-            let request = URLRequest(url: newURL)
+            let request = URLRequest(url: newURL, cachePolicy: .returnCacheDataElseLoad)
             webView.load(request)
         }
     }
@@ -190,33 +169,28 @@ struct TavusWebView: UIViewRepresentable {
         // MARK: - WKNavigationDelegate
         
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            print("🌐 WebView started loading")
             isLoading = true
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("✅ Tavus WebView loaded successfully")
             isLoading = false
             
-            // STABLE: Minimal JavaScript injection
-            let js = """
-            console.log('📱 Tavus WebView ready');
-            console.log('🔧 URL:', window.location.href);
-            """
+            // Minimal JavaScript injection after page load
+            let js = "console.log('WebView loaded successfully');"
             
-            webView.evaluateJavaScript(js) { result, error in
+            webView.evaluateJavaScript(js) { _, error in
                 if let error = error {
-                    print("❌ JavaScript error: \(error)")
+                    print("JavaScript error: \(error.localizedDescription)")
                 }
             }
         }
         
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            print("❌ WebView failed to load: \(error)")
             isLoading = false
+            print("WebView failed to load: \(error.localizedDescription)")
         }
         
-        // FIXED: Prevent unwanted navigation that causes reloads
+        // Prevent unwanted navigation that causes reloads
         func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             
             // Allow initial load
@@ -225,12 +199,11 @@ struct TavusWebView: UIViewRepresentable {
                 return
             }
             
-            // FIXED: Block user-initiated navigation during session to prevent reloads
+            // Block user-initiated navigation during session to prevent reloads
             if sessionStarted && !sessionEnded {
                 if navigationAction.navigationType == .linkActivated || 
                    navigationAction.navigationType == .formSubmitted ||
                    navigationAction.navigationType == .reload {
-                    print("🚫 Blocking navigation during active session to prevent reload")
                     decisionHandler(.cancel)
                     return
                 }
@@ -242,31 +215,28 @@ struct TavusWebView: UIViewRepresentable {
         // MARK: - WKUIDelegate
         
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
-            print("🎥 Media permission requested: \(type)")
+            // Grant camera/microphone permissions automatically
             decisionHandler(.grant)
         }
         
+        // Handle JavaScript alerts without showing UI
         func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
-            print("🔔 Alert: \(message)")
+            print("Alert: \(message)")
             completionHandler()
         }
         
-        // FIXED: Handle JavaScript confirm dialogs (like "Are you sure you want to leave?")
+        // Handle JavaScript confirm dialogs
         func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
-            print("❓ Confirm dialog: \(message)")
-            
             // If it's a leave confirmation during active session, handle it properly
             if sessionStarted && !sessionEnded && message.lowercased().contains("leave") {
-                print("🚪 User wants to leave during active session")
                 handleSessionEnd(reason: "user_leave")
                 completionHandler(true) // Allow leaving
             } else {
-                completionHandler(false) // Block other confirmations that might cause reload
+                completionHandler(false) // Block other confirmations
             }
         }
         
         func webViewDidClose(_ webView: WKWebView) {
-            print("🚪 WebView closed")
             if sessionStarted && !sessionEnded {
                 handleSessionEnd(reason: "webview_closed")
             }
@@ -283,8 +253,6 @@ struct TavusWebView: UIViewRepresentable {
             
             let reason = body["reason"] as? String ?? "unknown"
             
-            print("📨 Session message: \(action)")
-            
             DispatchQueue.main.async {
                 switch action {
                 case "session_started":
@@ -292,7 +260,7 @@ struct TavusWebView: UIViewRepresentable {
                 case "session_ended":
                     self.handleSessionEnd(reason: reason)
                 default:
-                    print("🔄 Unknown action: \(action)")
+                    break
                 }
             }
         }
@@ -303,7 +271,6 @@ struct TavusWebView: UIViewRepresentable {
             guard !sessionStarted else { return }
             
             sessionStarted = true
-            print("🎬 Session started (iOS)")
             parent.onSessionStart()
         }
         
@@ -311,20 +278,7 @@ struct TavusWebView: UIViewRepresentable {
             guard sessionStarted && !sessionEnded else { return }
             
             sessionEnded = true
-            print("🏁 Session ended (iOS) - Reason: \(reason)")
             parent.onSessionEnd()
         }
     }
-}
-
-#Preview {
-    TavusWebView(
-        url: "https://tavus.io/conversations/demo",
-        onSessionStart: {
-            print("Session started")
-        },
-        onSessionEnd: {
-            print("Session ended")
-        }
-    )
 }

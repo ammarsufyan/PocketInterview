@@ -614,19 +614,3 @@ struct TipsCard: View {
         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
 }
-
-#Preview {
-    let sessionData = SessionData()
-    sessionData.category = "Technical"
-    sessionData.sessionName = "iOS Development Practice"
-    sessionData.duration = 30
-    
-    return TavusInterviewView(
-        sessionData: sessionData,
-        cvContext: "Senior iOS Developer with 5+ years experience",
-        onBackToSetup: {
-            // Preview action
-        }
-    )
-    .environmentObject(InterviewHistoryManager())
-}

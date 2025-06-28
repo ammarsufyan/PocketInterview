@@ -343,6 +343,10 @@ class TavusService: ObservableObject {
         errorMessage = nil
         isLoading = false
         isCreatingSession = false
+        
+        // Cancel any pending publishers
+        cancellables.forEach { $0.cancel() }
+        cancellables.removeAll()
     }
     
     func checkConfiguration() -> Bool {
