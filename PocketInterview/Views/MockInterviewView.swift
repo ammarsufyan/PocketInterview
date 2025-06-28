@@ -34,7 +34,7 @@ struct MockInterviewView: View {
                                     .fontWeight(.bold)
                                     .foregroundColor(.primary)
                                 
-                                Text("Choose your interview type and start practicing")
+                                Text("Choose your interview type and meet your AI interviewer")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                                     .lineLimit(2)
@@ -50,16 +50,17 @@ struct MockInterviewView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // Interview Categories
+                    // Interview Categories with Personas
                     VStack(alignment: .leading, spacing: 20) {
                         VStack(spacing: 16) {
-                            // Technical Category
+                            // Technical Category - Steve
                             CategoryCard(
                                 title: "Technical",
                                 subtitle: "Technical & Problem Solving",
-                                description: "Practice technical skills and problem-solving abilities",
+                                description: "Practice with Steve, your technical interviewer specializing in coding challenges",
                                 icon: "laptopcomputer",
                                 color: .blue,
+                                interviewerName: "Steve",
                                 isSelected: selectedCategory == "Technical"
                             ) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -68,13 +69,14 @@ struct MockInterviewView: View {
                                 }
                             }
                             
-                            // Behavioral Category
+                            // Behavioral Category - Lucy
                             CategoryCard(
                                 title: "Behavioral",
                                 subtitle: "Soft Skills & Experience",
-                                description: "Master STAR method and showcase your experience",
+                                description: "Practice with Lucy, your behavioral interviewer expert in STAR method",
                                 icon: "person.2.fill",
                                 color: .purple,
+                                interviewerName: "Lucy",
                                 isSelected: selectedCategory == "Behavioral"
                             ) {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -115,6 +117,7 @@ struct MockInterviewView: View {
                     VStack(spacing: 12) {
                         StartInterviewButton(
                             category: selectedCategory,
+                            interviewerName: TavusConfig.getInterviewerName(for: selectedCategory),
                             isEnabled: cvUploaded
                         ) {
                             sessionData.category = selectedCategory
@@ -231,46 +234,73 @@ struct CategoryCard: View {
     let description: String
     let icon: String
     let color: Color
+    let interviewerName: String
     let isSelected: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundColor(isSelected ? .white : color)
-                    .frame(width: 52, height: 52)
-                    .background(
-                        isSelected ? color : color.opacity(0.1)
-                    )
-                    .cornerRadius(12)
-                    .symbolRenderingMode(.hierarchical)
-                
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(isSelected ? .white : .primary)
+            VStack(spacing: 16) {
+                HStack(spacing: 16) {
+                    Image(systemName: icon)
+                        .font(.title2)
+                        .foregroundColor(isSelected ? .white : color)
+                        .frame(width: 52, height: 52)
+                        .background(
+                            isSelected ? color : color.opacity(0.1)
+                        )
+                        .cornerRadius(12)
+                        .symbolRenderingMode(.hierarchical)
                     
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(isSelected ? .white.opacity(0.9) : .secondary)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(title)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(isSelected ? .white : .primary)
+                        
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(isSelected ? .white.opacity(0.9) : .secondary)
+                        
+                        Text(description)
+                            .font(.caption)
+                            .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+                    }
                     
-                    Text(description)
-                        .font(.caption)
-                        .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(2)
+                    Spacer()
+                    
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundColor(isSelected ? .white : .secondary)
+                        .symbolRenderingMode(.hierarchical)
                 }
                 
-                Spacer()
-                
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundColor(isSelected ? .white : .secondary)
-                    .symbolRenderingMode(.hierarchical)
+                // Interviewer Info
+                if isSelected {
+                    HStack(spacing: 12) {
+                        Image(systemName: "person.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.white.opacity(0.9))
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Your AI Interviewer")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.8))
+                            
+                            Text(interviewerName)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
             .padding(20)
             .background(
@@ -315,17 +345,19 @@ struct CVUploadCard: View {
     let onViewResults: () -> Void
     
     private var uploadDescription: String {
+        let interviewerName = TavusConfig.getInterviewerName(for: category)
+        
         switch category {
         case "Technical":
             return isUploaded ? 
-                "We'll create personalized technical questions based on your skills and experience" :
-                "We'll analyze your technical background and tailor coding/problem-solving questions accordingly"
+                "Steve will create personalized technical questions based on your skills and experience" :
+                "Steve will analyze your technical background and tailor coding/problem-solving questions accordingly"
         case "Behavioral":
             return isUploaded ?
-                "We'll create personalized behavioral questions based on your work experience and achievements" :
-                "We'll analyze your work history and create STAR-method questions based on your background"
+                "Lucy will create personalized behavioral questions based on your work experience and achievements" :
+                "Lucy will analyze your work history and create STAR-method questions based on your background"
         default:
-            return "We'll analyze your background and tailor questions accordingly"
+            return "Your AI interviewer will analyze your background and tailor questions accordingly"
         }
     }
     
@@ -448,6 +480,7 @@ struct CVUploadCard: View {
 
 struct StartInterviewButton: View {
     let category: String
+    let interviewerName: String
     let isEnabled: Bool
     let action: () -> Void
     
@@ -469,7 +502,7 @@ struct StartInterviewButton: View {
                     .font(.title2)
                     .symbolRenderingMode(.hierarchical)
                 
-                Text("Start \(category) Interview")
+                Text("Start Interview with \(interviewerName)")
                     .font(.headline)
                     .fontWeight(.semibold)
             }
@@ -518,6 +551,10 @@ struct SessionSetupView: View {
         sessionData.category == "Technical" ? .blue : .purple
     }
     
+    private var interviewerName: String {
+        TavusConfig.getInterviewerName(for: sessionData.category)
+    }
+    
     private var placeholderText: String {
         switch sessionData.category {
         case "Technical":
@@ -553,7 +590,7 @@ struct SessionSetupView: View {
                                 .font(.title2)
                                 .fontWeight(.bold)
                             
-                            Text("\(sessionData.category) Interview")
+                            Text("\(sessionData.category) Interview with \(interviewerName)")
                                 .font(.headline)
                                 .foregroundColor(categoryColor)
                                 .fontWeight(.semibold)
@@ -597,7 +634,7 @@ struct SessionSetupView: View {
                                             isTextFieldFocused = true
                                         }
                                     }
-                                    .onChange(of: localSessionName) { _ in
+                                    .onChange(of: localSessionName) { _, _ in
                                         // Validation happens automatically through computed property
                                     }
                                 
@@ -641,7 +678,7 @@ struct SessionSetupView: View {
                                 }
                             }
                             
-                            Text("How long do you want to practice?")
+                            Text("How long do you want to practice with \(interviewerName)?")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -656,7 +693,7 @@ struct SessionSetupView: View {
                             Image(systemName: "person.wave.2.fill")
                                 .font(.title2)
                             
-                            Text("Start AI Interview")
+                            Text("Start Interview with \(interviewerName)")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                         }
@@ -702,7 +739,7 @@ struct SessionSetupView: View {
                                 .multilineTextAlignment(.center)
                         }
                     } else {
-                        Text("Ready to start your personalized AI interview!")
+                        Text("Ready to start your personalized interview with \(interviewerName)!")
                             .font(.caption)
                             .foregroundColor(.green)
                             .multilineTextAlignment(.center)
@@ -813,14 +850,18 @@ struct CVPickerView: View {
         category == "Technical" ? .blue : .purple
     }
     
+    private var interviewerName: String {
+        TavusConfig.getInterviewerName(for: category)
+    }
+    
     private var analysisDescription: String {
         switch category {
         case "Technical":
-            return "We'll analyze your technical skills, programming languages, frameworks, and project experience to create relevant coding challenges and technical questions."
+            return "\(interviewerName) will analyze your technical skills, programming languages, frameworks, and project experience to create relevant coding challenges and technical questions."
         case "Behavioral":
-            return "We'll analyze your work experience, achievements, and career progression to create personalized STAR-method behavioral questions."
+            return "\(interviewerName) will analyze your work experience, achievements, and career progression to create personalized STAR-method behavioral questions."
         default:
-            return "We'll analyze your background to create personalized questions."
+            return "\(interviewerName) will analyze your background to create personalized questions."
         }
     }
     
@@ -842,7 +883,7 @@ struct CVPickerView: View {
                             .font(.title2)
                             .fontWeight(.bold)
                         
-                        Text("For \(category) Interview")
+                        Text("For \(category) Interview with \(interviewerName)")
                             .font(.headline)
                             .foregroundColor(categoryColor)
                             .fontWeight(.semibold)

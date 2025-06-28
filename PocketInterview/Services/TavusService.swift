@@ -14,7 +14,7 @@ class TavusService: ObservableObject {
     @Published var errorMessage: String?
     @Published var conversationUrl: String?
     @Published var sessionId: String?
-    @Published var createdSessionId: UUID? // Track the created Supabase session
+    @Published var createdSessionId: UUID?
     
     private let envConfig = EnvironmentConfig.shared
     private var isCreatingSession = false
@@ -50,8 +50,8 @@ class TavusService: ObservableObject {
                 throw TavusConfigError.invalidConfiguration
             }
             
-            guard TavusConfig.validateReplicaId() else {
-                throw TavusConfigError.invalidReplicaId
+            guard TavusConfig.validatePersonaIds() else {
+                throw TavusConfigError.invalidPersonaId
             }
             
             let conversationData = TavusConversationRequest(
@@ -61,31 +61,27 @@ class TavusService: ObservableObject {
                 cvContext: cvContext
             )
             
-            // Create Tavus conversation
+            // Create Tavus conversation with persona
             let response = try await createTavusConversation(data: conversationData)
             
             self.conversationUrl = response.conversationUrl
             self.sessionId = response.sessionId
             
-            // Immediately create Supabase session record with conversation_id
+            // Create Supabase session record with conversation_id
             let supabaseSession = await historyManager.createSession(
                 category: category,
                 sessionName: trimmedSessionName,
-                score: nil, // Will be updated later
-                expectedDurationMinutes: duration, // Planned duration
-                actualDurationMinutes: nil, // Will be set when completed
-                questionsAnswered: 0, // Will be updated later
+                score: nil,
+                expectedDurationMinutes: duration,
+                actualDurationMinutes: nil,
+                questionsAnswered: 0,
                 conversationId: response.sessionId,
                 sessionStatus: "created",
                 endReason: nil
             )
             
-            // Store the created session ID for later updates
             if let session = supabaseSession {
                 self.createdSessionId = session.id
-                print("✅ Created Supabase session record: \(session.id)")
-            } else {
-                print("⚠️ Failed to create Supabase session record")
             }
             
             isLoading = false
@@ -136,7 +132,6 @@ class TavusService: ObservableObject {
         endReason: String = "completed"
     ) async -> Bool {
         guard let sessionId = createdSessionId else {
-            print("⚠️ No session ID to update")
             return false
         }
         
@@ -149,12 +144,6 @@ class TavusService: ObservableObject {
             endReason: endReason,
             completedTimestamp: Date()
         )
-        
-        if success {
-            print("✅ Updated session with final data")
-        } else {
-            print("❌ Failed to update session with final data")
-        }
         
         return success
     }
@@ -174,18 +163,17 @@ class TavusService: ObservableObject {
         request.httpMethod = "POST"
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("PocketInterview/1.0", forHTTPHeaderField: "User-Agent")
         
         let shortContext = generateShortInstructions(for: data.category, cvContext: data.cvContext)
-        
-        // Generate webhook URL for transcript callbacks
         let webhookUrl = generateWebhookUrl()
+        let personaId = TavusConfig.getPersonaId(for: data.category)
         
         let payload = TavusCreateConversationPayload(
-            replicaId: TavusConfig.defaultReplicaId,
+            personaId: personaId,
             conversationName: data.sessionName,
             conversationalContext: shortContext,
-            callbackUrl: webhookUrl, // Added callback_url parameter
+            callbackUrl: webhookUrl,
             properties: TavusConversationProperties(
                 maxCallDuration: data.duration * 60,
                 enableRecording: false,
@@ -214,7 +202,7 @@ class TavusService: ObservableObject {
                 throw TavusError.apiErrorWithMessage(401, "Invalid API key. Please check your TAVUS_API_KEY in .env file.")
                 
             case 404:
-                throw TavusError.apiErrorWithMessage(404, "Replica not found. Please verify replica ID 'rf4703150052' exists in your Tavus dashboard.")
+                throw TavusError.apiErrorWithMessage(404, "Persona not found. Please verify persona IDs exist in your Tavus dashboard.")
                 
             case 400:
                 if let errorData = try? JSONDecoder().decode(TavusErrorResponse.self, from: responseData) {
@@ -254,7 +242,7 @@ class TavusService: ObservableObject {
         request.httpMethod = "POST"
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("InterviewSim/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("PocketInterview/1.0", forHTTPHeaderField: "User-Agent")
         
         let endPayload = [
             "reason": "interview_completed"
@@ -321,17 +309,9 @@ class TavusService: ObservableObject {
         
         switch category {
         case "Technical":
-            baseInstructions = """
-            You are a technical interviewer. Ask coding and problem-solving questions. 
-            Focus on algorithms, data structures, and system design. 
-            Encourage the candidate to think out loud and explain their approach.
-            """
+            baseInstructions = TavusConfig.technicalInterviewPrompt
         case "Behavioral":
-            baseInstructions = """
-            You are conducting a behavioral interview. Ask about past experiences using the STAR method. 
-            Focus on leadership, teamwork, and problem-solving situations. 
-            Ask for specific examples and results.
-            """
+            baseInstructions = TavusConfig.behavioralInterviewPrompt
         default:
             baseInstructions = """
             You are an experienced interviewer. Ask relevant questions about the candidate's background. 
@@ -339,19 +319,15 @@ class TavusService: ObservableObject {
             """
         }
         
-        if let cvContext = cvContext, !cvContext.isEmpty {
-            let shortCvSummary = String(cvContext.prefix(200))
-            return baseInstructions + " Candidate background: \(shortCvSummary)..."
-        }
-        
-        return baseInstructions
+        return TavusConfig.createPersonalizedPrompt(
+            basePrompt: baseInstructions,
+            category: category,
+            cvContext: cvContext
+        )
     }
     
     private func generateWebhookUrl() -> String {
-        // Get Supabase URL from environment
         let supabaseUrl = EnvironmentConfig.shared.supabaseURL ?? "https://your-project.supabase.co"
-        
-        // Construct webhook URL for the edge function
         return "\(supabaseUrl)/functions/v1/tavus-transcript-webhook"
     }
     
@@ -365,13 +341,13 @@ class TavusService: ObservableObject {
     }
     
     func checkConfiguration() -> Bool {
-        return TavusConfig.validateConfiguration() && TavusConfig.validateReplicaId()
+        return TavusConfig.validateConfiguration() && TavusConfig.validatePersonaIds()
     }
     
     func testApiKey() async -> Bool {
         do {
             let apiKey = try TavusConfig.getApiKey()
-            let testEndpoint = "https://tavusapi.com/v2/replicas"
+            let testEndpoint = "https://tavusapi.com/v2/personas"
             
             guard let url = URL(string: testEndpoint) else {
                 return false
@@ -426,17 +402,17 @@ struct TavusConversationResponse {
 // MARK: - API Models
 
 struct TavusCreateConversationPayload: Codable {
-    let replicaId: String
+    let personaId: String
     let conversationName: String
     let conversationalContext: String
-    let callbackUrl: String // Added callback_url parameter
+    let callbackUrl: String
     let properties: TavusConversationProperties
     
     enum CodingKeys: String, CodingKey {
-        case replicaId = "replica_id"
+        case personaId = "persona_id"
         case conversationName = "conversation_name"
         case conversationalContext = "conversational_context"
-        case callbackUrl = "callback_url" // Maps to callback_url in JSON
+        case callbackUrl = "callback_url"
         case properties
     }
 }

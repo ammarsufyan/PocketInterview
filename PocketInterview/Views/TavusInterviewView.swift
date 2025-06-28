@@ -32,6 +32,14 @@ struct TavusInterviewView: View {
         sessionData.category == "Technical" ? .blue : .purple
     }
     
+    private var interviewerName: String {
+        TavusConfig.getInterviewerName(for: sessionData.category)
+    }
+    
+    private var interviewerDescription: String {
+        TavusConfig.getInterviewerDescription(for: sessionData.category)
+    }
+    
     var body: some View {
         NavigationView {
             ZStack {
@@ -41,6 +49,8 @@ struct TavusInterviewView: View {
                         sessionName: sessionData.sessionName,
                         duration: sessionData.duration,
                         categoryColor: categoryColor,
+                        interviewerName: interviewerName,
+                        interviewerDescription: interviewerDescription,
                         onStart: {
                             showPreparationView = false
                             hasAttemptedStart = true
@@ -54,7 +64,10 @@ struct TavusInterviewView: View {
                         }
                     )
                 } else if tavusService.isLoading {
-                    TavusLoadingView(category: sessionData.category)
+                    TavusLoadingView(
+                        category: sessionData.category,
+                        interviewerName: interviewerName
+                    )
                 } else if let conversationUrl = tavusService.conversationUrl {
                     TavusWebView(
                         url: conversationUrl,
@@ -84,7 +97,10 @@ struct TavusInterviewView: View {
                         }
                     )
                 } else if hasAttemptedStart {
-                    TavusLoadingView(category: sessionData.category)
+                    TavusLoadingView(
+                        category: sessionData.category,
+                        interviewerName: interviewerName
+                    )
                 }
                 
                 if isEndingSession {
@@ -218,7 +234,6 @@ struct TavusInterviewView: View {
             return
         }
         
-        // Pass historyManager to create session immediately
         let success = await tavusService.createConversationSession(
             category: sessionData.category,
             sessionName: sessionData.sessionName,
@@ -249,7 +264,7 @@ struct TavusInterviewView: View {
         isEndingSession = true
         
         // End the Tavus conversation
-        let apiSuccess = await tavusService.endConversationSession()
+        _ = await tavusService.endConversationSession()
         
         let actualDuration = Int(Date().timeIntervalSince(sessionStartTime) / 60)
         
@@ -257,8 +272,8 @@ struct TavusInterviewView: View {
         _ = await tavusService.updateSessionWithFinalData(
             historyManager: historyManager,
             actualDurationMinutes: max(actualDuration, 1),
-            questionsAnswered: 0, // Could be updated with actual count
-            score: nil, // Could be calculated based on performance
+            questionsAnswered: 0,
+            score: nil,
             endReason: reason
         )
         
@@ -289,6 +304,7 @@ struct TavusInterviewView: View {
 
 struct TavusLoadingView: View {
     let category: String
+    let interviewerName: String
     
     private var categoryColor: Color {
         category == "Technical" ? .blue : .purple
@@ -310,12 +326,12 @@ struct TavusLoadingView: View {
             .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: UUID())
             
             VStack(spacing: 12) {
-                Text("Preparing Your AI Interviewer")
+                Text("Connecting to \(interviewerName)")
                     .font(.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
                 
-                Text("Setting up personalized \(category.lowercased()) interview...")
+                Text("Setting up your personalized \(category.lowercased()) interview...")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -410,6 +426,8 @@ struct TavusPreparationView: View {
     let sessionName: String
     let duration: Int
     let categoryColor: Color
+    let interviewerName: String
+    let interviewerDescription: String
     let onStart: () -> Void
     let onCancel: () -> Void
     
@@ -423,14 +441,20 @@ struct TavusPreparationView: View {
                         .symbolRenderingMode(.hierarchical)
                     
                     VStack(spacing: 8) {
-                        Text("Ready to Start?")
+                        Text("Meet Your Interviewer")
                             .font(.title2)
                             .fontWeight(.bold)
                         
-                        Text("\(category) Interview with AI")
-                            .font(.headline)
+                        Text(interviewerName)
+                            .font(.title)
                             .foregroundColor(categoryColor)
-                            .fontWeight(.semibold)
+                            .fontWeight(.bold)
+                        
+                        Text(interviewerDescription)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
                     }
                 }
                 .padding(.top, 40)
@@ -456,6 +480,13 @@ struct TavusPreparationView: View {
                         value: category,
                         color: categoryColor
                     )
+                    
+                    SessionDetailRow(
+                        icon: "brain.head.profile",
+                        title: "AI Interviewer",
+                        value: interviewerName,
+                        color: categoryColor
+                    )
                 }
                 .padding(.horizontal, 20)
                 
@@ -470,7 +501,7 @@ struct TavusPreparationView: View {
                             Image(systemName: "play.circle.fill")
                                 .font(.title2)
                             
-                            Text("Start AI Interview")
+                            Text("Start Interview with \(interviewerName)")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                         }

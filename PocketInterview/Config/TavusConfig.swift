@@ -20,7 +20,51 @@ struct TavusConfig {
         return EnvironmentConfig.shared.tavusBaseURL
     }
     
-    // MARK: - Conversation Settings (FIXED: Explicit type annotations)
+    // MARK: - Persona Configuration
+    
+    /// Technical Interviewer - Steve
+    static let technicalPersonaId = "pfc9c8208888"
+    
+    /// Behavioral Interviewer - Lucy
+    static let behavioralPersonaId = "pcf4ce9dcc5a"
+    
+    /// Get persona ID based on interview category
+    static func getPersonaId(for category: String) -> String {
+        switch category {
+        case "Technical":
+            return technicalPersonaId
+        case "Behavioral":
+            return behavioralPersonaId
+        default:
+            return technicalPersonaId // Default to technical
+        }
+    }
+    
+    /// Get interviewer name based on category
+    static func getInterviewerName(for category: String) -> String {
+        switch category {
+        case "Technical":
+            return "Steve"
+        case "Behavioral":
+            return "Lucy"
+        default:
+            return "AI Interviewer"
+        }
+    }
+    
+    /// Get interviewer description based on category
+    static func getInterviewerDescription(for category: String) -> String {
+        switch category {
+        case "Technical":
+            return "Steve is your technical interviewer with expertise in software engineering, algorithms, and system design."
+        case "Behavioral":
+            return "Lucy is your behavioral interviewer specializing in leadership assessment, team dynamics, and career development."
+        default:
+            return "Your AI interviewer will guide you through the interview process."
+        }
+    }
+    
+    // MARK: - Conversation Settings
     
     /// Default conversation properties
     static let defaultConversationProperties: [String: Any] = [
@@ -34,7 +78,7 @@ struct TavusConfig {
     // MARK: - Interview Templates
     
     static let technicalInterviewPrompt = """
-    You are an expert technical interviewer with years of experience in software engineering. 
+    You are Steve, an expert technical interviewer with years of experience in software engineering. 
     Your role is to conduct a comprehensive technical interview that evaluates the candidate's:
     
     1. Technical Knowledge & Skills
@@ -43,8 +87,14 @@ struct TavusConfig {
     4. System Design Understanding
     5. Communication Skills
     
+    Your personality:
+    - Professional yet approachable
+    - Encouraging and supportive
+    - Detail-oriented and thorough
+    - Patient with explanations
+    
     Guidelines:
-    - Start with a brief introduction and overview of the interview process
+    - Start with a brief introduction: "Hi, I'm Steve, and I'll be your technical interviewer today"
     - Ask questions that build upon each other logically
     - Encourage the candidate to think out loud
     - Provide hints if they get stuck, but let them work through problems
@@ -61,7 +111,7 @@ struct TavusConfig {
     """
     
     static let behavioralInterviewPrompt = """
-    You are an experienced HR professional and behavioral interviewer. 
+    You are Lucy, an experienced HR professional and behavioral interviewer with a warm, empathetic approach. 
     Your role is to assess the candidate's:
     
     1. Past Work Experience & Achievements
@@ -70,7 +120,14 @@ struct TavusConfig {
     4. Communication & Interpersonal Skills
     5. Cultural Fit & Values Alignment
     
+    Your personality:
+    - Warm and empathetic
+    - Excellent listener
+    - Insightful and perceptive
+    - Supportive and encouraging
+    
     Guidelines:
+    - Start with a warm introduction: "Hello! I'm Lucy, and I'm excited to learn more about you today"
     - Use the STAR method (Situation, Task, Action, Result) framework
     - Ask for specific examples and concrete details
     - Probe deeper when answers are too general
@@ -118,17 +175,7 @@ struct TavusConfig {
         let isValid = EnvironmentConfig.shared.validateTavusConfiguration()
         
         if !isValid {
-            print("❌ Tavus Configuration Validation Failed")
-            print("📋 Required Environment Variables:")
-            print("  - TAVUS_API_KEY: \(apiKey != nil ? "✅ Found" : "❌ Missing")")
-            print("  - TAVUS_BASE_URL: \(baseURL.isEmpty ? "❌ Missing" : "✅ Found")")
-            
-            if let apiKey = apiKey {
-                print("🔑 API Key Debug Info:")
-                print("  - Length: \(apiKey.count)")
-                print("  - Starts with expected prefix: \(apiKey.hasPrefix("3d52ddd") ? "✅" : "❌")")
-                print("  - Contains underscore: \(apiKey.contains("_") ? "✅" : "❌")")
-            }
+            // Silent validation for production
         }
         
         return isValid
@@ -139,11 +186,6 @@ struct TavusConfig {
     static func getApiKey() throws -> String {
         guard let apiKey = apiKey, !apiKey.isEmpty else {
             throw TavusConfigError.missingApiKey
-        }
-        
-        // Validate API key format (Tavus keys typically have specific format)
-        if apiKey.count < 10 {
-            print("⚠️ Warning: API key seems too short (\(apiKey.count) characters)")
         }
         
         return apiKey
@@ -160,7 +202,7 @@ struct TavusConfig {
     /// Supported conversation languages
     static let supportedLanguages: [String] = ["en", "es", "fr", "de", "it", "pt"]
     
-    /// Default conversation settings (FIXED: Explicit type annotations)
+    /// Default conversation settings
     static let defaultSettings: [String: Any] = [
         "auto_start": true as Bool,
         "show_controls": true as Bool,
@@ -168,42 +210,36 @@ struct TavusConfig {
         "theme": "professional" as String
     ]
     
-    // MARK: - Replica Configuration (UPDATED WITH YOUR REPLICA ID)
+    // MARK: - Persona Validation
     
-    /// Your actual replica ID from Tavus dashboard
-    static let defaultReplicaId = "rf4703150052"
-    
-    /// Replica validation
-    static func validateReplicaId(_ replicaId: String = defaultReplicaId) -> Bool {
-        // Tavus replica IDs typically start with 'r' followed by alphanumeric characters
-        let isValidFormat = replicaId.hasPrefix("r") && replicaId.count >= 8
+    /// Validate persona IDs
+    static func validatePersonaIds() -> Bool {
+        let technicalValid = !technicalPersonaId.isEmpty && technicalPersonaId.hasPrefix("p")
+        let behavioralValid = !behavioralPersonaId.isEmpty && behavioralPersonaId.hasPrefix("p")
         
-        if !isValidFormat {
-            print("⚠️ Warning: Replica ID '\(replicaId)' might not be in the correct format")
-            print("   Expected format: r followed by alphanumeric characters (e.g., rf4703150052)")
-        } else {
-            print("✅ Replica ID '\(replicaId)' appears to be valid")
-        }
-        
-        return isValidFormat
+        return technicalValid && behavioralValid
     }
     
-    /// Instructions for replica setup (updated)
-    static let replicaSetupInstructions = """
-    REPLICA SETUP COMPLETED ✅
+    /// Instructions for persona setup
+    static let personaSetupInstructions = """
+    PERSONA SETUP COMPLETED ✅
     
-    Current Replica ID: rf4703150052
+    Technical Interviewer - Steve: pfc9c8208888
+    Behavioral Interviewer - Lucy: pcf4ce9dcc5a
     
-    This replica ID has been configured and should work with your Tavus account.
-    If you need to change it:
+    These personas are now configured and will provide personalized interview experiences:
     
-    1. Go to https://platform.tavus.io/replicas
-    2. Select a different replica or create a new one
-    3. Copy the replica ID
-    4. Update TavusConfig.defaultReplicaId with the new ID
+    Steve (Technical):
+    - Expert in software engineering and system design
+    - Professional yet approachable demeanor
+    - Focuses on coding challenges and technical depth
     
-    Note: The replica represents the AI interviewer that will conduct the interview.
-    Make sure this replica ID exists in your Tavus account.
+    Lucy (Behavioral):
+    - Experienced HR professional with empathetic approach
+    - Specializes in STAR method and leadership assessment
+    - Creates comfortable environment for sharing experiences
+    
+    The app will automatically select the appropriate persona based on interview type.
     """
 }
 
@@ -214,7 +250,7 @@ enum TavusConfigError: Error, LocalizedError {
     case invalidConfiguration
     case networkError
     case invalidResponse
-    case invalidReplicaId
+    case invalidPersonaId
     
     var errorDescription: String? {
         switch self {
@@ -226,38 +262,8 @@ enum TavusConfigError: Error, LocalizedError {
             return "Network error occurred while connecting to Tavus API."
         case .invalidResponse:
             return "Invalid response received from Tavus API."
-        case .invalidReplicaId:
-            return "Invalid replica ID. Please check your replica ID in Tavus dashboard."
+        case .invalidPersonaId:
+            return "Invalid persona ID. Please check your persona IDs in Tavus dashboard."
         }
     }
 }
-
-// MARK: - Setup Instructions (UPDATED)
-
-/*
- TAVUS ENVIRONMENT SETUP INSTRUCTIONS:
- 
- ✅ REPLICA ID CONFIGURED: rf4703150052
- 
- 1. Create a .env file in your project root with:
-    TAVUS_API_KEY=3d52ddd842e64285b8982713be1e3896
-    TAVUS_BASE_URL=https://tavusapi.com/v2
- 
- 2. Your Tavus API Key should be working now
-    - Make sure it's the complete key from https://platform.tavus.io/api-keys
-    - The key should be in format: 3d52ddd842e6428...
- 
- 3. Replica ID is already configured: rf4703150052
-    - This should match a replica in your Tavus dashboard
-    - Verify at: https://platform.tavus.io/replicas
- 
- 4. Test the configuration:
-    TavusConfig.validateConfiguration()
-    TavusConfig.validateReplicaId()
- 
- SECURITY NOTES:
- - Never commit .env file to version control
- - Add .env to your .gitignore file
- - Use different keys for development and production
- - Consider using Xcode build configurations for different environments
- */
