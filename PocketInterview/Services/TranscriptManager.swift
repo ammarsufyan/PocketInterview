@@ -264,11 +264,11 @@ class TranscriptManager: ObservableObject {
 
 // MARK: - Helper Structs for Database Response
 
-// FIXED: Simplified TranscriptResponse without CodableAny wrapper
+// FIXED: Completely simplified TranscriptResponse that works with Supabase
 private struct TranscriptResponse: Codable {
     let id: UUID
     let conversationId: String
-    let transcriptData: Any // Keep as Any but handle parsing manually
+    let transcriptData: [[String: String]] // FIXED: Use proper type that can be decoded
     let messageCount: Int
     let userMessageCount: Int
     let assistantMessageCount: Int
@@ -286,49 +286,6 @@ private struct TranscriptResponse: Codable {
         case webhookTimestamp = "webhook_timestamp"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
-    }
-    
-    // FIXED: Custom decoder that handles Any type properly
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        
-        id = try container.decode(UUID.self, forKey: .id)
-        conversationId = try container.decode(String.self, forKey: .conversationId)
-        messageCount = try container.decode(Int.self, forKey: .messageCount)
-        userMessageCount = try container.decode(Int.self, forKey: .userMessageCount)
-        assistantMessageCount = try container.decode(Int.self, forKey: .assistantMessageCount)
-        webhookTimestamp = try container.decode(Date.self, forKey: .webhookTimestamp)
-        createdAt = try container.decode(Date.self, forKey: .createdAt)
-        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
-        
-        // Handle transcript_data as raw JSON
-        if let jsonArray = try? container.decode([[String: Any]].self, forKey: .transcriptData) {
-            transcriptData = jsonArray
-        } else if let jsonString = try? container.decode(String.self, forKey: .transcriptData) {
-            transcriptData = jsonString
-        } else {
-            // Try to decode as generic JSON
-            let jsonDecoder = JSONDecoder()
-            let jsonData = try container.decode(Data.self, forKey: .transcriptData)
-            transcriptData = jsonData
-        }
-    }
-    
-    // FIXED: Custom encoder that doesn't try to encode Any type
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        
-        try container.encode(id, forKey: .id)
-        try container.encode(conversationId, forKey: .conversationId)
-        try container.encode(messageCount, forKey: .messageCount)
-        try container.encode(userMessageCount, forKey: .userMessageCount)
-        try container.encode(assistantMessageCount, forKey: .assistantMessageCount)
-        try container.encode(webhookTimestamp, forKey: .webhookTimestamp)
-        try container.encode(createdAt, forKey: .createdAt)
-        try container.encode(updatedAt, forKey: .updatedAt)
-        
-        // Don't try to encode transcriptData as it's Any type
-        // This will be handled by the database layer
     }
 }
 
