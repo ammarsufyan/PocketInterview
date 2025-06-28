@@ -557,20 +557,21 @@ struct TavusPreparationView: View {
                 TipsCard(category: category, categoryColor: categoryColor)
                     .padding(.horizontal, 20)
                 
-                VStack(spacing: 20) {
-                    // 🔥 IMPROVED: Primary Safari Button (Recommended)
+                // 🔥 UPDATED: Button Section dengan design yang sesuai screenshot
+                VStack(spacing: 16) {
+                    // Primary Safari Button (Recommended)
                     Button(action: {
                         onStartWithSafari()
                     }) {
                         HStack(spacing: 16) {
-                            // Safari Icon with Glow Effect
+                            // Safari Icon
                             ZStack {
                                 Circle()
                                     .fill(Color.white.opacity(0.2))
-                                    .frame(width: 44, height: 44)
+                                    .frame(width: 40, height: 40)
                                 
                                 Image(systemName: "safari.fill")
-                                    .font(.title2)
+                                    .font(.title3)
                                     .foregroundColor(.white)
                             }
                             
@@ -578,13 +579,12 @@ struct TavusPreparationView: View {
                                 HStack(spacing: 8) {
                                     Text("Start Interview (Safari)")
                                         .font(.headline)
-                                        .fontWeight(.bold)
+                                        .fontWeight(.semibold)
                                     
                                     // Star Badge
                                     Image(systemName: "star.fill")
                                         .font(.caption)
                                         .foregroundColor(.yellow)
-                                        .shadow(color: .yellow.opacity(0.5), radius: 2)
                                 }
                                 
                                 Text("Recommended • Better Performance")
@@ -597,76 +597,45 @@ struct TavusPreparationView: View {
                             
                             // Arrow Icon
                             Image(systemName: "arrow.right.circle.fill")
-                                .font(.title2)
+                                .font(.title3)
                                 .foregroundColor(.white.opacity(0.8))
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 72)
+                        .frame(height: 64)
                         .background(
-                            ZStack {
-                                // Gradient Background
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        categoryColor,
-                                        categoryColor.opacity(0.8),
-                                        categoryColor.opacity(0.9)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                                
-                                // Subtle Pattern Overlay
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.white.opacity(0.1),
-                                        Color.clear,
-                                        Color.black.opacity(0.05)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            }
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color(red: 0.2, green: 0.6, blue: 1.0),
+                                    Color(red: 0.4, green: 0.8, blue: 1.0)
+                                ]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                        .cornerRadius(20)
+                        .cornerRadius(16)
                         .shadow(
-                            color: categoryColor.opacity(0.4),
-                            radius: 12,
+                            color: Color.blue.opacity(0.3),
+                            radius: 8,
                             x: 0,
-                            y: 6
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color.white.opacity(0.3),
-                                            Color.clear
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
+                            y: 4
                         )
                     }
-                    .scaleEffect(1.0)
-                    .animation(.easeInOut(duration: 0.1), value: false)
                     
-                    // 🔥 IMPROVED: Secondary In-App Button
+                    // Secondary In-App Button
                     Button(action: {
                         onStartInApp()
                     }) {
                         HStack(spacing: 16) {
                             // App Icon
                             ZStack {
-                                Circle()
-                                    .fill(categoryColor.opacity(0.1))
-                                    .frame(width: 44, height: 44)
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.blue)
+                                    .frame(width: 40, height: 40)
                                 
                                 Image(systemName: "app.fill")
-                                    .font(.title2)
-                                    .foregroundColor(categoryColor)
+                                    .font(.title3)
+                                    .foregroundColor(.white)
                             }
                             
                             VStack(alignment: .leading, spacing: 4) {
@@ -684,86 +653,29 @@ struct TavusPreparationView: View {
                             
                             Image(systemName: "arrow.right")
                                 .font(.subheadline)
-                                .foregroundColor(categoryColor.opacity(0.6))
+                                .foregroundColor(.blue)
                         }
-                        .foregroundColor(categoryColor)
+                        .foregroundColor(.primary)
                         .frame(maxWidth: .infinity)
                         .frame(height: 64)
-                        .background(
-                            ZStack {
-                                Color(.systemBackground)
-                                
-                                // Subtle inner shadow effect
-                                RoundedRectangle(cornerRadius: 18)
-                                    .fill(categoryColor.opacity(0.02))
-                            }
-                        )
+                        .background(Color(.systemBackground))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 18)
-                                .stroke(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            categoryColor.opacity(0.3),
-                                            categoryColor.opacity(0.1)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 2
-                                )
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.blue.opacity(0.3), lineWidth: 1.5)
                         )
-                        .cornerRadius(18)
-                        .shadow(
-                            color: Color.black.opacity(0.05),
-                            radius: 4,
-                            x: 0,
-                            y: 2
-                        )
+                        .cornerRadius(16)
                     }
                     
-                    // 🔥 IMPROVED: Performance Info Card
-                    VStack(spacing: 12) {
-                        HStack(spacing: 12) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.green.opacity(0.1))
-                                    .frame(width: 32, height: 32)
-                                
-                                Image(systemName: "battery.100")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.green)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Safari uses less battery and performs better")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                                
-                                Text("Recommended for the best interview experience")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                        }
-                        .padding(16)
-                        .background(Color.green.opacity(0.05))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.green.opacity(0.2), lineWidth: 1)
-                        )
-                        
-                        Button(action: {
-                            onCancel()
-                        }) {
-                            Text("Cancel")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.secondary)
-                        }
+                    // Cancel Button
+                    Button(action: {
+                        onCancel()
+                    }) {
+                        Text("Cancel")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
                     }
+                    .padding(.top, 8)
                 }
                 .padding(.horizontal, 20)
                 
