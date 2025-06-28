@@ -1,4 +1,3 @@
-```swift
 //
 //  HistoryView.swift
 //  InterviewSim
@@ -1045,4 +1044,3 @@ struct NoTranscriptCard: View {
 #Preview {
     HistoryView()
 }
-```
