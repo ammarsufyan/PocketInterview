@@ -148,7 +148,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 UPDATED: Delete Account with Password Verification
+    // MARK: - 🔥 FIXED: Delete Account with Password Verification
     
     func deleteAccount(password: String) async {
         isLoading = true
@@ -195,10 +195,18 @@ class AuthenticationManager: ObservableObject {
     }
     
     private func verifyPassword(email: String, password: String) async throws {
-        // Create a temporary client to verify password without affecting current session
+        // 🔥 FIXED: Create a temporary client using environment config
+        let envConfig = EnvironmentConfig.shared
+        
+        guard let supabaseURL = envConfig.supabaseURL,
+              let supabaseKey = envConfig.supabaseAnonKey,
+              let url = URL(string: supabaseURL) else {
+            throw AuthError.unauthorized
+        }
+        
         let tempClient = SupabaseClient(
-            supabaseURL: supabase.supabaseURL,
-            supabaseKey: supabase.supabaseKey
+            supabaseURL: url,
+            supabaseKey: supabaseKey
         )
         
         do {
