@@ -1,15 +1,11 @@
-//
-//  ProfileView.swift
-//  InterviewSim
-//
-//  Created by Ammar Sufyan on 23/06/25.
-//
-
 import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject private var authManager: AuthenticationManager
     @State private var showingSignOutAlert = false
+    @State private var showingDeleteAccountAlert = false
+    @State private var showingDeleteConfirmation = false
+    @State private var deleteConfirmationText = ""
     
     var body: some View {
         NavigationView {
@@ -93,27 +89,53 @@ struct ProfileView: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // Sign Out Button
-                    Button(action: {
-                        showingSignOutAlert = true
-                    }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "arrow.right.square")
-                                .font(.title3)
-                            
-                            Text("Sign Out")
-                                .font(.headline)
-                                .fontWeight(.semibold)
+                    // Account Actions Section
+                    VStack(spacing: 12) {
+                        // Sign Out Button
+                        Button(action: {
+                            showingSignOutAlert = true
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "arrow.right.square")
+                                    .font(.title3)
+                                
+                                Text("Sign Out")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.orange)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(Color.orange.opacity(0.1))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                            )
                         }
-                        .foregroundColor(.red)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(Color.red.opacity(0.1))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.red.opacity(0.3), lineWidth: 1)
-                        )
+                        
+                        // Delete Account Button
+                        Button(action: {
+                            showingDeleteAccountAlert = true
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "trash.circle")
+                                    .font(.title3)
+                                
+                                Text("Delete Account")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 52)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(12)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                            )
+                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
@@ -138,6 +160,225 @@ struct ProfileView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
+            .alert("Delete Account", isPresented: $showingDeleteAccountAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Continue", role: .destructive) {
+                    showingDeleteConfirmation = true
+                }
+            } message: {
+                Text("This action cannot be undone. All your interview history and data will be permanently deleted.")
+            }
+            .sheet(isPresented: $showingDeleteConfirmation) {
+                DeleteAccountConfirmationView(
+                    userEmail: authManager.userEmail ?? "",
+                    confirmationText: $deleteConfirmationText,
+                    onConfirm: {
+                        Task {
+                            await authManager.deleteAccount()
+                        }
+                        showingDeleteConfirmation = false
+                    },
+                    onCancel: {
+                        showingDeleteConfirmation = false
+                        deleteConfirmationText = ""
+                    }
+                )
+            }
+        }
+    }
+}
+
+struct DeleteAccountConfirmationView: View {
+    let userEmail: String
+    @Binding var confirmationText: String
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+    
+    @EnvironmentObject private var authManager: AuthenticationManager
+    
+    private var isConfirmationValid: Bool {
+        confirmationText.lowercased() == "delete my account"
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 32) {
+                Spacer()
+                
+                // Warning Icon
+                VStack(spacing: 20) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 60))
+                        .foregroundColor(.red)
+                        .symbolRenderingMode(.hierarchical)
+                    
+                    VStack(spacing: 12) {
+                        Text("Delete Account")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        
+                        Text("This action is permanent and cannot be undone")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                
+                // Account Info
+                VStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Account to be deleted:")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
+                        
+                        Text(userEmail)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    
+                    // What will be deleted
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("What will be deleted:")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.red)
+                        
+                        VStack(alignment: .leading, spacing: 6) {
+                            DeletedItemRow(text: "All interview sessions and history")
+                            DeletedItemRow(text: "All transcripts and recordings")
+                            DeletedItemRow(text: "All AI scores and feedback")
+                            DeletedItemRow(text: "Account settings and preferences")
+                            DeletedItemRow(text: "All personal data")
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Color.red.opacity(0.1))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                    )
+                }
+                .padding(.horizontal, 20)
+                
+                // Confirmation Input
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Type \"delete my account\" to confirm:")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                    
+                    TextField("delete my account", text: $confirmationText)
+                        .font(.subheadline)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(
+                                    isConfirmationValid ? Color.red : Color.clear,
+                                    lineWidth: 2
+                                )
+                        )
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                }
+                .padding(.horizontal, 20)
+                
+                // Action Buttons
+                VStack(spacing: 12) {
+                    Button(action: onConfirm) {
+                        HStack(spacing: 12) {
+                            if authManager.isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "trash.fill")
+                                    .font(.title3)
+                            }
+                            
+                            Text(authManager.isLoading ? "Deleting Account..." : "Delete My Account")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(
+                            isConfirmationValid && !authManager.isLoading ? 
+                                Color.red : 
+                                Color.gray
+                        )
+                        .cornerRadius(12)
+                        .shadow(
+                            color: isConfirmationValid ? Color.red.opacity(0.3) : Color.clear,
+                            radius: 8,
+                            x: 0,
+                            y: 4
+                        )
+                    }
+                    .disabled(!isConfirmationValid || authManager.isLoading)
+                    
+                    Button(action: onCancel) {
+                        Text("Cancel")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.blue)
+                    }
+                    .disabled(authManager.isLoading)
+                }
+                .padding(.horizontal, 20)
+                
+                if let errorMessage = authManager.errorMessage {
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                }
+                
+                Spacer()
+            }
+            .navigationTitle("Delete Account")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden()
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        onCancel()
+                    }
+                    .foregroundColor(.blue)
+                    .disabled(authManager.isLoading)
+                }
+            }
+        }
+    }
+}
+
+struct DeletedItemRow: View {
+    let text: String
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.caption)
+                .foregroundColor(.red)
+            
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            Spacer()
         }
     }
 }

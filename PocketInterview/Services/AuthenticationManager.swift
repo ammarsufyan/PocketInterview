@@ -148,6 +148,72 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
+    // MARK: - 🔥 NEW: Delete Account Method
+    
+    func deleteAccount() async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            // Get current user ID before deletion
+            guard let currentUser = currentUser else {
+                throw AuthError.userNotFound
+            }
+            
+            let userId = currentUser.id
+            
+            print("🗑️ Starting account deletion for user: \(userId)")
+            
+            // Step 1: Delete user data from custom tables
+            // Note: Foreign key constraints with CASCADE will handle related data
+            try await deleteUserData(userId: userId)
+            
+            // Step 2: Delete the user account from Supabase Auth
+            try await supabase.auth.admin.deleteUser(id: userId)
+            
+            print("✅ Account deleted successfully")
+            
+            // Step 3: Clear local state
+            self.currentUser = nil
+            self.isAuthenticated = false
+            
+        } catch {
+            print("❌ Account deletion error: \(error)")
+            self.errorMessage = handleDeleteAccountError(error)
+        }
+        
+        isLoading = false
+    }
+    
+    private func deleteUserData(userId: UUID) async throws {
+        print("🗑️ Deleting user data for: \(userId)")
+        
+        // Delete interview sessions (this will cascade to transcripts and score details)
+        try await supabase
+            .from("interview_sessions")
+            .delete()
+            .eq("user_id", value: userId)
+            .execute()
+        
+        print("✅ User data deleted successfully")
+    }
+    
+    private func handleDeleteAccountError(_ error: Error) -> String {
+        let errorDescription = error.localizedDescription.lowercased()
+        
+        if errorDescription.contains("user not found") {
+            return "Account not found. You may already be signed out."
+        } else if errorDescription.contains("unauthorized") || errorDescription.contains("permission") {
+            return "Unable to delete account. Please try signing out and back in."
+        } else if errorDescription.contains("network") || errorDescription.contains("connection") {
+            return "Network error. Please check your connection and try again."
+        } else if errorDescription.contains("rate limit") {
+            return "Too many requests. Please try again later."
+        }
+        
+        return "Failed to delete account: \(error.localizedDescription)"
+    }
+    
     // MARK: - Error Handling
     
     private func handleAuthError(_ error: Error) -> String {
@@ -261,5 +327,24 @@ class AuthenticationManager: ObservableObject {
         }
         
         isLoading = false
+    }
+}
+
+// MARK: - Custom Auth Errors
+
+enum AuthError: Error, LocalizedError {
+    case userNotFound
+    case deletionFailed
+    case unauthorized
+    
+    var errorDescription: String? {
+        switch self {
+        case .userNotFound:
+            return "User not found"
+        case .deletionFailed:
+            return "Failed to delete account"
+        case .unauthorized:
+            return "Unauthorized operation"
+        }
     }
 }
