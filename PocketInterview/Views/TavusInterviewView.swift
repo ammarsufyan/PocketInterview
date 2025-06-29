@@ -126,6 +126,7 @@ struct TavusInterviewView: View {
                     .cornerRadius(16)
                 }
             }
+            .navigationTitle("Interview Summary")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden()
             .toolbar {
@@ -486,9 +487,7 @@ struct TavusPreparationView: View {
             VStack(spacing: 32) {
                 VStack(spacing: 16) {
                     VStack(spacing: 8) {
-                        Text("Session Summary")
-                            .font(.title2)
-                            .fontWeight(.bold)
+                        // Removed "Session Summary" text
                     }
                 }
                 .padding(.top, 40)
