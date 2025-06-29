@@ -36,7 +36,7 @@ struct MockInterviewView: View {
                             Spacer()
                             
                             // 🔥 NEW: Bolt Logo with Hyperlink
-                            BoltBadgeImageView(height: 28, scaleEffect: 0.95)
+                            BoltBadgeImageView(height: 60, scaleEffect: 0.95)
                         }
                     }
                     .padding(.horizontal, 20)
