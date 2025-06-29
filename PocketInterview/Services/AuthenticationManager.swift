@@ -138,7 +138,7 @@ class AuthenticationManager: ObservableObject {
         do {
             try await supabase.auth.resetPasswordForEmail(
                 email,
-                redirectTo: URL(string: "https://pocketinterview.netlify.app/auth/reset-password")
+                redirectTo: URL(string: "https://pocketinterview.netlify.app?type=recovery")
             )
             
             // Set simple success message
