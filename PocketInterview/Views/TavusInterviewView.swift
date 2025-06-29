@@ -21,8 +21,6 @@ struct TavusInterviewView: View {
     
     @State private var showPreparationView = true
     @State private var hasAttemptedStart = false
-    @State private var showingSafari = false
-    @State private var useSafari = true // DEFAULT: Safari untuk performance yang lebih baik
     
     private var categoryColor: Color {
         sessionData.category == "Technical" ? .blue : .purple
@@ -42,19 +40,9 @@ struct TavusInterviewView: View {
                         duration: sessionData.duration,
                         categoryColor: categoryColor,
                         interviewerName: interviewerName,
-                        onStartWithSafari: {
+                        onStartInterview: {
                             showPreparationView = false
                             hasAttemptedStart = true
-                            useSafari = true
-                            
-                            Task {
-                                await startTavusSession()
-                            }
-                        },
-                        onStartInApp: {
-                            showPreparationView = false
-                            hasAttemptedStart = true
-                            useSafari = false
                             
                             Task {
                                 await startTavusSession()
@@ -70,24 +58,16 @@ struct TavusInterviewView: View {
                         interviewerName: interviewerName
                     )
                 } else if let conversationUrl = tavusService.conversationUrl {
-                    if useSafari {
-                        // Safari akan ditampilkan sebagai sheet
-                        Color.clear
-                            .onAppear {
-                                showingSafari = true
-                            }
-                    } else {
-                        // In-App WebView (optimized)
-                        TavusWebView(
-                            url: conversationUrl,
-                            onSessionStart: {
-                                handleSessionStart()
-                            },
-                            onSessionEnd: {
-                                handleSessionEnd(reason: "tavus_end")
-                            }
-                        )
-                    }
+                    // In-App WebView only
+                    TavusWebView(
+                        url: conversationUrl,
+                        onSessionStart: {
+                            handleSessionStart()
+                        },
+                        onSessionEnd: {
+                            handleSessionEnd(reason: "tavus_end")
+                        }
+                    )
                 } else if let errorMessage = tavusService.errorMessage {
                     TavusErrorView(
                         message: errorMessage,
@@ -177,26 +157,6 @@ struct TavusInterviewView: View {
             } message: {
                 Text("Are you sure you want to end the interview? Your progress will be saved.")
             }
-            .sheet(isPresented: $showingSafari) {
-                if let conversationUrl = tavusService.conversationUrl {
-                    SafariWebView(url: conversationUrl) {
-                        showingSafari = false
-                        // 🔥 IMPORTANT: End conversation via API when Safari is dismissed
-                        Task {
-                            await endConversationViaAPI()
-                        }
-                        
-                        // Handle session end when Safari is dismissed
-                        if hasSessionStarted && isSessionActive {
-                            Task {
-                                await endInterviewWithAPI(reason: "safari_closed")
-                            }
-                        } else {
-                            dismiss()
-                        }
-                    }
-                }
-            }
         }
         .onAppear {
             if !sessionData.isValid {
@@ -272,54 +232,6 @@ struct TavusInterviewView: View {
         }
     }
     
-    // MARK: - End Conversation via API
-    
-    private func endConversationViaAPI() async {
-        guard let sessionId = tavusService.sessionId else {
-            print("⚠️ No session ID available for ending conversation")
-            return
-        }
-        
-        do {
-            let apiKey = try TavusConfig.getApiKey()
-            let endpoint = "https://tavusapi.com/v2/conversations/\(sessionId)/end"
-            
-            guard let url = URL(string: endpoint) else {
-                print("❌ Invalid endpoint URL")
-                return
-            }
-            
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.setValue("PocketInterview/1.0", forHTTPHeaderField: "User-Agent")
-            
-            let endPayload = [
-                "reason": "safari_closed"
-            ]
-            
-            let jsonData = try JSONSerialization.data(withJSONObject: endPayload)
-            request.httpBody = jsonData
-            
-            let (_, response) = try await URLSession.shared.data(for: request)
-            
-            if let httpResponse = response as? HTTPURLResponse {
-                switch httpResponse.statusCode {
-                case 200, 201, 204:
-                    print("✅ Conversation ended successfully via API")
-                case 404:
-                    print("⚠️ Conversation not found (already ended)")
-                default:
-                    print("⚠️ API returned status: \(httpResponse.statusCode)")
-                }
-            }
-            
-        } catch {
-            print("❌ Failed to end conversation via API: \(error)")
-        }
-    }
-    
     // MARK: - End Interview with API Call
     
     private func endInterviewWithAPI(reason: String = "manual") async {
@@ -361,8 +273,6 @@ struct TavusInterviewView: View {
         showPreparationView = true
         hasAttemptedStart = false
         showingEndConfirmation = false
-        showingSafari = false
-        useSafari = true // Reset ke default Safari
         
         sessionStartTime = Date()
         sessionEndReason = "manual"
@@ -478,14 +388,13 @@ struct TavusPreparationView: View {
     let duration: Int
     let categoryColor: Color
     let interviewerName: String
-    let onStartWithSafari: () -> Void
-    let onStartInApp: () -> Void
+    let onStartInterview: () -> Void
     let onCancel: () -> Void
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                // Session Details - Start directly without extra spacing
+            VStack(spacing: 32) {
+                // Session Details
                 VStack(spacing: 16) {
                     SessionDetailRow(
                         icon: "text.quote",
@@ -516,37 +425,31 @@ struct TavusPreparationView: View {
                     )
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 20) // Add minimal top padding
+                .padding(.top, 20)
                 
-                TipsCard(category: category, categoryColor: categoryColor)
-                    .padding(.horizontal, 20)
-                
-                // 🔥 UPDATED: Button Section dengan design yang sesuai screenshot
+                // 🔥 SIMPLIFIED: Single Start Interview Button
                 VStack(spacing: 16) {
-                    // Primary Safari Button (Recommended)
                     Button(action: {
-                        onStartWithSafari()
+                        onStartInterview()
                     }) {
                         HStack(spacing: 16) {
-                            // Safari Icon
+                            // Interview Icon
                             ZStack {
                                 Circle()
                                     .fill(Color.white.opacity(0.2))
                                     .frame(width: 40, height: 40)
                                 
-                                Image(systemName: "safari.fill")
+                                Image(systemName: "play.circle.fill")
                                     .font(.title3)
                                     .foregroundColor(.white)
                             }
                             
                             VStack(alignment: .leading, spacing: 4) {
-                                HStack(spacing: 8) {
-                                    Text("Start Interview (Safari)")
-                                        .font(.headline)
-                                        .fontWeight(.semibold)
-                                }
+                                Text("Start Interview")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
                                 
-                                Text("Recommended")
+                                Text("Begin your AI interview session")
                                     .font(.caption)
                                     .fontWeight(.medium)
                                     .opacity(0.9)
@@ -566,67 +469,18 @@ struct TavusPreparationView: View {
                         .frame(height: 64)
                         .background(
                             LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color(red: 0.2, green: 0.6, blue: 1.0),
-                                    Color(red: 0.4, green: 0.8, blue: 1.0)
-                                ]),
+                                gradient: Gradient(colors: [categoryColor, categoryColor.opacity(0.8)]),
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
                         .cornerRadius(16)
                         .shadow(
-                            color: Color.blue.opacity(0.3),
+                            color: categoryColor.opacity(0.3),
                             radius: 8,
                             x: 0,
                             y: 4
                         )
-                    }
-                    
-                    // Secondary In-App Button
-                    Button(action: {
-                        onStartInApp()
-                    }) {
-                        HStack(spacing: 16) {
-                            // App Icon
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.blue)
-                                    .frame(width: 40, height: 40)
-                                
-                                Image(systemName: "app.fill")
-                                    .font(.title3)
-                                    .foregroundColor(.white)
-                            }
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Start Interview (In-App)")
-                                    .font(.headline)
-                                    .fontWeight(.semibold)
-                                
-                                Text("Alternative")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .opacity(0.7)
-                            }
-                            
-                            Spacer()
-                            
-                            Image(systemName: "arrow.right")
-                                .font(.subheadline)
-                                .foregroundColor(.blue)
-                        }
-                        .foregroundColor(.primary)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 64)
-                        .background(Color(.systemBackground))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.blue.opacity(0.3), lineWidth: 1.5)
-                        )
-                        .cornerRadius(16)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -667,77 +521,6 @@ struct SessionDetailRow: View {
         .padding(16)
         .background(Color(.systemGray6))
         .cornerRadius(12)
-    }
-}
-
-struct TipsCard: View {
-    let category: String
-    let categoryColor: Color
-    
-    private var tips: [String] {
-        switch category {
-        case "Technical":
-            return [
-                "Think out loud while solving problems",
-                "Ask clarifying questions",
-                "Explain your approach before coding",
-                "Consider edge cases and optimization"
-            ]
-        case "Behavioral":
-            return [
-                "Use the STAR method (Situation, Task, Action, Result)",
-                "Provide specific examples from your experience",
-                "Be honest about challenges and learnings",
-                "Show your problem-solving process"
-            ]
-        default:
-            return [
-                "Be authentic and confident",
-                "Listen carefully to questions",
-                "Take your time to think",
-                "Ask questions if unclear"
-            ]
-        }
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                Image(systemName: "lightbulb.fill")
-                    .font(.title3)
-                    .foregroundColor(categoryColor)
-                
-                Text("Interview Tips")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-            }
-            
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(tips, id: \.self) { tip in
-                    HStack(alignment: .top, spacing: 12) {
-                        Circle()
-                            .fill(categoryColor)
-                            .frame(width: 6, height: 6)
-                            .padding(.top, 6)
-                        
-                        Text(tip)
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                            .multilineTextAlignment(.leading)
-                        
-                        Spacer()
-                    }
-                }
-            }
-        }
-        .padding(20)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(categoryColor.opacity(0.2), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
 }
 
