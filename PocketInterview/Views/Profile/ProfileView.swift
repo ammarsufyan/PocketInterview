@@ -113,6 +113,16 @@ struct ProfileView: View {
                 AboutView()
             }
         }
+        // 🔥 NEW: Monitor auth state and auto-dismiss sheets when user is logged out
+        .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
+            if !isAuthenticated {
+                // Close all sheets when user is signed out
+                showingAccountSettings = false
+                showingHelpSupport = false
+                showingAbout = false
+                showingSignOutAlert = false
+            }
+        }
     }
 }
 

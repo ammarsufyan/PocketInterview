@@ -136,6 +136,17 @@ struct AccountSettingsView: View {
                     .environmentObject(authManager)
             }
         }
+        // 🔥 NEW: Monitor auth state and auto-dismiss when user is logged out
+        .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
+            if !isAuthenticated {
+                dismiss()
+            }
+        }
+        .onChange(of: authManager.currentUser) { _, currentUser in
+            if currentUser == nil {
+                dismiss()
+            }
+        }
     }
 }
 

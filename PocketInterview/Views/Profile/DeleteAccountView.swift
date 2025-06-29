@@ -106,9 +106,6 @@ struct DeleteAccountView: View {
                     Button(action: {
                         Task {
                             await authManager.deleteAccountSimple()
-                            // 🔥 FIXED: Dismiss immediately after deletion starts
-                            // The auth state change will handle the logout automatically
-                            dismiss()
                         }
                     }) {
                         HStack(spacing: 12) {
@@ -173,9 +170,16 @@ struct DeleteAccountView: View {
                 alignment: .top
             )
         }
-        // 🔥 FIXED: Monitor auth state and auto-dismiss when user is logged out
+        // 🔥 ENHANCED: Monitor auth state and auto-dismiss when user is logged out
         .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
             if !isAuthenticated {
+                // Force dismiss all sheets and navigate to auth
+                dismiss()
+            }
+        }
+        // 🔥 NEW: Also monitor currentUser for immediate response
+        .onChange(of: authManager.currentUser) { _, currentUser in
+            if currentUser == nil {
                 dismiss()
             }
         }
