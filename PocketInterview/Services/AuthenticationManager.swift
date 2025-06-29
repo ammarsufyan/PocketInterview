@@ -148,7 +148,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 FIXED: Complete Account Deletion using Admin Client
+    // MARK: - 🔥 FIXED: Complete Account Deletion with Proper State Management
     
     func deleteAccountSimple() async {
         isLoading = true
@@ -174,9 +174,21 @@ class AuthenticationManager: ObservableObject {
             
             print("✅ Account deletion completed successfully")
             
-            // Step 3: Clear local state
-            self.currentUser = nil
-            self.isAuthenticated = false
+            // Step 3: 🔥 CRITICAL: Force immediate state update and sign out
+            await MainActor.run {
+                self.currentUser = nil
+                self.isAuthenticated = false
+                self.isLoading = false
+                self.errorMessage = nil
+            }
+            
+            // Step 4: 🔥 ADDITIONAL: Force sign out to ensure auth state is cleared
+            do {
+                try await supabase.auth.signOut()
+            } catch {
+                print("⚠️ Sign out after deletion failed (expected): \(error)")
+                // This is expected since the user no longer exists
+            }
             
         } catch {
             print("❌ Account deletion error: \(error)")

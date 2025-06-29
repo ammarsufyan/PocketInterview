@@ -106,6 +106,8 @@ struct DeleteAccountView: View {
                     Button(action: {
                         Task {
                             await authManager.deleteAccountSimple()
+                            // 🔥 FIXED: Dismiss immediately after deletion starts
+                            // The auth state change will handle the logout automatically
                             dismiss()
                         }
                     }) {
@@ -183,6 +185,12 @@ struct DeleteAccountView: View {
                 },
                 alignment: .top
             )
+        }
+        // 🔥 FIXED: Monitor auth state and auto-dismiss when user is logged out
+        .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
+            if !isAuthenticated {
+                dismiss()
+            }
         }
     }
 }
