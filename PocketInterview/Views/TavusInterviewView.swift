@@ -126,7 +126,6 @@ struct TavusInterviewView: View {
                     .cornerRadius(16)
                 }
             }
-            .navigationTitle("Interview Summary")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden()
             .toolbar {
@@ -142,7 +141,7 @@ struct TavusInterviewView: View {
                         .foregroundColor(.red)
                         .disabled(isEndingSession || isShowingAlert)
                     } else {
-                        Button("Back to Setup") {
+                        Button("Back") {
                             onBackToSetup()
                         }
                         .foregroundColor(categoryColor)
@@ -635,17 +634,6 @@ struct TavusPreparationView: View {
                         )
                         .cornerRadius(16)
                     }
-                    
-                    // Cancel Button
-                    Button(action: {
-                        onCancel()
-                    }) {
-                        Text("Cancel")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.top, 8)
                 }
                 .padding(.horizontal, 20)
                 
