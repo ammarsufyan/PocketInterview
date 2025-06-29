@@ -71,7 +71,7 @@ struct SplashScreenView: View {
                     Spacer()
                     
                     // Built by Bolt.new Badge - Using Asset Image
-                    BoltBadgeImageView(height: 32, scaleEffect: 0.9)
+                    BoltBadgeImageView(height: 60, scaleEffect: 0.9)
                         .opacity(isBadgeAnimated ? 1.0 : 0.0)
                         .offset(y: isBadgeAnimated ? 0 : 20)
                         .animation(

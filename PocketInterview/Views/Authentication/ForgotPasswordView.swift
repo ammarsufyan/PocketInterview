@@ -65,29 +65,6 @@ struct ForgotPasswordView: View {
                             }
                         }
                         
-                        // Error Message
-                        if let errorMessage = authManager.errorMessage {
-                            Text(errorMessage)
-                                .font(.subheadline)
-                                .foregroundColor(.red)
-                                .multilineTextAlignment(.center)
-                        }
-                        
-                        // Simple Success Message
-                        if let successMessage = authManager.successMessage {
-                            Text(successMessage)
-                                .font(.subheadline)
-                                .foregroundColor(.green)
-                                .multilineTextAlignment(.center)
-                                .padding(16)
-                                .background(Color.green.opacity(0.1))
-                                .cornerRadius(12)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.green.opacity(0.3), lineWidth: 1)
-                                )
-                        }
-                        
                         // Send Reset Link Button
                         Button(action: sendResetLink) {
                             HStack(spacing: 12) {
@@ -124,6 +101,29 @@ struct ForgotPasswordView: View {
                         }
                         .disabled(authManager.isLoading || !isFormValid)
                         .opacity(isFormValid ? 1.0 : 0.6)
+                        
+                        // Error Message
+                        if let errorMessage = authManager.errorMessage {
+                            Text(errorMessage)
+                                .font(.subheadline)
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                        }
+                        
+                        // Simple Success Message
+                        if let successMessage = authManager.successMessage {
+                            Text(successMessage)
+                                .font(.subheadline)
+                                .foregroundColor(.green)
+                                .multilineTextAlignment(.center)
+                                .padding(16)
+                                .background(Color.green.opacity(0.1))
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                                )
+                        }
                         
                         // Instructions (only show when no success message)
                         if authManager.successMessage == nil {
