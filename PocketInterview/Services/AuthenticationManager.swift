@@ -164,7 +164,7 @@ class AuthenticationManager: ObservableObject {
             let usersResponse = try await adminClient.auth.admin.listUsers()
             let users = usersResponse.users
             
-            guard let user = users.first(where: { $0.email == email }) else {
+            guard users.first(where: { $0.email == email }) != nil else {
                 throw AuthError.userNotFound
             }
             
