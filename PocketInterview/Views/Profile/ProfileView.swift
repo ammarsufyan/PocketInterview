@@ -3,7 +3,7 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject private var authManager: AuthenticationManager
     @State private var showingSignOutAlert = false
-    @State private var showingDeleteAccountAlert = false
+    @State private var showingDeleteAccountSheet = false
     
     var body: some View {
         NavigationView {
@@ -114,7 +114,7 @@ struct ProfileView: View {
                         
                         // Delete Account Button
                         Button(action: {
-                            showingDeleteAccountAlert = true
+                            showingDeleteAccountSheet = true
                         }) {
                             HStack(spacing: 12) {
                                 Image(systemName: "trash.circle")
@@ -158,22 +158,9 @@ struct ProfileView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
-            .alert("", isPresented: $showingDeleteAccountAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Delete Account", role: .destructive) {
-                    Task {
-                        await authManager.deleteAccountSimple()
-                    }
-                }
-            } message: {
-                VStack(spacing: 12) {
-                    Text("This action cannot be undone.")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    Text("All your interview history, transcripts, AI scores, and personal data will be permanently deleted.")
-                        .font(.subheadline)
-                }
+            .sheet(isPresented: $showingDeleteAccountSheet) {
+                DeleteAccountView()
+                    .environmentObject(authManager)
             }
         }
     }
