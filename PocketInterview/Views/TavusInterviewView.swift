@@ -430,37 +430,49 @@ struct TavusPreparationView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
-                // Session Details
-                VStack(spacing: 16) {
-                    SessionDetailRow(
-                        icon: "text.quote",
-                        title: "Session Name",
-                        value: sessionName,
-                        color: categoryColor
-                    )
+                // 🔥 NEW: Summary Header
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack {
+                        Text("Summary")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
                     
-                    SessionDetailRow(
-                        icon: "clock.fill",
-                        title: "Duration",
-                        value: "\(duration) minutes",
-                        color: categoryColor
-                    )
-                    
-                    SessionDetailRow(
-                        icon: "person.fill",
-                        title: "Interview Type",
-                        value: category,
-                        color: categoryColor
-                    )
-                    
-                    SessionDetailRow(
-                        icon: "brain.head.profile",
-                        title: "AI Interviewer",
-                        value: interviewerName,
-                        color: categoryColor
-                    )
+                    // Session Details
+                    VStack(spacing: 16) {
+                        SessionDetailRow(
+                            icon: "text.quote",
+                            title: "Session Name",
+                            value: sessionName,
+                            color: categoryColor
+                        )
+                        
+                        SessionDetailRow(
+                            icon: "clock.fill",
+                            title: "Duration",
+                            value: "\(duration) minutes",
+                            color: categoryColor
+                        )
+                        
+                        SessionDetailRow(
+                            icon: "person.fill",
+                            title: "Interview Type",
+                            value: category,
+                            color: categoryColor
+                        )
+                        
+                        SessionDetailRow(
+                            icon: "brain.head.profile",
+                            title: "AI Interviewer",
+                            value: interviewerName,
+                            color: categoryColor
+                        )
+                    }
+                    .padding(.horizontal, 20)
                 }
-                .padding(.horizontal, 20)
                 .padding(.top, 20)
                 
                 // 🔥 SIMPLIFIED: Single Start Interview Button
