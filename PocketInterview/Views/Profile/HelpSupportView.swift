@@ -34,7 +34,7 @@ struct HelpSupportView: View {
                             ContactInfoCard(
                                 icon: "clock.fill",
                                 title: "Support Hours",
-                                value: "Mon-Fri, 9:00 AM - 6:00 PM GMT+7",
+                                value: "Mon-Fri, 9:00 AM - 6:00 PM",
                                 color: .green
                             )
                             
