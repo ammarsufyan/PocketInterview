@@ -40,10 +40,4 @@ class SupabaseConfig {
     static func validateConfiguration() -> Bool {
         return EnvironmentConfig.shared.validateSupabaseConfiguration()
     }
-    
-    // MARK: - Debug Information
-    
-    func printConfiguration() {
-        let envConfig = EnvironmentConfig.shared
-    }
 }
