@@ -69,7 +69,8 @@ class EnvironmentConfig {
             "TAVUS_API_KEY",
             "TAVUS_BASE_URL",
             "SUPABASE_URL",
-            "SUPABASE_ANON_KEY"
+            "SUPABASE_ANON_KEY",
+            "SUPABASE_SERVICE_ROLE_KEY"  // 🔥 ADDED: Service role key for admin operations
         ]
         
         for key in envKeys {
@@ -84,7 +85,8 @@ class EnvironmentConfig {
             "TAVUS_API_KEY",
             "TAVUS_BASE_URL",
             "SUPABASE_URL",
-            "SUPABASE_ANON_KEY"
+            "SUPABASE_ANON_KEY",
+            "SUPABASE_SERVICE_ROLE_KEY"  // 🔥 ADDED: Service role key for admin operations
         ]
         
         for key in envKeys {
@@ -135,6 +137,11 @@ class EnvironmentConfig {
         return getValue(for: "SUPABASE_ANON_KEY")
     }
     
+    // 🔥 ADDED: Service role key for admin operations
+    var supabaseServiceRoleKey: String? {
+        return getValue(for: "SUPABASE_SERVICE_ROLE_KEY")
+    }
+    
     // MARK: - Validation
     
     func validateTavusConfiguration() -> Bool {
@@ -153,6 +160,13 @@ class EnvironmentConfig {
             return false
         }
         
+        return true
+    }
+    
+    // 🔥 ADDED: Validate admin configuration
+    func validateSupabaseAdminConfiguration() -> Bool {
+        guard validateSupabaseConfiguration() else { return false }
+        guard let serviceKey = supabaseServiceRoleKey, !serviceKey.isEmpty else { return false }
         return true
     }
 }

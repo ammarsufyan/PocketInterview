@@ -141,7 +141,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 SIMPLIFIED: Delete Account without Password
+    // MARK: - 🔥 FIXED: Complete Account Deletion
     
     func deleteAccountSimple() async {
         isLoading = true
@@ -155,24 +155,21 @@ class AuthenticationManager: ObservableObject {
             
             let userId = currentUser.id
             
-            print("🗑️ Starting simple account deletion for user: \(userId)")
+            print("🗑️ Starting complete account deletion for user: \(userId)")
             
             // Step 1: Delete user data from custom tables
             print("🗑️ Deleting user data...")
             try await deleteUserData(userId: userId)
             
-            // Step 2: Sign out the user (this effectively "deletes" their session)
-            print("🔄 Signing out user after data deletion...")
-            try await supabase.auth.signOut()
+            // Step 2: Delete the user from Supabase Auth using admin API
+            print("🗑️ Deleting user from Supabase Auth...")
+            try await deleteUserFromAuth(userId: userId)
             
             print("✅ Account deletion completed successfully")
             
             // Step 3: Clear local state
             self.currentUser = nil
             self.isAuthenticated = false
-            
-            // Note: For complete account deletion from Supabase Auth,
-            // the user would need to contact support or use admin API
             
         } catch {
             print("❌ Account deletion error: \(error)")
@@ -193,6 +190,54 @@ class AuthenticationManager: ObservableObject {
             .execute()
         
         print("✅ User data deleted successfully")
+    }
+    
+    private func deleteUserFromAuth(userId: UUID) async throws {
+        print("🗑️ Attempting to delete user from Supabase Auth...")
+        
+        // Use the admin API to delete the user
+        // This requires the service role key
+        let supabaseUrl = EnvironmentConfig.shared.supabaseURL ?? ""
+        let serviceRoleKey = EnvironmentConfig.shared.getValue(for: "SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        
+        guard !supabaseUrl.isEmpty, !serviceRoleKey.isEmpty else {
+            print("⚠️ Missing Supabase configuration for user deletion")
+            // If we can't delete from auth, at least sign out
+            try await supabase.auth.signOut()
+            return
+        }
+        
+        let deleteUrl = "\(supabaseUrl)/auth/v1/admin/users/\(userId.uuidString)"
+        
+        guard let url = URL(string: deleteUrl) else {
+            throw AuthError.deletionFailed
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(serviceRoleKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("2024-01-01", forHTTPHeaderField: "apikey")
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        
+        if let httpResponse = response as? HTTPURLResponse {
+            switch httpResponse.statusCode {
+            case 200, 204:
+                print("✅ User successfully deleted from Supabase Auth")
+            case 404:
+                print("⚠️ User not found in Auth (may already be deleted)")
+                // This is okay, user is already gone
+            case 401, 403:
+                print("⚠️ Insufficient permissions to delete user from Auth")
+                // Sign out the user instead
+                try await supabase.auth.signOut()
+            default:
+                print("⚠️ Unexpected response from Auth API: \(httpResponse.statusCode)")
+                // Sign out the user instead
+                try await supabase.auth.signOut()
+            }
+        }
     }
     
     private func handleDeleteAccountError(_ error: Error) -> String {
