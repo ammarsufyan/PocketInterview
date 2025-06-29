@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ChangePasswordView: View {
+    @EnvironmentObject private var authManager: AuthenticationManager
     @Environment(\.dismiss) private var dismiss
     @State private var currentPassword = ""
     @State private var newPassword = ""
@@ -15,8 +16,6 @@ struct ChangePasswordView: View {
     @State private var isCurrentPasswordValid = true
     @State private var isNewPasswordValid = true
     @State private var isConfirmPasswordValid = true
-    @State private var isLoading = false
-    @State private var errorMessage: String?
     @State private var successMessage: String?
     @FocusState private var focusedField: Field?
     
@@ -119,7 +118,7 @@ struct ChangePasswordView: View {
                     .padding(.horizontal, 32)
                     
                     // Error/Success Messages
-                    if let errorMessage = errorMessage {
+                    if let errorMessage = authManager.errorMessage {
                         Text(errorMessage)
                             .font(.subheadline)
                             .foregroundColor(.red)
@@ -138,7 +137,7 @@ struct ChangePasswordView: View {
                     // Change Password Button
                     Button(action: changePassword) {
                         HStack(spacing: 12) {
-                            if isLoading {
+                            if authManager.isLoading {
                                 ProgressView()
                                     .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                     .scaleEffect(0.8)
@@ -147,7 +146,7 @@ struct ChangePasswordView: View {
                                     .font(.title3)
                             }
                             
-                            Text(isLoading ? "Changing Password..." : "Change Password")
+                            Text(authManager.isLoading ? "Changing Password..." : "Change Password")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                         }
@@ -165,7 +164,7 @@ struct ChangePasswordView: View {
                             y: 4
                         )
                     }
-                    .disabled(!isFormValid || isLoading)
+                    .disabled(!isFormValid || authManager.isLoading)
                     .padding(.horizontal, 32)
                     
                     Spacer(minLength: 20)
@@ -180,7 +179,7 @@ struct ChangePasswordView: View {
                         dismiss()
                     }
                     .foregroundColor(.orange)
-                    .disabled(isLoading)
+                    .disabled(authManager.isLoading)
                 }
             }
             .onAppear {
@@ -213,25 +212,31 @@ struct ChangePasswordView: View {
     }
     
     private func clearMessages() {
-        errorMessage = nil
+        authManager.clearError()
         successMessage = nil
     }
     
     private func changePassword() {
         guard isFormValid else { return }
         
-        isLoading = true
-        clearMessages()
-        
-        // Simulate password change (replace with actual implementation)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            isLoading = false
+        Task {
+            await authManager.changePassword(
+                currentPassword: currentPassword,
+                newPassword: newPassword
+            )
             
-            // Simulate success
-            successMessage = "Password changed successfully!"
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                dismiss()
+            if authManager.errorMessage == nil {
+                successMessage = "Password changed successfully!"
+                
+                // Clear form fields
+                currentPassword = ""
+                newPassword = ""
+                confirmPassword = ""
+                
+                // Dismiss after showing success message
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    dismiss()
+                }
             }
         }
     }
@@ -260,4 +265,5 @@ struct PasswordFieldStyle: TextFieldStyle {
 
 #Preview {
     ChangePasswordView()
+        .environmentObject(AuthenticationManager())
 }

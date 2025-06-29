@@ -140,6 +140,47 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
+    // MARK: - 🔥 NEW: Change Password Method
+    
+    func changePassword(currentPassword: String, newPassword: String) async {
+        isLoading = true
+        errorMessage = nil
+        
+        do {
+            // First, verify the current password by attempting to sign in
+            guard let userEmail = currentUser?.email else {
+                throw AuthError.userNotFound
+            }
+            
+            // Verify current password by attempting to sign in
+            do {
+                _ = try await supabase.auth.signIn(
+                    email: userEmail,
+                    password: currentPassword
+                )
+            } catch {
+                throw AuthError.invalidPassword
+            }
+            
+            // If verification succeeds, update the password
+            let updatedUser = try await supabase.auth.update(
+                user: UserAttributes(
+                    password: newPassword
+                )
+            )
+            
+            // Update the current user
+            self.currentUser = updatedUser
+            
+        } catch let error as AuthError {
+            self.errorMessage = error.localizedDescription
+        } catch {
+            self.errorMessage = handleAuthError(error)
+        }
+        
+        isLoading = false
+    }
+    
     // MARK: - 🔥 FIXED: Complete Account Deletion with Proper State Management
     
     func deleteAccountSimple() async {
@@ -388,7 +429,7 @@ enum AuthError: Error, LocalizedError {
         case .unauthorized:
             return "Unauthorized operation"
         case .invalidPassword:
-            return "invalidPassword"
+            return "Current password is incorrect"
         }
     }
 }
