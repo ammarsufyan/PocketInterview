@@ -76,13 +76,12 @@ class AuthenticationManager: ObservableObject {
                 password: password,
                 data: [
                     "display_name": .string(fullName)
-                ],
-                redirectTo: URL(string: "https://pocketinterview.netlify.app/auth/callback")
+                ]
             )
             // Check if user needs email confirmation
             if response.session == nil {
                 // User created but needs email confirmation
-                self.successMessage = "Please check your email and click the confirmation link to activate your account."
+                self.errorMessage = "Please check your email and confirm your account before signing in."
             } else {
                 // User is automatically signed in
                 self.currentUser = response.user
@@ -128,9 +127,9 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 UPDATED: Email Link Password Reset System
+    // MARK: - 🔥 UPDATED: Supabase Password Reset System
     
-    func resetPasswordWithEmailLink(email: String) async {
+    func resetPassword(email: String) async {
         isLoading = true
         errorMessage = nil
         successMessage = nil
@@ -157,16 +156,6 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 UPDATED: Main Reset Password Method
-    
-    func resetPassword(email: String) async {
-        // Use the new email link system
-        await resetPasswordWithEmailLink(email: email)
-    }
-    
-    // MARK: - 🔥 REMOVED: Temporary Password System
-    // The temporary password methods have been removed in favor of email links
-    
     // MARK: - Change Password Method
     
     func changePassword(currentPassword: String, newPassword: String) async {
@@ -189,7 +178,7 @@ class AuthenticationManager: ObservableObject {
                 throw AuthError.invalidPassword
             }
             
-            // Use the correct API for authenticated user password change
+            // 🔥 FIXED: Use the correct API for authenticated user password change
             let updatedUser = try await supabase.auth.update(
                 user: UserAttributes(
                     password: newPassword
@@ -208,7 +197,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - Account Deletion with Auto Sign Out
+    // MARK: - 🔥 CLEANED: Account Deletion with Auto Sign Out
     
     func deleteAccountSimple() async {
         isLoading = true
@@ -290,7 +279,7 @@ class AuthenticationManager: ObservableObject {
             supabaseKey: serviceRoleKey
         )
         
-        // Use the correct admin API method
+        // 🔥 FIXED: Use the correct admin API method
         try await adminClient.auth.admin.deleteUser(id: userId)
     }
     
@@ -380,9 +369,13 @@ class AuthenticationManager: ObservableObject {
         errorMessage = nil
     }
     
+    // MARK: - 🔥 NEW: Clear Success Message
+    
     func clearSuccess() {
         successMessage = nil
     }
+    
+    // MARK: - 🔥 NEW: Clear All Messages
     
     func clearAllMessages() {
         errorMessage = nil
@@ -449,6 +442,7 @@ class AuthenticationManager: ObservableObject {
         errorMessage = nil
         
         do {
+            // 🔥 FIXED: Use the correct method for updating user metadata
             let updatedUser = try await supabase.auth.update(
                 user: UserAttributes(
                     data: [
