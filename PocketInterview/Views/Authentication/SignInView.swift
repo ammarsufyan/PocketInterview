@@ -38,6 +38,10 @@ struct SignInView: View {
                     }
                     .frame(minHeight: geometry.size.height * 0.35) // REDUCED from 0.4
                     
+                    // ADDED: Extra spacing between title and form
+                    Spacer()
+                        .frame(height: 32)
+                    
                     // Form Section
                     VStack(spacing: 24) {
                         // Email Field
