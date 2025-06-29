@@ -1,3 +1,10 @@
+//
+//  AuthenticationManager.swift
+//  InterviewSim
+//
+//  Created by Ammar Sufyan on 23/06/25.
+//
+
 import Foundation
 import Supabase
 import Combine
@@ -141,7 +148,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 FIXED: Complete Account Deletion
+    // MARK: - 🔥 FIXED: Complete Account Deletion using Admin Client
     
     func deleteAccountSimple() async {
         isLoading = true
@@ -161,9 +168,9 @@ class AuthenticationManager: ObservableObject {
             print("🗑️ Deleting user data...")
             try await deleteUserData(userId: userId)
             
-            // Step 2: Delete the user from Supabase Auth using admin API
+            // Step 2: Delete the user from Supabase Auth using admin client
             print("🗑️ Deleting user from Supabase Auth...")
-            try await deleteUserFromAuth(userId: userId)
+            try await deleteUserFromAuthAdmin(userId: userId)
             
             print("✅ Account deletion completed successfully")
             
@@ -174,6 +181,11 @@ class AuthenticationManager: ObservableObject {
         } catch {
             print("❌ Account deletion error: \(error)")
             self.errorMessage = handleDeleteAccountError(error)
+            
+            // If deletion fails, at least sign out the user
+            if self.isAuthenticated {
+                await signOut()
+            }
         }
         
         isLoading = false
@@ -192,52 +204,38 @@ class AuthenticationManager: ObservableObject {
         print("✅ User data deleted successfully")
     }
     
-    private func deleteUserFromAuth(userId: UUID) async throws {
-        print("🗑️ Attempting to delete user from Supabase Auth...")
+    private func deleteUserFromAuthAdmin(userId: UUID) async throws {
+        print("🗑️ Attempting to delete user from Supabase Auth using admin client...")
         
-        // Use the admin API to delete the user
-        // This requires the service role key
-        let supabaseUrl = EnvironmentConfig.shared.supabaseURL ?? ""
-        let serviceRoleKey = EnvironmentConfig.shared.getValue(for: "SUPABASE_SERVICE_ROLE_KEY") ?? ""
-        
-        guard !supabaseUrl.isEmpty, !serviceRoleKey.isEmpty else {
-            print("⚠️ Missing Supabase configuration for user deletion")
-            // If we can't delete from auth, at least sign out
+        // Get service role key from environment
+        guard let serviceRoleKey = EnvironmentConfig.shared.supabaseServiceRoleKey,
+              !serviceRoleKey.isEmpty else {
+            print("⚠️ Service role key not found, falling back to sign out")
             try await supabase.auth.signOut()
             return
         }
         
-        let deleteUrl = "\(supabaseUrl)/auth/v1/admin/users/\(userId.uuidString)"
+        guard let supabaseUrl = EnvironmentConfig.shared.supabaseURL,
+              !supabaseUrl.isEmpty else {
+            print("⚠️ Supabase URL not found, falling back to sign out")
+            try await supabase.auth.signOut()
+            return
+        }
         
-        guard let url = URL(string: deleteUrl) else {
+        // Create admin client with service role key
+        guard let url = URL(string: supabaseUrl) else {
             throw AuthError.deletionFailed
         }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "DELETE"
-        request.setValue("Bearer \(serviceRoleKey)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("2024-01-01", forHTTPHeaderField: "apikey")
+        let adminClient = SupabaseClient(
+            supabaseURL: url,
+            supabaseKey: serviceRoleKey
+        )
         
-        let (_, response) = try await URLSession.shared.data(for: request)
+        // Use admin client to delete the user
+        try await adminClient.auth.admin.deleteUser(id: userId)
         
-        if let httpResponse = response as? HTTPURLResponse {
-            switch httpResponse.statusCode {
-            case 200, 204:
-                print("✅ User successfully deleted from Supabase Auth")
-            case 404:
-                print("⚠️ User not found in Auth (may already be deleted)")
-                // This is okay, user is already gone
-            case 401, 403:
-                print("⚠️ Insufficient permissions to delete user from Auth")
-                // Sign out the user instead
-                try await supabase.auth.signOut()
-            default:
-                print("⚠️ Unexpected response from Auth API: \(httpResponse.statusCode)")
-                // Sign out the user instead
-                try await supabase.auth.signOut()
-            }
-        }
+        print("✅ User successfully deleted from Supabase Auth using admin client")
     }
     
     private func handleDeleteAccountError(_ error: Error) -> String {
