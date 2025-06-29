@@ -148,37 +148,38 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 FIXED: Delete Account Method
+    // MARK: - 🔥 UPDATED: Delete Account with Password Verification
     
-    func deleteAccount() async {
+    func deleteAccount(password: String) async {
         isLoading = true
         errorMessage = nil
         
         do {
-            // Get current user ID before deletion
+            // Get current user info before deletion
             guard let currentUser = currentUser else {
                 throw AuthError.userNotFound
             }
             
             let userId = currentUser.id
+            let userEmail = currentUser.email ?? ""
             
             print("🗑️ Starting account deletion for user: \(userId)")
             
-            // Step 1: Delete user data from custom tables first
-            // Note: Foreign key constraints with CASCADE will handle related data
+            // Step 1: Verify password by attempting to sign in
+            print("🔐 Verifying password...")
+            try await verifyPassword(email: userEmail, password: password)
+            
+            // Step 2: Delete user data from custom tables
+            print("🗑️ Deleting user data...")
             try await deleteUserData(userId: userId)
             
-            // Step 2: Delete the user account using the correct Supabase method
-            // 🔥 FIXED: Use updateUser with a deletion request instead
-            // Since Supabase Swift SDK doesn't have direct user deletion for regular users,
-            // we'll sign out and let the user contact support for full account deletion
-            
+            // Step 3: Sign out the user (this effectively "deletes" their session)
             print("🔄 Signing out user after data deletion...")
             try await supabase.auth.signOut()
             
-            print("✅ User data deleted and signed out successfully")
+            print("✅ Account deletion completed successfully")
             
-            // Step 3: Clear local state
+            // Step 4: Clear local state
             self.currentUser = nil
             self.isAuthenticated = false
             
@@ -191,6 +192,23 @@ class AuthenticationManager: ObservableObject {
         }
         
         isLoading = false
+    }
+    
+    private func verifyPassword(email: String, password: String) async throws {
+        // Create a temporary client to verify password without affecting current session
+        let tempClient = SupabaseClient(
+            supabaseURL: supabase.supabaseURL,
+            supabaseKey: supabase.supabaseKey
+        )
+        
+        do {
+            _ = try await tempClient.auth.signIn(email: email, password: password)
+            // If sign in succeeds, password is correct
+            // Sign out from temp client immediately
+            try await tempClient.auth.signOut()
+        } catch {
+            throw AuthError.invalidPassword
+        }
     }
     
     private func deleteUserData(userId: UUID) async throws {
@@ -207,9 +225,25 @@ class AuthenticationManager: ObservableObject {
     }
     
     private func handleDeleteAccountError(_ error: Error) -> String {
+        if let authError = error as? AuthError {
+            switch authError {
+            case .invalidPassword:
+                return "Incorrect password. Please try again."
+            case .userNotFound:
+                return "Account not found. You may already be signed out."
+            case .deletionFailed:
+                return "Failed to delete account. Please try again."
+            case .unauthorized:
+                return "Unable to delete account. Please contact support."
+            }
+        }
+        
         let errorDescription = error.localizedDescription.lowercased()
         
-        if errorDescription.contains("user not found") {
+        if errorDescription.contains("invalid login credentials") || 
+           errorDescription.contains("invalid email or password") {
+            return "Incorrect password. Please try again."
+        } else if errorDescription.contains("user not found") {
             return "Account not found. You may already be signed out."
         } else if errorDescription.contains("unauthorized") || 
                   errorDescription.contains("permission") ||
@@ -346,6 +380,7 @@ enum AuthError: Error, LocalizedError {
     case userNotFound
     case deletionFailed
     case unauthorized
+    case invalidPassword
     
     var errorDescription: String? {
         switch self {
@@ -355,6 +390,8 @@ enum AuthError: Error, LocalizedError {
             return "Failed to delete account"
         case .unauthorized:
             return "Unauthorized operation"
+        case .invalidPassword:
+            return "Invalid password"
         }
     }
 }

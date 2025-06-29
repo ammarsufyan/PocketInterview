@@ -8,13 +8,14 @@
 import SwiftUI
 
 struct AuthenticationView: View {
-    @StateObject private var authManager = AuthenticationManager()
+    @EnvironmentObject private var authManager: AuthenticationManager
     @State private var showingSignUp = false
     
     var body: some View {
         Group {
             if authManager.isAuthenticated {
                 ContentView()
+                    .environmentObject(authManager)
                     .transition(.opacity.combined(with: .scale))
             } else {
                 if showingSignUp {
@@ -39,4 +40,5 @@ struct AuthenticationView: View {
 
 #Preview {
     AuthenticationView()
+        .environmentObject(AuthenticationManager())
 }

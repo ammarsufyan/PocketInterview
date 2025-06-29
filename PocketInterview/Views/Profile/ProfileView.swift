@@ -5,7 +5,7 @@ struct ProfileView: View {
     @State private var showingSignOutAlert = false
     @State private var showingDeleteAccountAlert = false
     @State private var showingDeleteConfirmation = false
-    @State private var deleteConfirmationText = ""
+    @State private var passwordForDeletion = ""
     
     var body: some View {
         NavigationView {
@@ -171,16 +171,17 @@ struct ProfileView: View {
             .sheet(isPresented: $showingDeleteConfirmation) {
                 DeleteAccountConfirmationView(
                     userEmail: authManager.userEmail ?? "",
-                    confirmationText: $deleteConfirmationText,
+                    password: $passwordForDeletion,
                     onConfirm: {
                         Task {
-                            await authManager.deleteAccount()
+                            await authManager.deleteAccount(password: passwordForDeletion)
                         }
                         showingDeleteConfirmation = false
+                        passwordForDeletion = ""
                     },
                     onCancel: {
                         showingDeleteConfirmation = false
-                        deleteConfirmationText = ""
+                        passwordForDeletion = ""
                     }
                 )
             }
@@ -190,14 +191,15 @@ struct ProfileView: View {
 
 struct DeleteAccountConfirmationView: View {
     let userEmail: String
-    @Binding var confirmationText: String
+    @Binding var password: String
     let onConfirm: () -> Void
     let onCancel: () -> Void
     
     @EnvironmentObject private var authManager: AuthenticationManager
+    @FocusState private var isPasswordFocused: Bool
     
-    private var isConfirmationValid: Bool {
-        confirmationText.lowercased() == "delete my account"
+    private var isPasswordValid: Bool {
+        !password.isEmpty && password.count >= 6
     }
     
     var body: some View {
@@ -269,14 +271,14 @@ struct DeleteAccountConfirmationView: View {
                 }
                 .padding(.horizontal, 20)
                 
-                // Confirmation Input
+                // 🔥 UPDATED: Password Confirmation Input
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Type \"delete my account\" to confirm:")
+                    Text("Enter your password to confirm:")
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
                     
-                    TextField("delete my account", text: $confirmationText)
+                    SecureField("Password", text: $password)
                         .font(.subheadline)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
@@ -285,12 +287,25 @@ struct DeleteAccountConfirmationView: View {
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(
-                                    isConfirmationValid ? Color.red : Color.clear,
+                                    isPasswordValid ? Color.red : Color.clear,
                                     lineWidth: 2
                                 )
                         )
+                        .focused($isPasswordFocused)
+                        .textContentType(.password)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
+                        .onSubmit {
+                            if isPasswordValid {
+                                onConfirm()
+                            }
+                        }
+                    
+                    if !password.isEmpty && !isPasswordValid {
+                        Text("Password must be at least 6 characters")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
                 }
                 .padding(.horizontal, 20)
                 
@@ -315,19 +330,19 @@ struct DeleteAccountConfirmationView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
                         .background(
-                            isConfirmationValid && !authManager.isLoading ? 
+                            isPasswordValid && !authManager.isLoading ? 
                                 Color.red : 
                                 Color.gray
                         )
                         .cornerRadius(12)
                         .shadow(
-                            color: isConfirmationValid ? Color.red.opacity(0.3) : Color.clear,
+                            color: isPasswordValid ? Color.red.opacity(0.3) : Color.clear,
                             radius: 8,
                             x: 0,
                             y: 4
                         )
                     }
-                    .disabled(!isConfirmationValid || authManager.isLoading)
+                    .disabled(!isPasswordValid || authManager.isLoading)
                     
                     Button(action: onCancel) {
                         Text("Cancel")
@@ -359,6 +374,12 @@ struct DeleteAccountConfirmationView: View {
                     }
                     .foregroundColor(.blue)
                     .disabled(authManager.isLoading)
+                }
+            }
+            .onAppear {
+                // Auto-focus password field when view appears
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    isPasswordFocused = true
                 }
             }
         }
