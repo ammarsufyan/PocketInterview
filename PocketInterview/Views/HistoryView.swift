@@ -408,8 +408,8 @@ struct SessionDetailView: View {
                 }
                 .padding(.top, 20)
                 
-                // 🔥 UPDATED: Combined Session Details Card
-                CombinedSessionDetailsCard(
+                // 🔥 UPDATED: Session Details Card matching AI Score Breakdown style
+                SessionDetailsCard(
                     session: session,
                     categoryColor: categoryColor
                 )
@@ -514,86 +514,107 @@ struct SessionDetailView: View {
     }
 }
 
-// 🔥 NEW: Combined Session Details Card
-struct CombinedSessionDetailsCard: View {
+// 🔥 NEW: Session Details Card matching AI Score Breakdown style
+struct SessionDetailsCard: View {
     let session: InterviewSession
     let categoryColor: Color
     
     var body: some View {
-        VStack(spacing: 16) {
-            // Duration
-            HStack(spacing: 16) {
-                Image(systemName: "clock.fill")
+        VStack(alignment: .leading, spacing: 16) {
+            // Header with icon and title
+            HStack(spacing: 12) {
+                Image(systemName: "info.circle.fill")
                     .font(.title3)
-                    .foregroundColor(.blue)
-                    .frame(width: 24)
+                    .foregroundColor(categoryColor)
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Duration")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fontWeight(.medium)
-                    
-                    Text(session.durationText)
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-                        .fontWeight(.semibold)
-                }
+                Text("Session Details")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
                 
                 Spacer()
             }
             
-            Divider()
-            
-            // Questions Answered
-            HStack(spacing: 16) {
-                Image(systemName: "questionmark.circle.fill")
-                    .font(.title3)
-                    .foregroundColor(.green)
-                    .frame(width: 24)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Questions Answered")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fontWeight(.medium)
+            // Session details content
+            VStack(spacing: 16) {
+                // Duration
+                HStack(spacing: 16) {
+                    Image(systemName: "clock.fill")
+                        .font(.title3)
+                        .foregroundColor(.blue)
+                        .frame(width: 24)
                     
-                    Text("\(session.questionsAnswered)")
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-                        .fontWeight(.semibold)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Duration")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fontWeight(.medium)
+                        
+                        Text(session.durationText)
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                            .fontWeight(.semibold)
+                    }
+                    
+                    Spacer()
                 }
                 
-                Spacer()
-            }
-            
-            Divider()
-            
-            // Date & Time
-            HStack(spacing: 16) {
-                Image(systemName: "calendar")
-                    .font(.title3)
-                    .foregroundColor(.purple)
-                    .frame(width: 24)
+                Divider()
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Date & Time")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fontWeight(.medium)
+                // Questions Answered
+                HStack(spacing: 16) {
+                    Image(systemName: "questionmark.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(.green)
+                        .frame(width: 24)
                     
-                    Text("\(session.actualFormattedDate) at \(session.formattedTime)")
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-                        .fontWeight(.semibold)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Questions Answered")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fontWeight(.medium)
+                        
+                        Text("\(session.questionsAnswered)")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                            .fontWeight(.semibold)
+                    }
+                    
+                    Spacer()
                 }
                 
-                Spacer()
+                Divider()
+                
+                // Date & Time
+                HStack(spacing: 16) {
+                    Image(systemName: "calendar")
+                        .font(.title3)
+                        .foregroundColor(.purple)
+                        .frame(width: 24)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Date & Time")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fontWeight(.medium)
+                        
+                        Text("\(session.actualFormattedDate) at \(session.formattedTime)")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                            .fontWeight(.semibold)
+                    }
+                    
+                    Spacer()
+                }
             }
         }
         .padding(20)
         .background(Color(.systemBackground))
         .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(categoryColor.opacity(0.2), lineWidth: 1)
+        )
         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
 }
