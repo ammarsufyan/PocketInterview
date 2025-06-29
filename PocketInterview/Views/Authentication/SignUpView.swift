@@ -32,16 +32,11 @@ struct SignUpView: View {
                         InterviewSimLogo()
                             .scaleEffect(0.7)
                         
-                        // Welcome Text
+                        // App Name Only - REMOVED subtitle
                         VStack(spacing: 8) {
                             Text("Create Account")
                                 .font(.system(size: 28, weight: .bold, design: .rounded))
                                 .foregroundColor(.primary)
-                            
-                            Text("Join InterviewSim to start practicing")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
                         }
                     }
                     .frame(minHeight: geometry.size.height * 0.25)
