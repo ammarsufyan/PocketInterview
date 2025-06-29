@@ -33,8 +33,8 @@ struct SplashScreenView: View {
                 
                 // Logo and App Name Section
                 VStack(spacing: 32) {
-                    // Logo
-                    InterviewSimLogo()
+                    // 🔥 UPDATED: Use AppIcon from Assets
+                    AppIconLogo()
                         .scaleEffect(isLogoAnimated ? 1.0 : 0.3)
                         .opacity(isLogoAnimated ? 1.0 : 0.0)
                         .animation(
@@ -114,6 +114,38 @@ struct SplashScreenView: View {
     }
 }
 
+// 🔥 NEW: AppIcon Logo Component using Asset
+struct AppIconLogo: View {
+    var body: some View {
+        ZStack {
+            // Background Circle with Shadow
+            Circle()
+                .fill(Color.white.opacity(0.1))
+                .frame(width: 140, height: 140)
+                .shadow(
+                    color: Color.blue.opacity(0.3),
+                    radius: 20,
+                    x: 0,
+                    y: 10
+                )
+            
+            // App Icon from Assets
+            Image("PocketInterviewFull")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 120, height: 120)
+                .clipShape(RoundedRectangle(cornerRadius: 26.4)) // iOS app icon corner radius
+                .shadow(
+                    color: Color.black.opacity(0.2),
+                    radius: 8,
+                    x: 0,
+                    y: 4
+                )
+        }
+    }
+}
+
+// 🔥 DEPRECATED: Keep for backward compatibility but not used
 struct InterviewSimLogo: View {
     var body: some View {
         ZStack {

@@ -25,8 +25,8 @@ struct SignInView: View {
                     VStack(spacing: 24) {
                         Spacer(minLength: 40) // REDUCED from 60
                         
-                        // Logo
-                        InterviewSimLogo()
+                        // 🔥 UPDATED: Use AppIcon Logo
+                        AppIconLogo()
                             .scaleEffect(0.8)
                         
                         // Welcome Text
@@ -232,6 +232,31 @@ struct SignInView: View {
     private func signIn() {
         Task {
             await authManager.signIn(email: email, password: password)
+        }
+    }
+}
+
+// 🔥 NEW: Shared AppIcon Logo Component
+struct AppIconLogo: View {
+    var body: some View {
+        ZStack {
+            // Background Circle with Shadow
+            Circle()
+                .fill(Color.clear)
+                .frame(width: 140, height: 140)
+            
+            // App Icon from Assets
+            Image("PocketInterviewFull")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 120, height: 120)
+                .clipShape(RoundedRectangle(cornerRadius: 26.4)) // iOS app icon corner radius
+                .shadow(
+                    color: Color.black.opacity(0.1),
+                    radius: 8,
+                    x: 0,
+                    y: 4
+                )
         }
     }
 }

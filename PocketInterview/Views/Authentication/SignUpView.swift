@@ -21,8 +21,8 @@ struct SignUpView: View {
                     VStack(spacing: 24) {
                         Spacer(minLength: 40)
                         
-                        // Logo
-                        InterviewSimLogo()
+                        // 🔥 UPDATED: Use AppIcon Logo
+                        AppIconLogo()
                             .scaleEffect(0.7)
                         
                         // App Name Only - REMOVED subtitle
