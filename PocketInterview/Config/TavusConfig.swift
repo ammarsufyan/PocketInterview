@@ -64,6 +64,46 @@ struct TavusConfig {
         }
     }
     
+    // MARK: - Custom Greeting Configuration
+    
+    /// Get personalized greeting based on category and session details
+    static func getCustomGreeting(
+        for category: String,
+        sessionName: String,
+        duration: Int,
+        candidateName: String? = nil
+    ) -> String {
+        let interviewerName = getInterviewerName(for: category)
+        let greeting = candidateName != nil ? "Hi \(candidateName!)!" : "Hello there!"
+        
+        switch category {
+        case "Technical":
+            return "\(greeting) I'm \(interviewerName), and I'll be your technical interviewer today. We have \(duration) minutes for our '\(sessionName)' session. I'm excited to explore your technical skills and problem-solving approach. Are you ready to get started?"
+            
+        case "Behavioral":
+            return "\(greeting) Welcome! I'm \(interviewerName), your behavioral interviewer. Today we'll spend \(duration) minutes discussing your experiences in our '\(sessionName)' session. I'm looking forward to learning about your leadership style and how you handle different workplace situations. Shall we begin?"
+            
+        default:
+            return "\(greeting) I'm \(interviewerName), and I'll be conducting your interview today. We have \(duration) minutes for our '\(sessionName)' session. I'm here to help you showcase your best self. Ready to start?"
+        }
+    }
+    
+    /// Get fallback greeting if session details are not available
+    static func getDefaultGreeting(for category: String) -> String {
+        let interviewerName = getInterviewerName(for: category)
+        
+        switch category {
+        case "Technical":
+            return "Hello! I'm \(interviewerName), your technical interviewer. I'm excited to explore your technical skills and problem-solving abilities today. Are you ready to begin?"
+            
+        case "Behavioral":
+            return "Hi there! I'm \(interviewerName), and I'll be your behavioral interviewer today. I'm looking forward to learning about your experiences and how you approach different workplace situations. Shall we get started?"
+            
+        default:
+            return "Hello! I'm \(interviewerName), and I'll be conducting your interview today. I'm here to help you showcase your abilities. Ready to begin?"
+        }
+    }
+    
     // MARK: - Conversation Settings
     
     /// Default conversation properties

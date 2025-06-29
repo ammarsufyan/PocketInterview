@@ -173,11 +173,19 @@ class TavusService: ObservableObject {
             cvContext: sanitizeText(data.cvContext)
         )
         
-        // Create payload without replica_id (persona_id already defines the replica)
+        // 🔥 NEW: Generate custom greeting based on session details
+        let customGreeting = TavusConfig.getCustomGreeting(
+            for: data.category,
+            sessionName: data.sessionName,
+            duration: data.duration
+        )
+        
+        // Create payload with custom greeting
         let payload = TavusCreateConversationPayload(
             personaId: TavusConfig.getPersonaId(for: data.category),
             conversationName: data.sessionName,
             conversationalContext: conversationalContext,
+            customGreeting: customGreeting,
             callbackUrl: generateWebhookUrl(),
             properties: TavusConversationProperties(
                 maxCallDuration: data.duration * 60,
@@ -371,6 +379,7 @@ struct TavusCreateConversationPayload: Codable {
     let personaId: String
     let conversationName: String
     let conversationalContext: String?
+    let customGreeting: String
     let callbackUrl: String
     let properties: TavusConversationProperties
     
@@ -378,6 +387,7 @@ struct TavusCreateConversationPayload: Codable {
         case personaId = "persona_id"
         case conversationName = "conversation_name"
         case conversationalContext = "conversational_context"
+        case customGreeting = "custom_greeting"
         case callbackUrl = "callback_url"
         case properties
     }
