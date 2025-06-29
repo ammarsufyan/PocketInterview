@@ -13,7 +13,6 @@ struct ForgotPasswordView: View {
     
     @State private var email = ""
     @State private var isEmailValid = true
-    @State private var showingSuccess = false
     
     var body: some View {
         NavigationView {
