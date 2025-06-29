@@ -159,8 +159,8 @@ class AuthenticationManager: ObservableObject {
                 supabaseKey: serviceRoleKey
             )
             
-            // 🔥 FIXED: Use correct Supabase Admin API
-            // First, try to find user by email using a different approach
+            // 🔥 FIXED: Use the correct API structure
+            // First, get the user by email
             let usersResponse = try await adminClient.auth.admin.listUsers()
             let users = usersResponse.users
             
@@ -168,7 +168,7 @@ class AuthenticationManager: ObservableObject {
                 throw AuthError.userNotFound
             }
             
-            // 🔥 FIXED: Use the correct admin API method
+            // 🔥 FIXED: Use the correct admin API method with proper structure
             _ = try await adminClient.auth.admin.updateUser(
                 id: user.id,
                 attributes: UserAttributes(
@@ -256,7 +256,7 @@ class AuthenticationManager: ObservableObject {
                 throw AuthError.invalidPassword
             }
             
-            // If verification succeeds, update the password
+            // 🔥 FIXED: Use the correct API structure
             let updatedUser = try await supabase.auth.update(
                 user: UserAttributes(
                     password: newPassword
@@ -521,7 +521,7 @@ class AuthenticationManager: ObservableObject {
         errorMessage = nil
         
         do {
-            // Use the correct method for updating user metadata in Supabase Swift SDK
+            // 🔥 FIXED: Use the correct method for updating user metadata
             let updatedUser = try await supabase.auth.update(
                 user: UserAttributes(
                     data: [
