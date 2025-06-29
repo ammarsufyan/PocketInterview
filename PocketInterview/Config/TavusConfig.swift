@@ -23,10 +23,10 @@ struct TavusConfig {
     // MARK: - Persona Configuration
     
     /// Technical Interviewer - Steve
-    static let technicalPersonaId = "pa08278a4fba"
+    static let technicalPersonaId = "p28aa4c7a505"
     
     /// Behavioral Interviewer - Lucy
-    static let behavioralPersonaId = "p29e291ef719"
+    static let behavioralPersonaId = "pd8e1d0e7a85"
     
     /// Get persona ID based on interview category
     static func getPersonaId(for category: String) -> String {
