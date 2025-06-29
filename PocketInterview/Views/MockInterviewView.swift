@@ -608,9 +608,7 @@ struct SessionSetupView: View {
                                 }
                             }
                             
-                            Text("This name will appear in your interview history")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            // REMOVED: "This name will appear in your interview history"
                         }
                         
                         // Duration Selection
@@ -636,9 +634,7 @@ struct SessionSetupView: View {
                                 }
                             }
                             
-                            Text("How long do you want to practice with \(interviewerName)?")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            // REMOVED: "How long do you want to practice with \(interviewerName)?"
                         }
                     }
                     .padding(.horizontal, 20)
@@ -651,7 +647,8 @@ struct SessionSetupView: View {
                             Image(systemName: "person.wave.2.fill")
                                 .font(.title2)
                             
-                            Text("Start Interview with \(interviewerName)")
+                            // CHANGED: Button text from "Start Interview with \(interviewerName)" to "Start Interview"
+                            Text("Start Interview")
                                 .font(.headline)
                                 .fontWeight(.semibold)
                         }
@@ -698,13 +695,8 @@ struct SessionSetupView: View {
                                 .foregroundColor(.red)
                                 .multilineTextAlignment(.center)
                         }
-                    } else {
-                        Text("Ready to start your personalized interview with \(interviewerName)!")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                            .multilineTextAlignment(.center)
-                            .fontWeight(.medium)
                     }
+                    // REMOVED: Green text "Ready to start your personalized interview with \(interviewerName)!"
                     
                     Spacer(minLength: 20)
                 }
