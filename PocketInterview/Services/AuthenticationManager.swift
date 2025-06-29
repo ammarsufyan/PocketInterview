@@ -148,7 +148,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 FIXED: Delete Account with Password Verification
+    // MARK: - 🔥 FIXED: Delete Account with Simplified Password Verification
     
     func deleteAccount(password: String) async {
         isLoading = true
@@ -165,9 +165,9 @@ class AuthenticationManager: ObservableObject {
             
             print("🗑️ Starting account deletion for user: \(userId)")
             
-            // Step 1: Verify password by attempting to sign in
+            // 🔥 FIXED: Simplified password verification using reauthentication
             print("🔐 Verifying password...")
-            try await verifyPassword(email: userEmail, password: password)
+            try await reauthenticateUser(password: password)
             
             // Step 2: Delete user data from custom tables
             print("🗑️ Deleting user data...")
@@ -194,27 +194,22 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    private func verifyPassword(email: String, password: String) async throws {
-        // 🔥 FIXED: Create a temporary client using environment config
-        let envConfig = EnvironmentConfig.shared
-        
-        guard let supabaseURL = envConfig.supabaseURL,
-              let supabaseKey = envConfig.supabaseAnonKey,
-              let url = URL(string: supabaseURL) else {
-            throw AuthError.unauthorized
+    // 🔥 FIXED: Use reauthentication instead of separate sign-in
+    private func reauthenticateUser(password: String) async throws {
+        guard let currentUser = currentUser,
+              let email = currentUser.email else {
+            throw AuthError.userNotFound
         }
         
-        let tempClient = SupabaseClient(
-            supabaseURL: url,
-            supabaseKey: supabaseKey
-        )
-        
         do {
-            _ = try await tempClient.auth.signIn(email: email, password: password)
-            // If sign in succeeds, password is correct
-            // Sign out from temp client immediately
-            try await tempClient.auth.signOut()
+            // Use the current session to reauthenticate
+            _ = try await supabase.auth.signIn(
+                email: email,
+                password: password
+            )
+            print("✅ Password verification successful")
         } catch {
+            print("❌ Password verification failed: \(error)")
             throw AuthError.invalidPassword
         }
     }
@@ -249,7 +244,8 @@ class AuthenticationManager: ObservableObject {
         let errorDescription = error.localizedDescription.lowercased()
         
         if errorDescription.contains("invalid login credentials") || 
-           errorDescription.contains("invalid email or password") {
+           errorDescription.contains("invalid email or password") ||
+           errorDescription.contains("invalid_credentials") {
             return "Incorrect password. Please try again."
         } else if errorDescription.contains("user not found") {
             return "Account not found. You may already be signed out."
@@ -399,7 +395,7 @@ enum AuthError: Error, LocalizedError {
         case .unauthorized:
             return "Unauthorized operation"
         case .invalidPassword:
-            return "Invalid password"
+            return "invalidPassword"
         }
     }
 }
