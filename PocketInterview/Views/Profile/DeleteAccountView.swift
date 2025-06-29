@@ -148,18 +148,6 @@ struct DeleteAccountView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 20)
                     }
-                    
-                    // Cancel Button
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Text("Cancel")
-                            .font(.headline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.blue)
-                    }
-                    .disabled(authManager.isLoading)
-                    
                     Spacer(minLength: 20)
                 }
                 .padding(.vertical, 20)
@@ -170,7 +158,6 @@ struct DeleteAccountView: View {
                 VStack {
                     HStack {
                         Spacer()
-                        
                         Button("Cancel") {
                             dismiss()
                         }
@@ -179,7 +166,7 @@ struct DeleteAccountView: View {
                         .disabled(authManager.isLoading)
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 10)
+                    .padding(.top, 20)
                     
                     Spacer()
                 },

@@ -78,7 +78,7 @@ struct AccountSettingsView: View {
                                         .fontWeight(.semibold)
                                         .foregroundColor(.primary)
                                     
-                                    Text("Permanently delete your account and all data")
+                                    Text("Permanently delete your account")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                         .multilineTextAlignment(.leading)
