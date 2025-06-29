@@ -81,7 +81,8 @@ class AuthenticationManager: ObservableObject {
             // Check if user needs email confirmation
             if response.session == nil {
                 // User created but needs email confirmation
-                self.errorMessage = "Please check your email and confirm your account before signing in."
+                // 🔥 UPDATED: Set success message for sign in page
+                self.successMessage = "Please check your email and confirm your account before signing in."
             } else {
                 // User is automatically signed in
                 self.currentUser = response.user

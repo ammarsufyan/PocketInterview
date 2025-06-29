@@ -141,15 +141,6 @@ struct SignUpView: View {
                                 .padding(.horizontal)
                         }
                         
-                        // 🔥 NEW: Success Message for Email Confirmation
-                        if let successMessage = authManager.successMessage {
-                            Text(successMessage)
-                                .font(.subheadline)
-                                .foregroundColor(.green)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
-                        }
-                        
                         // Sign Up Button
                         Button(action: signUp) {
                             HStack(spacing: 12) {
@@ -219,6 +210,15 @@ struct SignUpView: View {
                 endPoint: .bottom
             )
         )
+        // 🔥 UPDATED: Navigate to sign in when account creation needs confirmation
+        .onChange(of: authManager.successMessage) { _, successMessage in
+            if successMessage != nil {
+                // Navigate to sign in page to show confirmation message
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showingSignUp = false
+                }
+            }
+        }
     }
     
     // MARK: - Validation

@@ -109,13 +109,20 @@ struct SignInView: View {
                                 .padding(.horizontal)
                         }
                         
-                        // Success Message (for email confirmations, etc.)
+                        // 🔥 NEW: Success Message for Email Confirmation
                         if let successMessage = authManager.successMessage {
                             Text(successMessage)
                                 .font(.subheadline)
-                                .foregroundColor(.green)
+                                .foregroundColor(.orange)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
+                                .padding(.vertical, 12)
+                                .background(Color.orange.opacity(0.1))
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                                )
                         }
                         
                         // Sign In Button
@@ -191,7 +198,15 @@ struct SignInView: View {
             ForgotPasswordView(authManager: authManager)
         }
         .onAppear {
-            authManager.clearSuccess()
+            // Keep success message when returning to sign in
+        }
+        // 🔥 NEW: Auto-hide success message after 5 seconds
+        .onChange(of: authManager.successMessage) { _, successMessage in
+            if successMessage != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                    authManager.clearSuccess()
+                }
+            }
         }
     }
     
