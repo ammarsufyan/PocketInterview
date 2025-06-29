@@ -127,7 +127,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 FIXED: Temporary Password Reset System
+    // MARK: - 🔥 FIXED: Simplified Temporary Password Reset System
     
     func resetPasswordWithTempPassword(email: String) async {
         isLoading = true
@@ -159,18 +159,18 @@ class AuthenticationManager: ObservableObject {
                 supabaseKey: serviceRoleKey
             )
             
-            // 🔥 FIXED: Use the correct API structure
-            // First, get the user by email
+            // 🔥 FIXED: First check if user exists by trying to get user by email
             let usersResponse = try await adminClient.auth.admin.listUsers()
             let users = usersResponse.users
             
-            guard users.first(where: { $0.email == email }) != nil else {
+            guard let user = users.first(where: { $0.email == email }) else {
                 throw AuthError.userNotFound
             }
             
-            // 🔥 FIXED: Use the same API structure as regular auth update
-            _ = try await adminClient.auth.update(
-                user: UserAttributes(
+            // 🔥 FIXED: Use the correct admin API method to update user password
+            _ = try await adminClient.auth.admin.updateUser(
+                id: user.id,
+                attributes: UserAttributes(
                     password: tempPassword
                 )
             )
@@ -420,7 +420,7 @@ class AuthenticationManager: ObservableObject {
         return error.localizedDescription
     }
     
-    // MARK: - 🔥 NEW: Temporary Password Error Handling
+    // MARK: - 🔥 ENHANCED: Temporary Password Error Handling
     
     private func handleTempPasswordError(_ error: Error) -> String {
         let errorDescription = error.localizedDescription.lowercased()
@@ -428,13 +428,16 @@ class AuthenticationManager: ObservableObject {
         if errorDescription.contains("user not found") {
             return "No account found with this email address"
         } else if errorDescription.contains("unauthorized") || 
-                  errorDescription.contains("permission") {
+                  errorDescription.contains("permission") ||
+                  errorDescription.contains("forbidden") {
             return "Unable to reset password. Please contact support."
         } else if errorDescription.contains("network") || 
                   errorDescription.contains("connection") {
             return "Network error. Please check your connection and try again."
         } else if errorDescription.contains("rate limit") {
             return "Too many requests. Please try again later."
+        } else if errorDescription.contains("invalid") {
+            return "Invalid request. Please check the email address and try again."
         }
         
         return "Failed to generate temporary password. Please try again or contact support."
