@@ -116,7 +116,7 @@ struct MockInterviewView: View {
                 }
                 .padding(.vertical, 20)
             }
-            .navigationTitle("Mock Interview")
+            .navigationTitle("Interview")
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showingCVPicker) {
                 CVPickerView(
@@ -350,36 +350,36 @@ struct CVUploadCard: View {
                 }
             }
             
-            if isUploaded && cvExtractor.cvAnalysis != nil {
-                VStack(spacing: 12) {
-                    Divider()
-                    
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Analysis Complete")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.green)
-                            
-                            if let analysis = cvExtractor.cvAnalysis {
-                                Text(analysis.summary)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(2)
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        Button(action: onViewResults) {
-                            Text("View Details")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(category == "Technical" ? .blue : .purple)
-                        }
-                    }
-                }
-            }
+//            if isUploaded && cvExtractor.cvAnalysis != nil {
+//                VStack(spacing: 12) {
+//                    Divider()
+//                    
+//                    HStack {
+//                        VStack(alignment: .leading, spacing: 4) {
+//                            Text("Analysis Complete")
+//                                .font(.caption)
+//                                .fontWeight(.semibold)
+//                                .foregroundColor(.green)
+//                            
+//                            if let analysis = cvExtractor.cvAnalysis {
+//                                Text(analysis.summary)
+//                                    .font(.caption2)
+//                                    .foregroundColor(.secondary)
+//                                    .lineLimit(2)
+//                            }
+//                        }
+//                        
+//                        Spacer()
+//                        
+//                        Button(action: onViewResults) {
+//                            Text("View Details")
+//                                .font(.caption)
+//                                .fontWeight(.semibold)
+//                                .foregroundColor(category == "Technical" ? .blue : .purple)
+//                        }
+//                    }
+//                }
+//            }
             
             if cvExtractor.isExtracting {
                 VStack(spacing: 8) {
@@ -500,7 +500,7 @@ struct SessionSetupView: View {
     private var placeholderText: String {
         switch sessionData.category {
         case "Technical":
-            return "e.g., iOS Development Practice, Data Structures Deep Dive"
+            return "e.g., iOS Development Practice, Android Development Practice"
         case "Behavioral":
             return "e.g., Leadership Experience, Communication Skills"
         default:
@@ -666,21 +666,6 @@ struct SessionSetupView: View {
                     .disabled(!isSessionNameValid)
                     .animation(.easeInOut(duration: 0.2), value: isSessionNameValid)
                     .padding(.horizontal, 20)
-                    
-                    if !isSessionNameValid {
-                        if localSessionName.isEmpty {
-                            Text("Please enter a session name to continue")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .multilineTextAlignment(.center)
-                        } else {
-                            Text("Session name must be at least 3 characters")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .multilineTextAlignment(.center)
-                        }
-                    }
-                    // REMOVED: Green text "Ready to start your personalized interview with \(interviewerName)!"
                     
                     Spacer(minLength: 20)
                 }

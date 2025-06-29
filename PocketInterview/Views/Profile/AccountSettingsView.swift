@@ -54,60 +54,6 @@ struct AccountSettingsView: View {
                         }
                     }
                     
-                    // Privacy & Security Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Privacy & Security")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                        
-                        VStack(spacing: 12) {
-                            SettingsToggleRow(
-                                icon: "eye.circle",
-                                title: "Data Analytics",
-                                subtitle: "Help improve the app with usage analytics",
-                                color: .purple,
-                                isOn: .constant(true)
-                            )
-                            
-                            SettingsToggleRow(
-                                icon: "shield.circle",
-                                title: "Enhanced Security",
-                                subtitle: "Additional security measures for your account",
-                                color: .red,
-                                isOn: .constant(false)
-                            )
-                        }
-                    }
-                    
-                    // Data Management Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Data Management")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                        
-                        VStack(spacing: 12) {
-                            SettingsActionRow(
-                                icon: "arrow.down.circle",
-                                title: "Export Data",
-                                subtitle: "Download your interview data",
-                                color: .cyan
-                            ) {
-                                // Export data action
-                            }
-                            
-                            SettingsActionRow(
-                                icon: "trash.circle",
-                                title: "Clear Interview History",
-                                subtitle: "Remove all interview sessions",
-                                color: .orange
-                            ) {
-                                // Clear history action
-                            }
-                        }
-                    }
-                    
                     // Danger Zone Section
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Danger Zone")

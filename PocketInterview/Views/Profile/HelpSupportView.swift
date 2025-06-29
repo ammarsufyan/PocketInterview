@@ -16,154 +16,6 @@ struct HelpSupportView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Quick Help Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Quick Help")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                        
-                        VStack(spacing: 12) {
-                            HelpActionRow(
-                                icon: "questionmark.circle.fill",
-                                title: "Frequently Asked Questions",
-                                subtitle: "Find answers to common questions",
-                                color: .blue
-                            ) {
-                                // Open FAQ
-                            }
-                            
-                            HelpActionRow(
-                                icon: "play.circle.fill",
-                                title: "Getting Started Guide",
-                                subtitle: "Learn how to use PocketInterview",
-                                color: .green
-                            ) {
-                                // Open getting started guide
-                            }
-                            
-                            HelpActionRow(
-                                icon: "video.circle.fill",
-                                title: "Video Tutorials",
-                                subtitle: "Watch step-by-step tutorials",
-                                color: .purple
-                            ) {
-                                // Open video tutorials
-                            }
-                        }
-                    }
-                    
-                    // Contact Support Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Contact Support")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                        
-                        VStack(spacing: 12) {
-                            HelpActionRow(
-                                icon: "envelope.circle.fill",
-                                title: "Email Support",
-                                subtitle: "Get help via email within 24 hours",
-                                color: .orange
-                            ) {
-                                showingContactForm = true
-                            }
-                            
-                            HelpActionRow(
-                                icon: "message.circle.fill",
-                                title: "Live Chat",
-                                subtitle: "Chat with our support team",
-                                color: .cyan
-                            ) {
-                                // Open live chat
-                            }
-                            
-                            HelpActionRow(
-                                icon: "phone.circle.fill",
-                                title: "Phone Support",
-                                subtitle: "Call us during business hours",
-                                color: .red
-                            ) {
-                                // Open phone support
-                            }
-                        }
-                    }
-                    
-                    // Feedback Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Feedback")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                        
-                        VStack(spacing: 12) {
-                            HelpActionRow(
-                                icon: "heart.circle.fill",
-                                title: "Send Feedback",
-                                subtitle: "Help us improve the app",
-                                color: .pink
-                            ) {
-                                showingFeedbackForm = true
-                            }
-                            
-                            HelpActionRow(
-                                icon: "star.circle.fill",
-                                title: "Rate the App",
-                                subtitle: "Rate us on the App Store",
-                                color: .yellow
-                            ) {
-                                // Open App Store rating
-                            }
-                            
-                            HelpActionRow(
-                                icon: "exclamationmark.triangle.circle.fill",
-                                title: "Report a Bug",
-                                subtitle: "Report technical issues",
-                                color: .red
-                            ) {
-                                // Open bug report form
-                            }
-                        }
-                    }
-                    
-                    // Resources Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Resources")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                        
-                        VStack(spacing: 12) {
-                            HelpActionRow(
-                                icon: "doc.circle.fill",
-                                title: "User Manual",
-                                subtitle: "Complete guide to all features",
-                                color: .indigo
-                            ) {
-                                // Open user manual
-                            }
-                            
-                            HelpActionRow(
-                                icon: "globe.circle.fill",
-                                title: "Community Forum",
-                                subtitle: "Connect with other users",
-                                color: .teal
-                            ) {
-                                // Open community forum
-                            }
-                            
-                            HelpActionRow(
-                                icon: "newspaper.circle.fill",
-                                title: "Release Notes",
-                                subtitle: "See what's new in each update",
-                                color: .brown
-                            ) {
-                                // Open release notes
-                            }
-                        }
-                    }
-                    
                     // Contact Information
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Contact Information")
@@ -175,14 +27,14 @@ struct HelpSupportView: View {
                             ContactInfoCard(
                                 icon: "envelope.fill",
                                 title: "Email",
-                                value: "support@pocketinterview.app",
+                                value: "ammarsfyn@gmail.com",
                                 color: .blue
                             )
                             
                             ContactInfoCard(
                                 icon: "clock.fill",
                                 title: "Support Hours",
-                                value: "Mon-Fri, 9:00 AM - 6:00 PM PST",
+                                value: "Mon-Fri, 9:00 AM - 6:00 PM GMT+7",
                                 color: .green
                             )
                             

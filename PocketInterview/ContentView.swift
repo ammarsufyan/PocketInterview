@@ -16,7 +16,7 @@ struct ContentView: View {
             MockInterviewView()
                 .tabItem {
                     Image(systemName: "mic.circle.fill")
-                    Text("Mock Interview")
+                    Text("Interview")
                 }
                 .environmentObject(historyManager)
             

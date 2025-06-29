@@ -13,25 +13,7 @@ struct AboutView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 32) {
-                    // App Logo and Info
-                    VStack(spacing: 20) {
-                        InterviewSimLogo()
-                            .scaleEffect(0.6)
-                        
-                        VStack(spacing: 8) {
-                            Text("PocketInterview")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
-                            
-                            Text("Master Your Interview Skills")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.top, 20)
-                    
+                VStack(spacing: 32) {                    
                     // App Information Section
                     VStack(alignment: .leading, spacing: 16) {
                         Text("App Information")
@@ -69,118 +51,6 @@ struct AboutView: View {
                             )
                         }
                     }
-                    
-                    // Features Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Key Features")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                        
-                        VStack(spacing: 12) {
-                            FeatureRow(
-                                icon: "brain.head.profile",
-                                title: "AI-Powered Interviews",
-                                description: "Practice with realistic AI interviewers"
-                            )
-                            
-                            FeatureRow(
-                                icon: "doc.text.magnifyingglass",
-                                title: "CV Analysis",
-                                description: "Personalized questions based on your resume"
-                            )
-                            
-                            FeatureRow(
-                                icon: "chart.bar.fill",
-                                title: "Performance Analytics",
-                                description: "Detailed scoring and feedback"
-                            )
-                            
-                            FeatureRow(
-                                icon: "clock.arrow.circlepath",
-                                title: "Interview History",
-                                description: "Track your progress over time"
-                            )
-                        }
-                    }
-                    
-                    // Legal Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Legal")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                        
-                        VStack(spacing: 12) {
-                            LegalActionRow(
-                                icon: "doc.text.fill",
-                                title: "Terms of Service",
-                                color: .blue
-                            ) {
-                                // Open Terms of Service
-                            }
-                            
-                            LegalActionRow(
-                                icon: "hand.raised.fill",
-                                title: "Privacy Policy",
-                                color: .green
-                            ) {
-                                // Open Privacy Policy
-                            }
-                            
-                            LegalActionRow(
-                                icon: "scale.3d",
-                                title: "Licenses",
-                                color: .purple
-                            ) {
-                                // Open Licenses
-                            }
-                        }
-                    }
-                    
-                    // Credits Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Credits")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                        
-                        VStack(spacing: 12) {
-                            CreditRow(
-                                icon: "person.fill",
-                                title: "Developer",
-                                value: "Ammar Sufyan"
-                            )
-                            
-                            CreditRow(
-                                icon: "brain.head.profile",
-                                title: "AI Technology",
-                                value: "Tavus API"
-                            )
-                            
-                            CreditRow(
-                                icon: "server.rack",
-                                title: "Backend",
-                                value: "Supabase"
-                            )
-                            
-                            CreditRow(
-                                icon: "hammer.fill",
-                                title: "Built with",
-                                value: "Bolt.new"
-                            )
-                        }
-                    }
-                    
-                    // Built with Bolt Badge
-                    VStack(spacing: 12) {
-                        Text("Built with")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        BoltBadgeImageView(height: 28, scaleEffect: 0.95)
-                    }
-                    .padding(.top, 20)
                     
                     // Copyright
                     Text("© 2025 PocketInterview. All rights reserved.")
