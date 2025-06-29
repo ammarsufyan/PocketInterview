@@ -31,14 +31,9 @@ struct SignInView: View {
                         
                         // Welcome Text
                         VStack(spacing: 8) {
-                            Text("Welcome Back")
+                            Text("PocketInterview")
                                 .font(.system(size: 28, weight: .bold, design: .rounded))
                                 .foregroundColor(.primary)
-                            
-                            Text("Sign in to continue your interview practice")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
                         }
                     }
                     .frame(minHeight: geometry.size.height * 0.4)
