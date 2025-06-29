@@ -141,9 +141,9 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 FIXED: Delete Account with Proper Password Verification
+    // MARK: - 🔥 SIMPLIFIED: Delete Account without Password
     
-    func deleteAccount(password: String) async {
+    func deleteAccountSimple() async {
         isLoading = true
         errorMessage = nil
         
@@ -154,25 +154,20 @@ class AuthenticationManager: ObservableObject {
             }
             
             let userId = currentUser.id
-            let userEmail = currentUser.email ?? ""
             
-            print("🗑️ Starting account deletion for user: \(userId)")
+            print("🗑️ Starting simple account deletion for user: \(userId)")
             
-            // 🔥 FIXED: Use proper password verification method
-            print("🔐 Verifying password...")
-            try await verifyPassword(email: userEmail, password: password)
-            
-            // Step 2: Delete user data from custom tables
+            // Step 1: Delete user data from custom tables
             print("🗑️ Deleting user data...")
             try await deleteUserData(userId: userId)
             
-            // Step 3: Sign out the user (this effectively "deletes" their session)
+            // Step 2: Sign out the user (this effectively "deletes" their session)
             print("🔄 Signing out user after data deletion...")
             try await supabase.auth.signOut()
             
             print("✅ Account deletion completed successfully")
             
-            // Step 4: Clear local state
+            // Step 3: Clear local state
             self.currentUser = nil
             self.isAuthenticated = false
             
@@ -185,55 +180,6 @@ class AuthenticationManager: ObservableObject {
         }
         
         isLoading = false
-    }
-    
-    // 🔥 FIXED: Use EnvironmentConfig instead of accessing internal Supabase client properties
-    private func verifyPassword(email: String, password: String) async throws {
-        do {
-            // Get Supabase configuration from EnvironmentConfig
-            let envConfig = EnvironmentConfig.shared
-            
-            guard let supabaseURL = envConfig.supabaseURL,
-                  let supabaseKey = envConfig.supabaseAnonKey else {
-                throw AuthError.unauthorized
-            }
-            
-            guard let url = URL(string: supabaseURL) else {
-                throw AuthError.unauthorized
-            }
-            
-            // Create a temporary client to test the credentials
-            let tempClient = SupabaseClient(
-                supabaseURL: url,
-                supabaseKey: supabaseKey
-            )
-            
-            // Try to sign in with the provided credentials
-            let response = try await tempClient.auth.signIn(
-                email: email,
-                password: password
-            )
-            
-            // If we get here, the password is correct
-            print("✅ Password verification successful")
-            
-            // Sign out from the temporary session immediately
-            try await tempClient.auth.signOut()
-            
-        } catch {
-            print("❌ Password verification failed: \(error)")
-            
-            // Check for specific error types
-            let errorDescription = error.localizedDescription.lowercased()
-            if errorDescription.contains("invalid login credentials") || 
-               errorDescription.contains("invalid email or password") ||
-               errorDescription.contains("invalid_credentials") {
-                throw AuthError.invalidPassword
-            } else {
-                // Re-throw other errors
-                throw error
-            }
-        }
     }
     
     private func deleteUserData(userId: UUID) async throws {
@@ -252,25 +198,20 @@ class AuthenticationManager: ObservableObject {
     private func handleDeleteAccountError(_ error: Error) -> String {
         if let authError = error as? AuthError {
             switch authError {
-            case .invalidPassword:
-                return "Incorrect password. Please try again."
             case .userNotFound:
                 return "Account not found. You may already be signed out."
             case .deletionFailed:
                 return "Failed to delete account. Please try again."
             case .unauthorized:
                 return "Unable to delete account. Please contact support."
+            case .invalidPassword:
+                return "Authentication error occurred."
             }
         }
         
         let errorDescription = error.localizedDescription.lowercased()
         
-        if errorDescription.contains("invalid login credentials") || 
-           errorDescription.contains("invalid email or password") ||
-           errorDescription.contains("invalid_credentials") ||
-           errorDescription.contains("invalid password") {
-            return "Incorrect password. Please try again."
-        } else if errorDescription.contains("user not found") {
+        if errorDescription.contains("user not found") {
             return "Account not found. You may already be signed out."
         } else if errorDescription.contains("unauthorized") || 
                   errorDescription.contains("permission") ||

@@ -4,8 +4,6 @@ struct ProfileView: View {
     @EnvironmentObject private var authManager: AuthenticationManager
     @State private var showingSignOutAlert = false
     @State private var showingDeleteAccountAlert = false
-    @State private var showingDeleteConfirmation = false
-    @State private var passwordForDeletion = ""
     
     var body: some View {
         NavigationView {
@@ -160,246 +158,23 @@ struct ProfileView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
-            .alert("Delete Account", isPresented: $showingDeleteAccountAlert) {
+            .alert("", isPresented: $showingDeleteAccountAlert) {
                 Button("Cancel", role: .cancel) { }
-                Button("Continue", role: .destructive) {
-                    showingDeleteConfirmation = true
+                Button("Delete Account", role: .destructive) {
+                    Task {
+                        await authManager.deleteAccountSimple()
+                    }
                 }
             } message: {
-                Text("This action cannot be undone. All your interview history and data will be permanently deleted.")
-            }
-            .sheet(isPresented: $showingDeleteConfirmation) {
-                DeleteAccountConfirmationView(
-                    userEmail: authManager.userEmail ?? "",
-                    password: $passwordForDeletion,
-                    onConfirm: {
-                        Task {
-                            await authManager.deleteAccount(password: passwordForDeletion)
-                        }
-                        showingDeleteConfirmation = false
-                        passwordForDeletion = ""
-                    },
-                    onCancel: {
-                        showingDeleteConfirmation = false
-                        passwordForDeletion = ""
-                    }
-                )
-            }
-        }
-    }
-}
-
-struct DeleteAccountConfirmationView: View {
-    let userEmail: String
-    @Binding var password: String
-    let onConfirm: () -> Void
-    let onCancel: () -> Void
-    
-    @EnvironmentObject private var authManager: AuthenticationManager
-    @FocusState private var isPasswordFocused: Bool
-    
-    private var isPasswordValid: Bool {
-        !password.isEmpty && password.count >= 6
-    }
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 32) {
-                Spacer()
-                
-                // Warning Icon
-                VStack(spacing: 20) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(.red)
-                        .symbolRenderingMode(.hierarchical)
-                    
-                    VStack(spacing: 12) {
-                        Text("Delete Account")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.primary)
-                        
-                        Text("This action is permanent and cannot be undone")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                }
-                
-                // Account Info
-                VStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Account to be deleted:")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.secondary)
-                        
-                        Text(userEmail)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(12)
-                    
-                    // What will be deleted
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("What will be deleted:")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.red)
-                        
-                        VStack(alignment: .leading, spacing: 6) {
-                            DeletedItemRow(text: "All interview sessions and history")
-                            DeletedItemRow(text: "All transcripts and recordings")
-                            DeletedItemRow(text: "All AI scores and feedback")
-                            DeletedItemRow(text: "Account settings and preferences")
-                            DeletedItemRow(text: "All personal data")
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.red.opacity(0.3), lineWidth: 1)
-                    )
-                }
-                .padding(.horizontal, 20)
-                
-                // 🔥 UPDATED: Password Confirmation Input
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Enter your password to confirm:")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                    
-                    SecureField("Password", text: $password)
-                        .font(.subheadline)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(
-                                    isPasswordValid ? Color.red : Color.clear,
-                                    lineWidth: 2
-                                )
-                        )
-                        .focused($isPasswordFocused)
-                        .textContentType(.password)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .onSubmit {
-                            if isPasswordValid {
-                                onConfirm()
-                            }
-                        }
-                    
-                    if !password.isEmpty && !isPasswordValid {
-                        Text("Password must be at least 6 characters")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
-                }
-                .padding(.horizontal, 20)
-                
-                // Action Buttons
                 VStack(spacing: 12) {
-                    Button(action: onConfirm) {
-                        HStack(spacing: 12) {
-                            if authManager.isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.8)
-                            } else {
-                                Image(systemName: "trash.fill")
-                                    .font(.title3)
-                            }
-                            
-                            Text(authManager.isLoading ? "Deleting Account..." : "Delete My Account")
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(
-                            isPasswordValid && !authManager.isLoading ? 
-                                Color.red : 
-                                Color.gray
-                        )
-                        .cornerRadius(12)
-                        .shadow(
-                            color: isPasswordValid ? Color.red.opacity(0.3) : Color.clear,
-                            radius: 8,
-                            x: 0,
-                            y: 4
-                        )
-                    }
-                    .disabled(!isPasswordValid || authManager.isLoading)
+                    Text("This action cannot be undone.")
+                        .font(.headline)
+                        .fontWeight(.semibold)
                     
-                    Button(action: onCancel) {
-                        Text("Cancel")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.blue)
-                    }
-                    .disabled(authManager.isLoading)
-                }
-                .padding(.horizontal, 20)
-                
-                if let errorMessage = authManager.errorMessage {
-                    Text(errorMessage)
+                    Text("All your interview history, transcripts, AI scores, and personal data will be permanently deleted.")
                         .font(.subheadline)
-                        .foregroundColor(.red)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
-                }
-                
-                Spacer()
-            }
-            .navigationTitle("Delete Account")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden()
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        onCancel()
-                    }
-                    .foregroundColor(.blue)
-                    .disabled(authManager.isLoading)
                 }
             }
-            .onAppear {
-                // Auto-focus password field when view appears
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    isPasswordFocused = true
-                }
-            }
-        }
-    }
-}
-
-struct DeletedItemRow: View {
-    let text: String
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "xmark.circle.fill")
-                .font(.caption)
-                .foregroundColor(.red)
-            
-            Text(text)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            
-            Spacer()
         }
     }
 }
