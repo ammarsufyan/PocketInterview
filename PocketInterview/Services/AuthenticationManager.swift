@@ -159,27 +159,21 @@ class AuthenticationManager: ObservableObject {
                 supabaseKey: serviceRoleKey
             )
             
-            // 🔥 FIXED: Correct way to list and find users
+            // 🔥 FIXED: Use correct Supabase Admin API
+            // First, try to find user by email using a different approach
             let usersResponse = try await adminClient.auth.admin.listUsers()
-            let users = usersResponse.users // Access the users array from the response
+            let users = usersResponse.users
             
-            let userExists = users.contains { $0.email == email }
-            
-            if !userExists {
-                throw AuthError.userNotFound
-            }
-            
-            // Find the user by email
             guard let user = users.first(where: { $0.email == email }) else {
                 throw AuthError.userNotFound
             }
             
-            // 🔥 FIXED: Correct way to update user with admin API
+            // 🔥 FIXED: Use the correct admin API method
             _ = try await adminClient.auth.admin.updateUser(
                 id: user.id,
-                attributes: AdminUserAttributes(
-                    emailConfirm: true, // 🔥 FIXED: emailConfirm must come before password
-                    password: tempPassword
+                attributes: UserAttributes(
+                    password: tempPassword,
+                    emailConfirm: true
                 )
             )
             
