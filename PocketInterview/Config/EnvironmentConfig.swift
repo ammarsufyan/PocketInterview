@@ -12,9 +12,6 @@ class EnvironmentConfig {
     
     private var envVariables: [String: String] = [:]
     
-    // 🔥 NEW: Supabase config manager for remote configs
-    private let supabaseConfigManager = SupabaseConfigManager()
-    
     private init() {
         loadEnvironmentVariables()
     }
@@ -32,15 +29,11 @@ class EnvironmentConfig {
         
         // Fallback to system environment variables
         loadFromSystemEnvironment()
-        
-        // 🔥 NEW: Load remote configs from Supabase
-        Task {
-            await supabaseConfigManager.loadConfigs()
-        }
     }
     
     private func loadFromFile(path: String) {
         do {
+            // FIXED: Use new iOS 18+ API
             let content = try String(contentsOfFile: path, encoding: .utf8)
             let lines = content.components(separatedBy: .newlines)
             
@@ -77,7 +70,7 @@ class EnvironmentConfig {
             "TAVUS_BASE_URL",
             "SUPABASE_URL",
             "SUPABASE_ANON_KEY",
-            "SUPABASE_SERVICE_ROLE_KEY"
+            "SUPABASE_SERVICE_ROLE_KEY"  // 🔥 ADDED: Service role key for admin operations
         ]
         
         for key in envKeys {
@@ -93,7 +86,7 @@ class EnvironmentConfig {
             "TAVUS_BASE_URL",
             "SUPABASE_URL",
             "SUPABASE_ANON_KEY",
-            "SUPABASE_SERVICE_ROLE_KEY"
+            "SUPABASE_SERVICE_ROLE_KEY"  // 🔥 ADDED: Service role key for admin operations
         ]
         
         for key in envKeys {
@@ -106,34 +99,19 @@ class EnvironmentConfig {
     // MARK: - Public Access Methods
     
     func getValue(for key: String) -> String? {
-        // 🔥 UPDATED: Check Supabase configs first, then local env
-        if let supabaseValue = supabaseConfigManager.configs[key], !supabaseValue.isEmpty {
-            return supabaseValue
-        }
-        
         return envVariables[key]
     }
     
     func getValue(for key: String, defaultValue: String) -> String {
-        return getValue(for: key) ?? defaultValue
+        return envVariables[key] ?? defaultValue
     }
     
     func getBoolValue(for key: String, defaultValue: Bool = false) -> Bool {
-        // 🔥 UPDATED: Check Supabase configs first
-        if !supabaseConfigManager.configs.isEmpty {
-            return supabaseConfigManager.getBoolValue(for: key, defaultValue: defaultValue)
-        }
-        
         guard let stringValue = envVariables[key] else { return defaultValue }
         return ["true", "1", "yes", "on"].contains(stringValue.lowercased())
     }
     
     func getIntValue(for key: String, defaultValue: Int = 0) -> Int {
-        // 🔥 UPDATED: Check Supabase configs first
-        if !supabaseConfigManager.configs.isEmpty {
-            return supabaseConfigManager.getIntValue(for: key, defaultValue: defaultValue)
-        }
-        
         guard let stringValue = envVariables[key],
               let intValue = Int(stringValue) else { return defaultValue }
         return intValue
@@ -146,10 +124,7 @@ class EnvironmentConfig {
     }
     
     var tavusBaseURL: String {
-        // 🔥 UPDATED: Prefer Supabase config, fallback to local
-        return supabaseConfigManager.tavusBaseURL.isEmpty ? 
-            getValue(for: "TAVUS_BASE_URL", defaultValue: "https://tavusapi.com/v2") :
-            supabaseConfigManager.tavusBaseURL
+        return getValue(for: "TAVUS_BASE_URL", defaultValue: "https://tavusapi.com/v2")
     }
     
     // MARK: - Supabase Configuration
@@ -162,40 +137,9 @@ class EnvironmentConfig {
         return getValue(for: "SUPABASE_ANON_KEY")
     }
     
+    // 🔥 ADDED: Service role key for admin operations
     var supabaseServiceRoleKey: String? {
         return getValue(for: "SUPABASE_SERVICE_ROLE_KEY")
-    }
-    
-    // MARK: - 🔥 NEW: Remote Config Access
-    
-    var maxSessionDuration: Int {
-        return supabaseConfigManager.maxSessionDuration
-    }
-    
-    var supportedLanguages: [String] {
-        return supabaseConfigManager.supportedLanguages
-    }
-    
-    var enableAnalytics: Bool {
-        return supabaseConfigManager.enableAnalytics
-    }
-    
-    var appVersion: String {
-        return supabaseConfigManager.appVersion
-    }
-    
-    // MARK: - 🔥 NEW: Remote Config Management
-    
-    func refreshRemoteConfigs() async {
-        await supabaseConfigManager.loadConfigs(forceRefresh: true)
-    }
-    
-    var isLoadingRemoteConfigs: Bool {
-        return supabaseConfigManager.isLoading
-    }
-    
-    var remoteConfigError: String? {
-        return supabaseConfigManager.errorMessage
     }
     
     // MARK: - Validation
@@ -219,6 +163,7 @@ class EnvironmentConfig {
         return true
     }
     
+    // 🔥 ADDED: Validate admin configuration
     func validateSupabaseAdminConfiguration() -> Bool {
         guard validateSupabaseConfiguration() else { return false }
         guard let serviceKey = supabaseServiceRoleKey, !serviceKey.isEmpty else { return false }
