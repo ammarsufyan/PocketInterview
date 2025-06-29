@@ -18,7 +18,7 @@ struct MockInterviewView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 32) {
-                    // Header Section
+                    // Header Section with Bolt Logo
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             VStack(alignment: .leading, spacing: 6) {
@@ -34,6 +34,9 @@ struct MockInterviewView: View {
                             }
                             
                             Spacer()
+                            
+                            // 🔥 NEW: Bolt Logo with Hyperlink
+                            BoltBadgeImageView(height: 28, scaleEffect: 0.95)
                         }
                     }
                     .padding(.horizontal, 20)
