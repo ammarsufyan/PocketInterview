@@ -168,12 +168,10 @@ class AuthenticationManager: ObservableObject {
                 throw AuthError.userNotFound
             }
             
-            // 🔥 FIXED: Use the correct admin API method with proper structure
-            _ = try await adminClient.auth.admin.updateUser(
-                id: user.id,
-                attributes: UserAttributes(
-                    password: tempPassword,
-                    emailConfirm: true
+            // 🔥 FIXED: Use the same API structure as regular auth update
+            _ = try await adminClient.auth.update(
+                user: UserAttributes(
+                    password: tempPassword
                 )
             )
             
