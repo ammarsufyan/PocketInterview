@@ -116,13 +116,8 @@ struct MockInterviewView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
-                        } else {
-                            Text("Next: Set session name and duration")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                                .multilineTextAlignment(.center)
-                                .fontWeight(.medium)
                         }
+                        // REMOVED: "Next: Set session name and duration" text
                     }
                     
                     // Built by Bolt.new Badge
@@ -458,7 +453,8 @@ struct StartInterviewButton: View {
                     .font(.title2)
                     .symbolRenderingMode(.hierarchical)
                 
-                Text("Start Interview with \(interviewerName)")
+                // CHANGED: Button text from "Start Interview with \(interviewerName)" to "Setup Interview"
+                Text("Setup Interview")
                     .font(.headline)
                     .fontWeight(.semibold)
             }
