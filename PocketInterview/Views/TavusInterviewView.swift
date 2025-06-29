@@ -1,10 +1,3 @@
-//
-//  TavusInterviewView.swift
-//  InterviewSim
-//
-//  Created by Ammar Sufyan on 23/06/25.
-//
-
 import SwiftUI
 import WebKit
 import SafariServices
@@ -133,7 +126,7 @@ struct TavusInterviewView: View {
                     .cornerRadius(16)
                 }
             }
-            .navigationTitle("AI Interview")
+            .navigationTitle("Interview Summary")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden()
             .toolbar {
@@ -493,19 +486,9 @@ struct TavusPreparationView: View {
         ScrollView {
             VStack(spacing: 32) {
                 VStack(spacing: 16) {
-                    Image(systemName: category == "Technical" ? "laptopcomputer" : "person.2.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(categoryColor)
-                        .symbolRenderingMode(.hierarchical)
-                    
                     VStack(spacing: 8) {
-                        Text("Meet Your Interviewer")
+                        Text("Session Summary")
                             .font(.title2)
-                            .fontWeight(.bold)
-                        
-                        Text(interviewerName)
-                            .font(.title)
-                            .foregroundColor(categoryColor)
                             .fontWeight(.bold)
                     }
                 }
