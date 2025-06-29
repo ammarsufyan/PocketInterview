@@ -148,7 +148,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 NEW: Delete Account Method
+    // MARK: - 🔥 FIXED: Delete Account Method
     
     func deleteAccount() async {
         isLoading = true
@@ -164,12 +164,13 @@ class AuthenticationManager: ObservableObject {
             
             print("🗑️ Starting account deletion for user: \(userId)")
             
-            // Step 1: Delete user data from custom tables
+            // Step 1: Delete user data from custom tables first
             // Note: Foreign key constraints with CASCADE will handle related data
             try await deleteUserData(userId: userId)
             
-            // Step 2: Delete the user account from Supabase Auth
-            try await supabase.auth.admin.deleteUser(id: userId)
+            // Step 2: Delete the user account using the correct method for authenticated users
+            // 🔥 FIXED: Use the user deletion method instead of admin API
+            try await supabase.auth.deleteUser()
             
             print("✅ Account deleted successfully")
             
@@ -203,15 +204,17 @@ class AuthenticationManager: ObservableObject {
         
         if errorDescription.contains("user not found") {
             return "Account not found. You may already be signed out."
-        } else if errorDescription.contains("unauthorized") || errorDescription.contains("permission") {
-            return "Unable to delete account. Please try signing out and back in."
+        } else if errorDescription.contains("unauthorized") || 
+                  errorDescription.contains("permission") ||
+                  errorDescription.contains("not_admin") {
+            return "Unable to delete account. Please contact support for assistance."
         } else if errorDescription.contains("network") || errorDescription.contains("connection") {
             return "Network error. Please check your connection and try again."
         } else if errorDescription.contains("rate limit") {
             return "Too many requests. Please try again later."
         }
         
-        return "Failed to delete account: \(error.localizedDescription)"
+        return "Failed to delete account. Please try again or contact support."
     }
     
     // MARK: - Error Handling
