@@ -189,7 +189,7 @@ struct HistoryFilterTab: View {
     }
 }
 
-// MARK: - 🔥 UPDATED History Session Card - Removed chevron and updated date format
+// MARK: - 🔥 UPDATED History Session Card - Fixed title alignment
 struct HistorySessionCard: View {
     let session: InterviewSession
     let hasTranscript: Bool
@@ -198,7 +198,7 @@ struct HistorySessionCard: View {
     
     var body: some View {
         HStack(spacing: 16) {
-            // Category Icon (no score badge)
+            // Category Icon
             Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
                 .font(.title2)
                 .foregroundColor(session.categoryColor)
@@ -207,18 +207,22 @@ struct HistorySessionCard: View {
                 .cornerRadius(12)
                 .symbolRenderingMode(.hierarchical)
             
-            // Session Info - CLEANED UP
+            // 🔥 FIXED: Session Info with proper alignment
             VStack(alignment: .leading, spacing: 8) {
-                // Session Name and Main Info
-                HStack {
+                // 🔥 UPDATED: Main content row with proper alignment
+                HStack(alignment: .top, spacing: 12) {
+                    // Left side - Session details
                     VStack(alignment: .leading, spacing: 4) {
+                        // 🔥 FIXED: Session name with proper line height and alignment
                         Text(session.sessionName)
                             .font(.headline)
                             .fontWeight(.semibold)
                             .foregroundColor(.primary)
-                            .lineLimit(1)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
                         
-                        // SIMPLIFIED: Only show category and status
+                        // Category and status tags
                         HStack(spacing: 8) {
                             Text(session.category)
                                 .font(.caption)
@@ -242,8 +246,9 @@ struct HistorySessionCard: View {
                     
                     Spacer()
                     
-                    // Score Display - CLEANED UP with DASH for no score
+                    // Right side - Score and date
                     VStack(alignment: .trailing, spacing: 4) {
+                        // 🔥 FIXED: Score display with proper alignment
                         if let score = session.score {
                             Text("\(score)%")
                                 .font(.title3)
@@ -256,23 +261,17 @@ struct HistorySessionCard: View {
                                 .foregroundColor(.secondary)
                         }
                         
-                        // REMOVED: Chevron icon
-                    }
-                }
-                
-                // UPDATED: Show actual date instead of "Today/Yesterday"
-                HStack(spacing: 16) {
-                    Spacer()
-                    
-                    VStack(alignment: .trailing, spacing: 1) {
-                        Text(session.actualFormattedDate)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fontWeight(.medium)
-                        
-                        Text(session.formattedTime)
-                            .font(.caption2)
-                            .foregroundColor(.secondary.opacity(0.8))
+                        // Date and time
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text(session.actualFormattedDate)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fontWeight(.medium)
+                            
+                            Text(session.formattedTime)
+                                .font(.caption2)
+                                .foregroundColor(.secondary.opacity(0.8))
+                        }
                     }
                 }
             }
