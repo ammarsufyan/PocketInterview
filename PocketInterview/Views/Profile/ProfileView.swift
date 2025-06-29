@@ -3,7 +3,10 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject private var authManager: AuthenticationManager
     @State private var showingSignOutAlert = false
-    @State private var showingDeleteAccountSheet = false
+    @State private var showingAccountSettings = false
+    @State private var showingNotifications = false
+    @State private var showingHelpSupport = false
+    @State private var showingAbout = false
     
     var body: some View {
         NavigationView {
@@ -33,7 +36,7 @@ struct ProfileView: View {
                             subtitle: "Manage your account preferences",
                             color: .blue
                         ) {
-                            // Account settings action
+                            showingAccountSettings = true
                         }
                         
                         ProfileOptionCard(
@@ -42,7 +45,7 @@ struct ProfileView: View {
                             subtitle: "Configure notification preferences",
                             color: .orange
                         ) {
-                            // Notifications action
+                            showingNotifications = true
                         }
                         
                         ProfileOptionCard(
@@ -51,7 +54,7 @@ struct ProfileView: View {
                             subtitle: "Get help and contact support",
                             color: .green
                         ) {
-                            // Help action
+                            showingHelpSupport = true
                         }
                         
                         ProfileOptionCard(
@@ -60,7 +63,7 @@ struct ProfileView: View {
                             subtitle: "App version and information",
                             color: .purple
                         ) {
-                            // About action
+                            showingAbout = true
                         }
                     }
                     .padding(.horizontal, 20)
@@ -89,29 +92,6 @@ struct ProfileView: View {
                                     .stroke(Color.orange.opacity(0.3), lineWidth: 1)
                             )
                         }
-                        
-                        // Delete Account Button
-                        Button(action: {
-                            showingDeleteAccountSheet = true
-                        }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "trash.circle")
-                                    .font(.title3)
-                                
-                                Text("Delete Account")
-                                    .font(.headline)
-                                    .fontWeight(.semibold)
-                            }
-                            .foregroundColor(.red)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
-                            )
-                        }
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
@@ -132,9 +112,18 @@ struct ProfileView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
-            .sheet(isPresented: $showingDeleteAccountSheet) {
-                DeleteAccountView()
+            .sheet(isPresented: $showingAccountSettings) {
+                AccountSettingsView()
                     .environmentObject(authManager)
+            }
+            .sheet(isPresented: $showingNotifications) {
+                NotificationsView()
+            }
+            .sheet(isPresented: $showingHelpSupport) {
+                HelpSupportView()
+            }
+            .sheet(isPresented: $showingAbout) {
+                AboutView()
             }
         }
     }
