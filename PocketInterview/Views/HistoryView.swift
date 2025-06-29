@@ -408,7 +408,7 @@ struct SessionDetailView: View {
                 }
                 .padding(.top, 20)
                 
-                // 🔥 UPDATED: Session Details Card matching AI Score Breakdown style
+                // 🔥 UPDATED: Session Details Card with boxes for Duration and Date & Time
                 SessionDetailsCard(
                     session: session,
                     categoryColor: categoryColor
@@ -514,7 +514,7 @@ struct SessionDetailView: View {
     }
 }
 
-// 🔥 NEW: Session Details Card matching AI Score Breakdown style
+// 🔥 NEW: Session Details Card with boxes for Duration and Date & Time
 struct SessionDetailsCard: View {
     let session: InterviewSession
     let categoryColor: Color
@@ -537,31 +537,7 @@ struct SessionDetailsCard: View {
             
             // Session details content
             VStack(spacing: 16) {
-                // Duration
-                HStack(spacing: 16) {
-                    Image(systemName: "clock.fill")
-                        .font(.title3)
-                        .foregroundColor(.blue)
-                        .frame(width: 24)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Duration")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fontWeight(.medium)
-                        
-                        Text(session.durationText)
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                            .fontWeight(.semibold)
-                    }
-                    
-                    Spacer()
-                }
-                
-                Divider()
-                
-                // Questions Answered
+                // Questions Answered (without box)
                 HStack(spacing: 16) {
                     Image(systemName: "questionmark.circle.fill")
                         .font(.title3)
@@ -585,26 +561,57 @@ struct SessionDetailsCard: View {
                 
                 Divider()
                 
-                // Date & Time
+                // Duration and Date & Time in boxes (like AI Score Breakdown)
                 HStack(spacing: 16) {
-                    Image(systemName: "calendar")
-                        .font(.title3)
-                        .foregroundColor(.purple)
-                        .frame(width: 24)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Date & Time")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fontWeight(.medium)
+                    // Duration Box
+                    VStack(spacing: 8) {
+                        Image(systemName: "clock.fill")
+                            .font(.title3)
+                            .foregroundColor(.blue)
                         
-                        Text("\(session.actualFormattedDate) at \(session.formattedTime)")
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                            .fontWeight(.semibold)
+                        VStack(spacing: 4) {
+                            Text("Duration")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fontWeight(.medium)
+                            
+                            Text(session.durationText)
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                                .fontWeight(.bold)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(12)
                     
-                    Spacer()
+                    // Date & Time Box
+                    VStack(spacing: 8) {
+                        Image(systemName: "calendar")
+                            .font(.title3)
+                            .foregroundColor(.purple)
+                        
+                        VStack(spacing: 4) {
+                            Text("Date & Time")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fontWeight(.medium)
+                            
+                            Text("\(session.actualFormattedDate)")
+                                .font(.caption)
+                                .foregroundColor(.primary)
+                                .fontWeight(.bold)
+                            
+                            Text("at \(session.formattedTime)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.purple.opacity(0.1))
+                    .cornerRadius(12)
                 }
             }
         }
