@@ -4,7 +4,6 @@ struct ProfileView: View {
     @EnvironmentObject private var authManager: AuthenticationManager
     @State private var showingSignOutAlert = false
     @State private var showingAccountSettings = false
-    @State private var showingNotifications = false
     @State private var showingHelpSupport = false
     @State private var showingAbout = false
     
@@ -37,15 +36,6 @@ struct ProfileView: View {
                             color: .blue
                         ) {
                             showingAccountSettings = true
-                        }
-                        
-                        ProfileOptionCard(
-                            icon: "bell.circle",
-                            title: "Notifications",
-                            subtitle: "Configure notification preferences",
-                            color: .orange
-                        ) {
-                            showingNotifications = true
                         }
                         
                         ProfileOptionCard(
@@ -115,9 +105,6 @@ struct ProfileView: View {
             .sheet(isPresented: $showingAccountSettings) {
                 AccountSettingsView()
                     .environmentObject(authManager)
-            }
-            .sheet(isPresented: $showingNotifications) {
-                NotificationsView()
             }
             .sheet(isPresented: $showingHelpSupport) {
                 HelpSupportView()
