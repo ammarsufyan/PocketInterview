@@ -224,7 +224,6 @@ class TranscriptManager: ObservableObject {
                 return TranscriptMessage(role: role, content: content)
             }
             
-            print("✅ Successfully parsed \(messages.count) transcript messages")
             return messages
             
         } catch {
