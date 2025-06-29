@@ -484,14 +484,8 @@ struct TavusPreparationView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 32) {
-                VStack(spacing: 16) {
-                    VStack(spacing: 8) {
-                        // Removed "Session Summary" text
-                    }
-                }
-                .padding(.top, 40)
-                
+            VStack(spacing: 24) {
+                // Session Details - Start directly without extra spacing
                 VStack(spacing: 16) {
                     SessionDetailRow(
                         icon: "text.quote",
@@ -522,6 +516,7 @@ struct TavusPreparationView: View {
                     )
                 }
                 .padding(.horizontal, 20)
+                .padding(.top, 20) // Add minimal top padding
                 
                 TipsCard(category: category, categoryColor: categoryColor)
                     .padding(.horizontal, 20)
