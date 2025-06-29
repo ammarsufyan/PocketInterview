@@ -141,6 +141,15 @@ struct SignUpView: View {
                                 .padding(.horizontal)
                         }
                         
+                        // 🔥 NEW: Success Message for Email Confirmation
+                        if let successMessage = authManager.successMessage {
+                            Text(successMessage)
+                                .font(.subheadline)
+                                .foregroundColor(.green)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
+                        
                         // Sign Up Button
                         Button(action: signUp) {
                             HStack(spacing: 12) {

@@ -23,7 +23,7 @@ struct ForgotPasswordView: View {
                     
                     // Header
                     VStack(spacing: 16) {
-                        Image(systemName: "key.fill")
+                        Image(systemName: "envelope.circle.fill")
                             .font(.system(size: 60))
                             .foregroundColor(.blue)
                             .symbolRenderingMode(.hierarchical)
@@ -33,8 +33,8 @@ struct ForgotPasswordView: View {
                                 .font(.title2)
                                 .fontWeight(.bold)
                             
-                            // 🔥 UPDATED: New description for temporary password system
-                            Text("Enter your email address and we'll generate a temporary password for you")
+                            // 🔥 UPDATED: New description for email link system
+                            Text("Enter your email address and we'll send you a link to reset your password")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
@@ -57,7 +57,7 @@ struct ForgotPasswordView: View {
                                 .autocapitalization(.none)
                                 .onChange(of: email) {
                                     validateEmail()
-                                    authManager.clearAllMessages() // 🔥 UPDATED: Clear all messages
+                                    authManager.clearAllMessages()
                                 }
                             
                             if !isEmailValid {
@@ -75,10 +75,10 @@ struct ForgotPasswordView: View {
                                 .multilineTextAlignment(.center)
                         }
                         
-                        // 🔥 NEW: Success Message with Temporary Password
+                        // 🔥 UPDATED: Success Message for Email Link
                         if let successMessage = authManager.successMessage {
                             VStack(spacing: 12) {
-                                Text("Temporary Password Generated!")
+                                Text("Reset Link Sent!")
                                     .font(.headline)
                                     .fontWeight(.semibold)
                                     .foregroundColor(.green)
@@ -97,20 +97,20 @@ struct ForgotPasswordView: View {
                             }
                         }
                         
-                        // Generate Temporary Password Button
-                        Button(action: generateTempPassword) {
+                        // 🔥 UPDATED: Send Reset Link Button
+                        Button(action: sendResetLink) {
                             HStack(spacing: 12) {
                                 if authManager.isLoading {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         .scaleEffect(0.8)
                                 } else {
-                                    Image(systemName: "key.radiowaves.forward.fill")
+                                    Image(systemName: "envelope.arrow.triangle.branch")
                                         .font(.title3)
                                 }
                                 
                                 // 🔥 UPDATED: New button text
-                                Text(authManager.isLoading ? "Generating..." : "Generate Temporary Password")
+                                Text(authManager.isLoading ? "Sending..." : "Send Reset Link")
                                     .font(.headline)
                                     .fontWeight(.semibold)
                             }
@@ -135,27 +135,32 @@ struct ForgotPasswordView: View {
                         .disabled(authManager.isLoading || !isFormValid)
                         .opacity(isFormValid ? 1.0 : 0.6)
                         
-                        // 🔥 NEW: Security Notice
+                        // 🔥 UPDATED: Instructions
                         if authManager.successMessage == nil {
                             VStack(spacing: 8) {
                                 HStack(spacing: 8) {
-                                    Image(systemName: "shield.fill")
+                                    Image(systemName: "info.circle.fill")
                                         .font(.caption)
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(.blue)
                                     
-                                    Text("Security Notice")
+                                    Text("How it works")
                                         .font(.caption)
                                         .fontWeight(.semibold)
-                                        .foregroundColor(.orange)
+                                        .foregroundColor(.blue)
                                 }
                                 
-                                Text("The temporary password will expire in 24 hours. Please change it immediately after signing in.")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("1. Enter your email address")
+                                    Text("2. Check your email for a reset link")
+                                    Text("3. Click the link to set a new password")
+                                    Text("4. Sign in with your new password")
+                                }
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
                             .padding(12)
-                            .background(Color.orange.opacity(0.1))
+                            .background(Color.blue.opacity(0.1))
                             .cornerRadius(8)
                         }
                     }
@@ -175,11 +180,11 @@ struct ForgotPasswordView: View {
                     .foregroundColor(.blue)
                 }
             }
-            // 🔥 NEW: Auto dismiss after successful temp password generation
+            // 🔥 UPDATED: Auto dismiss after successful email send
             .onChange(of: authManager.successMessage) { _, successMessage in
                 if successMessage != nil {
-                    // Auto dismiss after 10 seconds to give user time to copy password
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+                    // Auto dismiss after 5 seconds to give user time to read message
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
                         if authManager.successMessage != nil {
                             dismiss()
                         }
@@ -201,10 +206,10 @@ struct ForgotPasswordView: View {
     
     // MARK: - Actions
     
-    // 🔥 UPDATED: Use new temporary password system
-    private func generateTempPassword() {
+    // 🔥 UPDATED: Use new email link system
+    private func sendResetLink() {
         Task {
-            await authManager.resetPasswordWithTempPassword(email: email)
+            await authManager.resetPasswordWithEmailLink(email: email)
         }
     }
 }

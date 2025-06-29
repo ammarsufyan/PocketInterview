@@ -76,12 +76,13 @@ class AuthenticationManager: ObservableObject {
                 password: password,
                 data: [
                     "display_name": .string(fullName)
-                ]
+                ],
+                redirectTo: URL(string: "https://pocketinterview.netlify.app/auth/callback")
             )
             // Check if user needs email confirmation
             if response.session == nil {
                 // User created but needs email confirmation
-                self.errorMessage = "Please check your email and confirm your account before signing in."
+                self.successMessage = "Please check your email and click the confirmation link to activate your account."
             } else {
                 // User is automatically signed in
                 self.currentUser = response.user
@@ -127,111 +128,44 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 FIXED: Correct Temporary Password Reset System
+    // MARK: - 🔥 UPDATED: Email Link Password Reset System
     
-    func resetPasswordWithTempPassword(email: String) async {
+    func resetPasswordWithEmailLink(email: String) async {
         isLoading = true
         errorMessage = nil
         successMessage = nil
         
         do {
-            // Generate a secure temporary password
-            let tempPassword = generateTemporaryPassword()
-            
-            // Get service role key for admin operations
-            guard let serviceRoleKey = EnvironmentConfig.shared.supabaseServiceRoleKey,
-                  !serviceRoleKey.isEmpty else {
-                throw AuthError.unauthorized
-            }
-            
-            guard let supabaseUrl = EnvironmentConfig.shared.supabaseURL,
-                  !supabaseUrl.isEmpty else {
-                throw AuthError.invalidConfiguration
-            }
-            
-            // Create admin client
-            guard let url = URL(string: supabaseUrl) else {
-                throw AuthError.invalidConfiguration
-            }
-            
-            let adminClient = SupabaseClient(
-                supabaseURL: url,
-                supabaseKey: serviceRoleKey
+            try await supabase.auth.resetPasswordForEmail(
+                email,
+                redirectTo: URL(string: "https://pocketinterview.netlify.app/auth/reset-password")
             )
             
-            // 🔥 FIXED: Use the correct admin API method to update user password
-            // First, find the user by email
-            let usersResponse = try await adminClient.auth.admin.listUsers()
-            let users = usersResponse.users
-            
-            guard let user = users.first(where: { $0.email == email }) else {
-                throw AuthError.userNotFound
-            }
-            
-            // 🔥 FIXED: Use admin.updateUser with correct parameters
-            _ = try await adminClient.auth.admin.updateUser(
-                id: user.id,
-                attributes: AdminUserAttributes(
-                    password: tempPassword
-                )
-            )
-            
-            // Set success message with temporary password
+            // Set success message
             self.successMessage = """
-            Temporary password has been generated for your account.
+            Password reset link sent!
             
-            Your temporary password is: \(tempPassword)
+            Please check your email for a password reset link. Click the link in the email to reset your password.
             
-            Please sign in with this temporary password and immediately change it to a new secure password in Account Settings.
-            
-            This temporary password will expire in 24 hours for security reasons.
+            If you don't see the email, please check your spam folder.
             """
             
-        } catch let error as AuthError {
-            self.errorMessage = error.localizedDescription
         } catch {
-            self.errorMessage = handleTempPasswordError(error)
+            self.errorMessage = handlePasswordResetError(error)
         }
         
         isLoading = false
     }
     
-    // MARK: - 🔥 NEW: Temporary Password Generator
-    
-    private func generateTemporaryPassword() -> String {
-        // Generate a secure 12-character temporary password
-        // Format: 4 letters + 4 numbers + 4 special chars (easy to type)
-        let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        let numbers = "0123456789"
-        let specialChars = "!@#$"
-        
-        var password = ""
-        
-        // Add 4 random letters
-        for _ in 0..<4 {
-            password += String(letters.randomElement()!)
-        }
-        
-        // Add 4 random numbers
-        for _ in 0..<4 {
-            password += String(numbers.randomElement()!)
-        }
-        
-        // Add 4 random special characters
-        for _ in 0..<4 {
-            password += String(specialChars.randomElement()!)
-        }
-        
-        // Shuffle the password to make it more random
-        return String(password.shuffled())
-    }
-    
-    // MARK: - Original Reset Password (kept for compatibility)
+    // MARK: - 🔥 UPDATED: Main Reset Password Method
     
     func resetPassword(email: String) async {
-        // Redirect to new temporary password system
-        await resetPasswordWithTempPassword(email: email)
+        // Use the new email link system
+        await resetPasswordWithEmailLink(email: email)
     }
+    
+    // MARK: - 🔥 REMOVED: Temporary Password System
+    // The temporary password methods have been removed in favor of email links
     
     // MARK: - Change Password Method
     
@@ -255,7 +189,7 @@ class AuthenticationManager: ObservableObject {
                 throw AuthError.invalidPassword
             }
             
-            // 🔥 FIXED: Use the correct API for authenticated user password change
+            // Use the correct API for authenticated user password change
             let updatedUser = try await supabase.auth.update(
                 user: UserAttributes(
                     password: newPassword
@@ -274,7 +208,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 CLEANED: Account Deletion with Auto Sign Out
+    // MARK: - Account Deletion with Auto Sign Out
     
     func deleteAccountSimple() async {
         isLoading = true
@@ -356,7 +290,7 @@ class AuthenticationManager: ObservableObject {
             supabaseKey: serviceRoleKey
         )
         
-        // 🔥 FIXED: Use the correct admin API method
+        // Use the correct admin API method
         try await adminClient.auth.admin.deleteUser(id: userId)
     }
     
@@ -421,28 +355,23 @@ class AuthenticationManager: ObservableObject {
         return error.localizedDescription
     }
     
-    // MARK: - 🔥 ENHANCED: Temporary Password Error Handling
+    // MARK: - 🔥 NEW: Password Reset Error Handling
     
-    private func handleTempPasswordError(_ error: Error) -> String {
+    private func handlePasswordResetError(_ error: Error) -> String {
         let errorDescription = error.localizedDescription.lowercased()
         
         if errorDescription.contains("user not found") {
             return "No account found with this email address"
-        } else if errorDescription.contains("unauthorized") || 
-                  errorDescription.contains("permission") ||
-                  errorDescription.contains("forbidden") ||
-                  errorDescription.contains("admin") {
-            return "Unable to reset password. Please contact support."
+        } else if errorDescription.contains("rate limit") {
+            return "Too many password reset requests. Please try again later."
         } else if errorDescription.contains("network") || 
                   errorDescription.contains("connection") {
             return "Network error. Please check your connection and try again."
-        } else if errorDescription.contains("rate limit") {
-            return "Too many requests. Please try again later."
         } else if errorDescription.contains("invalid") {
-            return "Invalid request. Please check the email address and try again."
+            return "Invalid email address. Please check and try again."
         }
         
-        return "Failed to generate temporary password. Please try again or contact support."
+        return "Failed to send password reset email. Please try again."
     }
     
     // MARK: - Utility Methods
@@ -451,13 +380,9 @@ class AuthenticationManager: ObservableObject {
         errorMessage = nil
     }
     
-    // MARK: - 🔥 NEW: Clear Success Message
-    
     func clearSuccess() {
         successMessage = nil
     }
-    
-    // MARK: - 🔥 NEW: Clear All Messages
     
     func clearAllMessages() {
         errorMessage = nil
@@ -524,7 +449,6 @@ class AuthenticationManager: ObservableObject {
         errorMessage = nil
         
         do {
-            // 🔥 FIXED: Use the correct method for updating user metadata
             let updatedUser = try await supabase.auth.update(
                 user: UserAttributes(
                     data: [

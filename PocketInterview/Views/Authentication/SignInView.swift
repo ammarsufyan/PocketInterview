@@ -58,7 +58,7 @@ struct SignInView: View {
                                 .autocapitalization(.none)
                                 .onChange(of: email) {
                                     validateEmail()
-                                    authManager.clearAllMessages() // 🔥 UPDATED: Clear all messages
+                                    authManager.clearAllMessages()
                                 }
                             
                             if !isEmailValid {
@@ -80,7 +80,7 @@ struct SignInView: View {
                                 .textContentType(.password)
                                 .onChange(of: password) {
                                     validatePassword()
-                                    authManager.clearAllMessages() // 🔥 UPDATED: Clear all messages
+                                    authManager.clearAllMessages()
                                 }
                             
                             if !isPasswordValid {
@@ -109,7 +109,7 @@ struct SignInView: View {
                                 .padding(.horizontal)
                         }
                         
-                        // 🔥 NEW: Success Message (for temporary password notifications)
+                        // Success Message (for email confirmations, etc.)
                         if let successMessage = authManager.successMessage {
                             Text(successMessage)
                                 .font(.subheadline)
@@ -190,7 +190,6 @@ struct SignInView: View {
         .sheet(isPresented: $showingForgotPassword) {
             ForgotPasswordView(authManager: authManager)
         }
-        // 🔥 NEW: Clear success message when view appears
         .onAppear {
             authManager.clearSuccess()
         }
