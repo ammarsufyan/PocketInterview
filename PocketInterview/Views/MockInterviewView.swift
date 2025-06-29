@@ -1,10 +1,3 @@
-//
-//  MockInterviewView.swift
-//  InterviewSim
-//
-//  Created by Ammar Sufyan on 23/06/25.
-//
-
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -821,17 +814,6 @@ struct CVPickerView: View {
         TavusConfig.getInterviewerName(for: category)
     }
     
-    private var analysisDescription: String {
-        switch category {
-        case "Technical":
-            return "\(interviewerName) will analyze your technical skills, programming languages, frameworks, and project experience to create relevant coding challenges and technical questions."
-        case "Behavioral":
-            return "\(interviewerName) will analyze your work experience, achievements, and career progression to create personalized STAR-method behavioral questions."
-        default:
-            return "\(interviewerName) will analyze your background to create personalized questions."
-        }
-    }
-    
     var body: some View {
         NavigationView {
             VStack(spacing: 32) {
@@ -854,13 +836,6 @@ struct CVPickerView: View {
                             .font(.headline)
                             .foregroundColor(categoryColor)
                             .fontWeight(.semibold)
-                        
-                        Text(analysisDescription)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 20)
-                            .lineLimit(4)
                     }
                 }
                 
