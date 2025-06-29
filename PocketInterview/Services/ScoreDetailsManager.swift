@@ -59,12 +59,9 @@ class ScoreDetailsManager: ObservableObject {
                 .value
             
             self.scoreDetails = response
-            print("✅ Loaded \(response.count) score details")
-            
         } catch {
             self.errorMessage = "Failed to load score details"
             print("❌ Failed to load score details: \(error)")
-            
             // Fallback to sample data for development
             self.scoreDetails = createSampleScoreDetails()
         }

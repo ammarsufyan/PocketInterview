@@ -74,13 +74,6 @@ class TranscriptManager: ObservableObject {
                 return convertToInterviewTranscript(from: transcriptResponse)
             }
             
-            print("✅ Loaded \(self.transcripts.count) transcripts")
-            
-            // Debug: Print loaded transcripts
-            for transcript in self.transcripts {
-                print("📄 Transcript: \(transcript.conversationId) - \(transcript.messageCount) messages")
-            }
-            
         } catch {
             self.errorMessage = "Failed to load transcripts"
             print("❌ Failed to load transcripts: \(error)")
@@ -113,7 +106,6 @@ class TranscriptManager: ObservableObject {
                 .value
             
             let transcript = convertToInterviewTranscript(from: response)
-            print("✅ Loaded transcript for conversation \(conversationId): \(transcript?.messageCount ?? 0) messages")
             return transcript
             
         } catch {
@@ -144,13 +136,11 @@ class TranscriptManager: ObservableObject {
     func hasTranscript(for conversationId: String?) -> Bool {
         guard let conversationId = conversationId else { return false }
         let hasIt = transcripts.contains { $0.conversationId == conversationId }
-        print("🔍 Checking transcript for \(conversationId): \(hasIt)")
         return hasIt
     }
     
     func getLocalTranscript(for conversationId: String) -> InterviewTranscript? {
         let transcript = transcripts.first { $0.conversationId == conversationId }
-        print("🔍 Getting local transcript for \(conversationId): \(transcript != nil)")
         return transcript
     }
     
@@ -199,25 +189,20 @@ class TranscriptManager: ObservableObject {
     
     private func parseTranscriptData(_ rawData: Any) -> [TranscriptMessage]? {
         do {
-            print("🔍 Parsing transcript data of type: \(type(of: rawData))")
-            
             // Handle different data types from Supabase JSONB
             let jsonData: Data
             
             if let dataObject = rawData as? Data {
                 jsonData = dataObject
-                print("✅ Using Data object directly")
             } else if let stringData = rawData as? String {
                 guard let data = stringData.data(using: .utf8) else {
                     print("❌ Failed to convert string to data")
                     return nil
                 }
                 jsonData = data
-                print("✅ Converted string to data")
             } else {
                 // Try to serialize the object to JSON data
                 jsonData = try JSONSerialization.data(withJSONObject: rawData, options: [])
-                print("✅ Serialized object to JSON data")
             }
             
             // Parse the JSON data
@@ -227,14 +212,11 @@ class TranscriptManager: ObservableObject {
                 print("❌ Failed to parse as array of dictionaries")
                 return nil
             }
-            
-            print("📊 Found \(messageArray.count) messages in transcript data")
-            
+                        
             let messages = messageArray.compactMap { messageDict -> TranscriptMessage? in
                 guard let roleString = messageDict["role"] as? String,
                       let content = messageDict["content"] as? String,
                       let role = TranscriptMessage.MessageRole(rawValue: roleString) else {
-                    print("⚠️ Skipping invalid message: \(messageDict)")
                     return nil
                 }
                 

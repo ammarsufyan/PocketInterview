@@ -151,12 +151,9 @@ struct TavusWebView: UIViewRepresentable {
         // MARK: - WKNavigationDelegate
         
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-            print("🌐 WebView loading started")
         }
         
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            print("✅ WebView loaded successfully")
-            
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {            
             // PERFORMANCE: Minimal post-load JavaScript
             let optimizationJS = """
             // Disable unnecessary features for performance

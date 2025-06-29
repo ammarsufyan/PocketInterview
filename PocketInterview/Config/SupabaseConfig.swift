@@ -33,9 +33,6 @@ class SupabaseConfig {
             supabaseURL: url,
             supabaseKey: apiKey
         )
-        
-        print("✅ Supabase client initialized with URL: \(supabaseURL)")
-        print("🔑 Using API key from environment variables")
     }
     
     // MARK: - Configuration Validation
@@ -48,8 +45,5 @@ class SupabaseConfig {
     
     func printConfiguration() {
         let envConfig = EnvironmentConfig.shared
-        print("🔧 Supabase Configuration:")
-        print("  URL: \(envConfig.supabaseURL ?? "Not set")")
-        print("  API Key: \(envConfig.supabaseAnonKey?.prefix(8) ?? "Not set")...")
     }
 }

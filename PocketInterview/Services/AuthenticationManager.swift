@@ -34,7 +34,6 @@ class AuthenticationManager: ObservableObject {
             self.currentUser = session.user
             self.isAuthenticated = true
         } catch {
-            print("Error checking initial auth state: \(error)")
             self.isAuthenticated = false
             self.currentUser = nil
         }
@@ -71,8 +70,6 @@ class AuthenticationManager: ObservableObject {
         errorMessage = nil
         
         do {
-            print("Starting sign up for: \(email) with name: \(fullName)")
-            
             let response = try await supabase.auth.signUp(
                 email: email,
                 password: password,
@@ -80,21 +77,16 @@ class AuthenticationManager: ObservableObject {
                     "display_name": .string(fullName)
                 ]
             )
-            
-            print("Sign up response - User: \(response.user.id.uuidString), Session: \(response.session != nil)")
-            
             // Check if user needs email confirmation
             if response.session == nil {
                 // User created but needs email confirmation
                 self.errorMessage = "Please check your email and confirm your account before signing in."
             } else {
                 // User is automatically signed in
-                print("User signed up successfully with display name: \(fullName)")
                 self.currentUser = response.user
                 self.isAuthenticated = true
             }
         } catch {
-            print("Sign up error: \(error)")
             self.errorMessage = handleAuthError(error)
         }
         
@@ -161,19 +153,13 @@ class AuthenticationManager: ObservableObject {
             }
             
             let userId = currentUser.id
-            
-            print("🗑️ Starting complete account deletion for user: \(userId)")
-            
+                    
             // Step 1: Delete user data from custom tables
-            print("🗑️ Deleting user data...")
             try await deleteUserData(userId: userId)
             
             // Step 2: Delete the user from Supabase Auth using admin client
-            print("🗑️ Deleting user from Supabase Auth...")
             try await deleteUserFromAuthAdmin(userId: userId)
-            
-            print("✅ Account deletion completed successfully")
-            
+                        
             // Step 3: 🔥 CRITICAL: Force immediate state update and sign out
             await MainActor.run {
                 self.currentUser = nil
@@ -204,32 +190,24 @@ class AuthenticationManager: ObservableObject {
     }
     
     private func deleteUserData(userId: UUID) async throws {
-        print("🗑️ Deleting user data for: \(userId)")
-        
         // Delete interview sessions (this will cascade to transcripts and score details)
         try await supabase
             .from("interview_sessions")
             .delete()
             .eq("user_id", value: userId)
             .execute()
-        
-        print("✅ User data deleted successfully")
     }
     
     private func deleteUserFromAuthAdmin(userId: UUID) async throws {
-        print("🗑️ Attempting to delete user from Supabase Auth using admin client...")
-        
         // Get service role key from environment
         guard let serviceRoleKey = EnvironmentConfig.shared.supabaseServiceRoleKey,
               !serviceRoleKey.isEmpty else {
-            print("⚠️ Service role key not found, falling back to sign out")
             try await supabase.auth.signOut()
             return
         }
         
         guard let supabaseUrl = EnvironmentConfig.shared.supabaseURL,
               !supabaseUrl.isEmpty else {
-            print("⚠️ Supabase URL not found, falling back to sign out")
             try await supabase.auth.signOut()
             return
         }
@@ -246,8 +224,6 @@ class AuthenticationManager: ObservableObject {
         
         // Use admin client to delete the user
         try await adminClient.auth.admin.deleteUser(id: userId)
-        
-        print("✅ User successfully deleted from Supabase Auth using admin client")
     }
     
     private func handleDeleteAccountError(_ error: Error) -> String {
@@ -386,8 +362,6 @@ class AuthenticationManager: ObservableObject {
             
             // Update the current user with the updated user directly
             self.currentUser = updatedUser
-            
-            print("Display name updated successfully to: \(displayName)")
         } catch {
             print("Error updating display name: \(error)")
             self.errorMessage = "Failed to update display name"
