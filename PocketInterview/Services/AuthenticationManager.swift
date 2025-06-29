@@ -15,6 +15,7 @@ class AuthenticationManager: ObservableObject {
     @Published var currentUser: User?
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var successMessage: String? // 🔥 NEW: For success messages
     
     private let supabase = SupabaseConfig.shared.client
     private var cancellables = Set<AnyCancellable>()
@@ -126,21 +127,118 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    func resetPassword(email: String) async {
+    // MARK: - 🔥 NEW: Temporary Password Reset System
+    
+    func resetPasswordWithTempPassword(email: String) async {
         isLoading = true
         errorMessage = nil
+        successMessage = nil
         
         do {
-            try await supabase.auth.resetPasswordForEmail(email)
-            // Success - user will receive email
+            // Generate a secure temporary password
+            let tempPassword = generateTemporaryPassword()
+            
+            // Get service role key for admin operations
+            guard let serviceRoleKey = EnvironmentConfig.shared.supabaseServiceRoleKey,
+                  !serviceRoleKey.isEmpty else {
+                throw AuthError.unauthorized
+            }
+            
+            guard let supabaseUrl = EnvironmentConfig.shared.supabaseURL,
+                  !supabaseUrl.isEmpty else {
+                throw AuthError.invalidConfiguration
+            }
+            
+            // Create admin client
+            guard let url = URL(string: supabaseUrl) else {
+                throw AuthError.invalidConfiguration
+            }
+            
+            let adminClient = SupabaseClient(
+                supabaseURL: url,
+                supabaseKey: serviceRoleKey
+            )
+            
+            // First, check if user exists
+            let users = try await adminClient.auth.admin.listUsers()
+            let userExists = users.contains { $0.email == email }
+            
+            if !userExists {
+                throw AuthError.userNotFound
+            }
+            
+            // Find the user by email
+            guard let user = users.first(where: { $0.email == email }) else {
+                throw AuthError.userNotFound
+            }
+            
+            // Update user password using admin API
+            _ = try await adminClient.auth.admin.updateUser(
+                id: user.id,
+                attributes: AdminUserAttributes(
+                    password: tempPassword,
+                    emailConfirm: true // Ensure email is confirmed
+                )
+            )
+            
+            // Set success message with temporary password
+            self.successMessage = """
+            Temporary password has been generated for your account.
+            
+            Your temporary password is: \(tempPassword)
+            
+            Please sign in with this temporary password and immediately change it to a new secure password in Account Settings.
+            
+            This temporary password will expire in 24 hours for security reasons.
+            """
+            
+        } catch let error as AuthError {
+            self.errorMessage = error.localizedDescription
         } catch {
-            self.errorMessage = handleAuthError(error)
+            self.errorMessage = handleTempPasswordError(error)
         }
         
         isLoading = false
     }
     
-    // MARK: - 🔥 NEW: Change Password Method
+    // MARK: - 🔥 NEW: Temporary Password Generator
+    
+    private func generateTemporaryPassword() -> String {
+        // Generate a secure 12-character temporary password
+        // Format: 4 letters + 4 numbers + 4 special chars (easy to type)
+        let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        let numbers = "0123456789"
+        let specialChars = "!@#$"
+        
+        var password = ""
+        
+        // Add 4 random letters
+        for _ in 0..<4 {
+            password += String(letters.randomElement()!)
+        }
+        
+        // Add 4 random numbers
+        for _ in 0..<4 {
+            password += String(numbers.randomElement()!)
+        }
+        
+        // Add 4 random special characters
+        for _ in 0..<4 {
+            password += String(specialChars.randomElement()!)
+        }
+        
+        // Shuffle the password to make it more random
+        return String(password.shuffled())
+    }
+    
+    // MARK: - Original Reset Password (kept for compatibility)
+    
+    func resetPassword(email: String) async {
+        // Redirect to new temporary password system
+        await resetPasswordWithTempPassword(email: email)
+    }
+    
+    // MARK: - Change Password Method
     
     func changePassword(currentPassword: String, newPassword: String) async {
         isLoading = true
@@ -181,7 +279,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 FIXED: Complete Account Deletion with Proper State Management
+    // MARK: - Account Deletion
     
     func deleteAccountSimple() async {
         isLoading = true
@@ -201,7 +299,7 @@ class AuthenticationManager: ObservableObject {
             // Step 2: Delete the user from Supabase Auth using admin client
             try await deleteUserFromAuthAdmin(userId: userId)
                         
-            // Step 3: 🔥 CRITICAL: Force immediate state update and sign out
+            // Step 3: Force immediate state update and sign out
             await MainActor.run {
                 self.currentUser = nil
                 self.isAuthenticated = false
@@ -209,7 +307,7 @@ class AuthenticationManager: ObservableObject {
                 self.errorMessage = nil
             }
             
-            // Step 4: 🔥 ADDITIONAL: Force sign out to ensure auth state is cleared
+            // Step 4: Force sign out to ensure auth state is cleared
             do {
                 try await supabase.auth.signOut()
             } catch {
@@ -278,6 +376,8 @@ class AuthenticationManager: ObservableObject {
                 return "Unable to delete account. Please contact support."
             case .invalidPassword:
                 return "Authentication error occurred."
+            case .invalidConfiguration:
+                return "Configuration error. Please contact support."
             }
         }
         
@@ -326,10 +426,43 @@ class AuthenticationManager: ObservableObject {
         return error.localizedDescription
     }
     
+    // MARK: - 🔥 NEW: Temporary Password Error Handling
+    
+    private func handleTempPasswordError(_ error: Error) -> String {
+        let errorDescription = error.localizedDescription.lowercased()
+        
+        if errorDescription.contains("user not found") {
+            return "No account found with this email address"
+        } else if errorDescription.contains("unauthorized") || 
+                  errorDescription.contains("permission") {
+            return "Unable to reset password. Please contact support."
+        } else if errorDescription.contains("network") || 
+                  errorDescription.contains("connection") {
+            return "Network error. Please check your connection and try again."
+        } else if errorDescription.contains("rate limit") {
+            return "Too many requests. Please try again later."
+        }
+        
+        return "Failed to generate temporary password. Please try again or contact support."
+    }
+    
     // MARK: - Utility Methods
     
     func clearError() {
         errorMessage = nil
+    }
+    
+    // MARK: - 🔥 NEW: Clear Success Message
+    
+    func clearSuccess() {
+        successMessage = nil
+    }
+    
+    // MARK: - 🔥 NEW: Clear All Messages
+    
+    func clearAllMessages() {
+        errorMessage = nil
+        successMessage = nil
     }
     
     var userEmail: String? {
@@ -419,6 +552,7 @@ enum AuthError: Error, LocalizedError {
     case deletionFailed
     case unauthorized
     case invalidPassword
+    case invalidConfiguration
     
     var errorDescription: String? {
         switch self {
@@ -430,6 +564,8 @@ enum AuthError: Error, LocalizedError {
             return "Unauthorized operation"
         case .invalidPassword:
             return "Current password is incorrect"
+        case .invalidConfiguration:
+            return "Configuration error"
         }
     }
 }

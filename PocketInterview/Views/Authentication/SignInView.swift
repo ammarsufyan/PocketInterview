@@ -58,7 +58,7 @@ struct SignInView: View {
                                 .autocapitalization(.none)
                                 .onChange(of: email) {
                                     validateEmail()
-                                    authManager.clearError()
+                                    authManager.clearAllMessages() // 🔥 UPDATED: Clear all messages
                                 }
                             
                             if !isEmailValid {
@@ -80,7 +80,7 @@ struct SignInView: View {
                                 .textContentType(.password)
                                 .onChange(of: password) {
                                     validatePassword()
-                                    authManager.clearError()
+                                    authManager.clearAllMessages() // 🔥 UPDATED: Clear all messages
                                 }
                             
                             if !isPasswordValid {
@@ -105,6 +105,15 @@ struct SignInView: View {
                             Text(errorMessage)
                                 .font(.subheadline)
                                 .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                        }
+                        
+                        // 🔥 NEW: Success Message (for temporary password notifications)
+                        if let successMessage = authManager.successMessage {
+                            Text(successMessage)
+                                .font(.subheadline)
+                                .foregroundColor(.green)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
                         }
@@ -180,6 +189,10 @@ struct SignInView: View {
         )
         .sheet(isPresented: $showingForgotPassword) {
             ForgotPasswordView(authManager: authManager)
+        }
+        // 🔥 NEW: Clear success message when view appears
+        .onAppear {
+            authManager.clearSuccess()
         }
     }
     
