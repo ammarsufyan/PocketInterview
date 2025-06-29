@@ -102,3 +102,4 @@ iOSInjectionProject/
 # OS
 .DS_Store
 Thumbs.db
+PocketInterview/Info.plist
