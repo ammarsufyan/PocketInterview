@@ -1,10 +1,3 @@
-//
-//  AuthenticationManager.swift
-//  InterviewSim
-//
-//  Created by Ammar Sufyan on 23/06/25.
-//
-
 import Foundation
 import Supabase
 import Combine
@@ -194,14 +187,25 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // 🔥 FIXED: Use a temporary sign-in approach for password verification
+    // 🔥 FIXED: Use EnvironmentConfig instead of accessing internal Supabase client properties
     private func verifyPassword(email: String, password: String) async throws {
         do {
+            // Get Supabase configuration from EnvironmentConfig
+            let envConfig = EnvironmentConfig.shared
+            
+            guard let supabaseURL = envConfig.supabaseURL,
+                  let supabaseKey = envConfig.supabaseAnonKey else {
+                throw AuthError.unauthorized
+            }
+            
+            guard let url = URL(string: supabaseURL) else {
+                throw AuthError.unauthorized
+            }
+            
             // Create a temporary client to test the credentials
-            // This is the most reliable way to verify password with current Supabase Swift SDK
             let tempClient = SupabaseClient(
-                supabaseURL: supabase.supabaseURL,
-                supabaseKey: supabase.supabaseKey
+                supabaseURL: url,
+                supabaseKey: supabaseKey
             )
             
             // Try to sign in with the provided credentials
