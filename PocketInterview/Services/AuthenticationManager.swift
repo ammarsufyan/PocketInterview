@@ -140,14 +140,8 @@ class AuthenticationManager: ObservableObject {
                 redirectTo: URL(string: "https://pocketinterview.netlify.app/auth/reset-password")
             )
             
-            // Set success message
-            self.successMessage = """
-            Password reset link sent!
-            
-            Please check your email for a password reset link. Click the link in the email to reset your password.
-            
-            If you don't see the email, please check your spam folder.
-            """
+            // Set simple success message
+            self.successMessage = "Reset link sent to your email"
             
         } catch {
             self.errorMessage = handlePasswordResetError(error)

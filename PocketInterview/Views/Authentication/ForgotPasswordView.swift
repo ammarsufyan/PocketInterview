@@ -74,26 +74,19 @@ struct ForgotPasswordView: View {
                                 .multilineTextAlignment(.center)
                         }
                         
-                        // Success Message for Email Link
+                        // Simple Success Message
                         if let successMessage = authManager.successMessage {
-                            VStack(spacing: 12) {
-                                Text("Reset Link Sent!")
-                                    .font(.headline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.green)
-                                
-                                Text(successMessage)
-                                    .font(.subheadline)
-                                    .foregroundColor(.primary)
-                                    .multilineTextAlignment(.center)
-                                    .padding(16)
-                                    .background(Color.green.opacity(0.1))
-                                    .cornerRadius(12)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.green.opacity(0.3), lineWidth: 1)
-                                    )
-                            }
+                            Text(successMessage)
+                                .font(.subheadline)
+                                .foregroundColor(.green)
+                                .multilineTextAlignment(.center)
+                                .padding(16)
+                                .background(Color.green.opacity(0.1))
+                                .cornerRadius(12)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                                )
                         }
                         
                         // Send Reset Link Button
@@ -133,7 +126,7 @@ struct ForgotPasswordView: View {
                         .disabled(authManager.isLoading || !isFormValid)
                         .opacity(isFormValid ? 1.0 : 0.6)
                         
-                        // Instructions
+                        // Instructions (only show when no success message)
                         if authManager.successMessage == nil {
                             VStack(spacing: 8) {
                                 HStack(spacing: 8) {
@@ -181,8 +174,8 @@ struct ForgotPasswordView: View {
             // Auto dismiss after successful email send
             .onChange(of: authManager.successMessage) { _, successMessage in
                 if successMessage != nil {
-                    // Auto dismiss after 5 seconds to give user time to read message
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                    // Auto dismiss after 3 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                         if authManager.successMessage != nil {
                             dismiss()
                         }
