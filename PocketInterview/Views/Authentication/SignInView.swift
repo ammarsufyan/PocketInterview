@@ -21,9 +21,9 @@ struct SignInView: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(spacing: 0) {
-                    // Header Section
+                    // Header Section - MOVED HIGHER
                     VStack(spacing: 24) {
-                        Spacer(minLength: 60)
+                        Spacer(minLength: 40) // REDUCED from 60
                         
                         // Logo
                         InterviewSimLogo()
@@ -36,7 +36,7 @@ struct SignInView: View {
                                 .foregroundColor(.primary)
                         }
                     }
-                    .frame(minHeight: geometry.size.height * 0.4)
+                    .frame(minHeight: geometry.size.height * 0.35) // REDUCED from 0.4
                     
                     // Form Section
                     VStack(spacing: 24) {

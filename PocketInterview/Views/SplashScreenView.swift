@@ -43,7 +43,7 @@ struct SplashScreenView: View {
                     
                     // App Name and Tagline
                     VStack(spacing: 12) {
-                        Text("InterviewSim")
+                        Text("PocketInterview")
                             .font(.system(size: 36, weight: .bold, design: .rounded))
                             .foregroundColor(.white)
                             .opacity(isTextAnimated ? 1.0 : 0.0)
