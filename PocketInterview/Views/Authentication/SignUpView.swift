@@ -1,10 +1,3 @@
-//
-//  SignUpView.swift
-//  InterviewSim
-//
-//  Created by Ammar Sufyan on 23/06/25.
-//
-
 import SwiftUI
 
 struct SignUpView: View {
@@ -40,6 +33,10 @@ struct SignUpView: View {
                         }
                     }
                     .frame(minHeight: geometry.size.height * 0.25)
+                    
+                    // ADDED: Extra spacing between title and form
+                    Spacer()
+                        .frame(height: 40)
                     
                     // Form Section
                     VStack(spacing: 20) {
