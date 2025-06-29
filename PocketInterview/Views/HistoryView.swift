@@ -101,50 +101,6 @@ struct HistoryView: View {
                 await transcriptManager.refreshTranscripts()
                 await scoreDetailsManager.refreshScoreDetails()
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button("Refresh", systemImage: "arrow.clockwise") {
-                            Task {
-                                await historyManager.refreshSessions()
-                                await transcriptManager.refreshTranscripts()
-                                await scoreDetailsManager.refreshScoreDetails()
-                            }
-                        }
-                        
-                        Button("Add Sample Data", systemImage: "plus.circle") {
-                            Task {
-                                await historyManager.addSampleData()
-                            }
-                        }
-                        
-                        if historyManager.errorMessage != nil {
-                            Button("Clear Error", systemImage: "xmark.circle") {
-                                historyManager.clearError()
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                }
-            }
-            .alert("Delete Session", isPresented: $showingDeleteAlert) {
-                Button("Cancel", role: .cancel) {
-                    sessionToDelete = nil
-                }
-                Button("Delete", role: .destructive) {
-                    if let session = sessionToDelete {
-                        Task {
-                            await historyManager.deleteSession(session)
-                        }
-                    }
-                    sessionToDelete = nil
-                }
-            } message: {
-                if let session = sessionToDelete {
-                    Text("Are you sure you want to delete '\(session.sessionName)'? This action cannot be undone.")
-                }
-            }
             .onAppear {
                 Task {
                     await historyManager.loadSessions()
@@ -385,15 +341,6 @@ struct SessionDetailView: View {
             VStack(spacing: 24) {
                 // Session Header
                 VStack(spacing: 16) {
-                    // Category Icon
-                    Image(systemName: session.category == "Technical" ? "laptopcomputer" : "person.2.fill")
-                        .font(.system(size: 60))
-                        .foregroundColor(categoryColor)
-                        .frame(width: 100, height: 100)
-                        .background(categoryColor.opacity(0.1))
-                        .cornerRadius(20)
-                        .symbolRenderingMode(.hierarchical)
-                    
                     VStack(spacing: 8) {
                         Text(session.sessionName)
                             .font(.title2)
@@ -408,7 +355,6 @@ struct SessionDetailView: View {
                 }
                 .padding(.top, 20)
                 
-                // 🔥 UPDATED: Session Details Card without Questions Answered and equal size boxes
                 SessionDetailsCard(
                     session: session,
                     categoryColor: categoryColor
@@ -428,14 +374,8 @@ struct SessionDetailView: View {
                 }
                 
                 // Transcript Section
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading) {
                     HStack {
-                        Text("Transcript")
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                        
-                        Spacer()
-                        
                         if isLoadingTranscript {
                             ProgressView()
                                 .scaleEffect(0.8)
@@ -455,8 +395,6 @@ struct SessionDetailView: View {
                             .padding(.horizontal, 20)
                     }
                 }
-                
-                Spacer(minLength: 20)
             }
         }
         .navigationTitle("Session Details")
@@ -556,7 +494,7 @@ struct SessionDetailsCard: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 80)
+                .frame(height: 100)
                 .background(Color.blue.opacity(0.1))
                 .cornerRadius(12)
                 
@@ -583,7 +521,7 @@ struct SessionDetailsCard: View {
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 80)
+                .frame(height: 100)
                 .background(Color.purple.opacity(0.1))
                 .cornerRadius(12)
             }

@@ -11,28 +11,6 @@ struct ProfileView: View {
                 VStack(spacing: 32) {
                     // Profile Header
                     VStack(spacing: 16) {
-                        // Profile Avatar
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [.blue, .cyan]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 100, height: 100)
-                            .overlay(
-                                Text(authManager.userInitials)
-                                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-                            )
-                            .shadow(
-                                color: .blue.opacity(0.3),
-                                radius: 10,
-                                x: 0,
-                                y: 5
-                            )
-                        
                         // User Info
                         VStack(spacing: 4) {
                             Text(authManager.userName ?? "User")
