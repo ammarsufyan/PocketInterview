@@ -127,7 +127,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 FIXED: Simplified Temporary Password Reset System
+    // MARK: - 🔥 FIXED: Correct Temporary Password Reset System
     
     func resetPasswordWithTempPassword(email: String) async {
         isLoading = true
@@ -159,7 +159,8 @@ class AuthenticationManager: ObservableObject {
                 supabaseKey: serviceRoleKey
             )
             
-            // 🔥 FIXED: First check if user exists by trying to get user by email
+            // 🔥 FIXED: Use the correct admin API method to update user password
+            // First, find the user by email
             let usersResponse = try await adminClient.auth.admin.listUsers()
             let users = usersResponse.users
             
@@ -167,10 +168,10 @@ class AuthenticationManager: ObservableObject {
                 throw AuthError.userNotFound
             }
             
-            // 🔥 FIXED: Use the correct admin API method to update user password
+            // 🔥 FIXED: Use admin.updateUser with correct parameters
             _ = try await adminClient.auth.admin.updateUser(
                 id: user.id,
-                attributes: UserAttributes(
+                attributes: AdminUserAttributes(
                     password: tempPassword
                 )
             )
@@ -254,7 +255,7 @@ class AuthenticationManager: ObservableObject {
                 throw AuthError.invalidPassword
             }
             
-            // 🔥 FIXED: Use the correct API structure
+            // 🔥 FIXED: Use the correct API for authenticated user password change
             let updatedUser = try await supabase.auth.update(
                 user: UserAttributes(
                     password: newPassword
@@ -429,7 +430,8 @@ class AuthenticationManager: ObservableObject {
             return "No account found with this email address"
         } else if errorDescription.contains("unauthorized") || 
                   errorDescription.contains("permission") ||
-                  errorDescription.contains("forbidden") {
+                  errorDescription.contains("forbidden") ||
+                  errorDescription.contains("admin") {
             return "Unable to reset password. Please contact support."
         } else if errorDescription.contains("network") || 
                   errorDescription.contains("connection") {
