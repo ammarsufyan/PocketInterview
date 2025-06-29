@@ -22,6 +22,10 @@ struct TavusInterviewView: View {
     @State private var showPreparationView = true
     @State private var hasAttemptedStart = false
     
+    // 🔥 NEW: Timer for updating elapsed time
+    @State private var timer: Timer?
+    @State private var elapsedTime: TimeInterval = 0
+    
     private var categoryColor: Color {
         sessionData.category == "Technical" ? .blue : .purple
     }
@@ -106,7 +110,8 @@ struct TavusInterviewView: View {
                     .cornerRadius(16)
                 }
             }
-            .navigationTitle("Interview Summary")
+            // 🔥 FIXED: Change title from "Interview Summary" to "Interview"
+            .navigationTitle("Interview")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden()
             .toolbar {
@@ -136,7 +141,8 @@ struct TavusInterviewView: View {
                                 .foregroundColor(.red)
                                 .font(.caption)
                             
-                            Text(timeElapsed)
+                            // 🔥 FIXED: Use elapsedTime state instead of computed property
+                            Text(formatElapsedTime(elapsedTime))
                                 .font(.caption)
                                 .fontWeight(.medium)
                                 .foregroundColor(.secondary)
@@ -177,8 +183,10 @@ struct TavusInterviewView: View {
     
     // MARK: - Computed Properties
     
-    private var timeElapsed: String {
-        let elapsed = Int(Date().timeIntervalSince(sessionStartTime))
+    // 🔥 REMOVED: Old timeElapsed computed property
+    // 🔥 NEW: Format elapsed time function
+    private func formatElapsedTime(_ timeInterval: TimeInterval) -> String {
+        let elapsed = Int(timeInterval)
         let minutes = elapsed / 60
         let seconds = elapsed % 60
         return String(format: "%02d:%02d", minutes, seconds)
@@ -196,6 +204,10 @@ struct TavusInterviewView: View {
                 self.sessionStartTime = Date()
                 self.isSessionActive = true
                 self.hasSessionStarted = true
+                self.elapsedTime = 0
+                
+                // 🔥 NEW: Start timer for updating elapsed time
+                self.startTimer()
             }
         }
     }
@@ -208,6 +220,23 @@ struct TavusInterviewView: View {
         Task {
             await endInterviewWithAPI(reason: reason)
         }
+    }
+    
+    // 🔥 NEW: Timer management functions
+    private func startTimer() {
+        timer?.invalidate() // Invalidate any existing timer
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            DispatchQueue.main.async {
+                if self.isSessionActive && self.hasSessionStarted {
+                    self.elapsedTime = Date().timeIntervalSince(self.sessionStartTime)
+                }
+            }
+        }
+    }
+    
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
     }
     
     private func startTavusSession() async {
@@ -244,6 +273,9 @@ struct TavusInterviewView: View {
         
         isEndingSession = true
         
+        // 🔥 NEW: Stop timer when ending interview
+        stopTimer()
+        
         // End the Tavus conversation
         _ = await tavusService.endConversationSession()
         
@@ -265,6 +297,9 @@ struct TavusInterviewView: View {
     // MARK: - State Reset
     
     private func resetAllState() {
+        // 🔥 NEW: Stop timer when resetting state
+        stopTimer()
+        
         isSessionActive = false
         hasSessionStarted = false
         isEndingSession = false
@@ -276,6 +311,7 @@ struct TavusInterviewView: View {
         
         sessionStartTime = Date()
         sessionEndReason = "manual"
+        elapsedTime = 0
         
         tavusService.clearSession()
     }
