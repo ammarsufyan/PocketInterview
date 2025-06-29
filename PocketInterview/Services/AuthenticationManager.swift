@@ -127,7 +127,7 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - 🔥 NEW: Temporary Password Reset System
+    // MARK: - 🔥 FIXED: Temporary Password Reset System
     
     func resetPasswordWithTempPassword(email: String) async {
         isLoading = true
@@ -159,8 +159,10 @@ class AuthenticationManager: ObservableObject {
                 supabaseKey: serviceRoleKey
             )
             
-            // First, check if user exists
-            let users = try await adminClient.auth.admin.listUsers()
+            // 🔥 FIXED: Correct way to list and find users
+            let usersResponse = try await adminClient.auth.admin.listUsers()
+            let users = usersResponse.users // Access the users array from the response
+            
             let userExists = users.contains { $0.email == email }
             
             if !userExists {
@@ -172,12 +174,12 @@ class AuthenticationManager: ObservableObject {
                 throw AuthError.userNotFound
             }
             
-            // Update user password using admin API
+            // 🔥 FIXED: Correct way to update user with admin API
             _ = try await adminClient.auth.admin.updateUser(
                 id: user.id,
                 attributes: AdminUserAttributes(
-                    password: tempPassword,
-                    emailConfirm: true // Ensure email is confirmed
+                    emailConfirm: true, // 🔥 FIXED: emailConfirm must come before password
+                    password: tempPassword
                 )
             )
             
