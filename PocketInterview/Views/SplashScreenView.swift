@@ -79,26 +79,9 @@ struct SplashScreenView: View {
             startAnimationSequence()
         }
         .fullScreenCover(isPresented: $showMainApp) {
-            // 🔥 FIXED: Pass the authManager to maintain state consistency
-            if authManager.isAuthenticated {
-                ContentView()
-                    .environmentObject(authManager)
-            } else {
-                AuthenticationView()
-                    .environmentObject(authManager)
-            }
-        }
-        // 🔥 FIXED: Listen to auth state changes to handle account deletion
-        .onReceive(authManager.$isAuthenticated) { isAuthenticated in
-            // If user gets signed out (including after account deletion), 
-            // ensure we show the auth flow
-            if !isAuthenticated && showMainApp {
-                // Reset and show auth flow
-                showMainApp = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    showMainApp = true
-                }
-            }
+            // 🔥 FIXED: Always show ContentView which will handle auth state internally
+            ContentView()
+                .environmentObject(authManager)
         }
     }
     
