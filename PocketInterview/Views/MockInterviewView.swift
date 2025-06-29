@@ -110,19 +110,7 @@ struct MockInterviewView: View {
                             showingSessionSetup = true
                         }
                         .padding(.horizontal, 20)
-                        
-                        if !cvUploaded {
-                            Text("Upload your CV to get personalized questions")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                        }
-                        // REMOVED: "Next: Set session name and duration" text
                     }
-                    
-                    // Built by Bolt.new Badge
-                    BoltBadgeImageView()
-                        .padding(.top, 20)
                     
                     Spacer(minLength: 20)
                 }

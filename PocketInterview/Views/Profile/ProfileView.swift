@@ -138,10 +138,6 @@ struct ProfileView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                     
-                    // Built by Bolt.new Badge
-                    BoltBadgeImageView()
-                        .padding(.top, 20)
-                    
                     Spacer(minLength: 20)
                 }
                 .padding(.vertical, 20)
