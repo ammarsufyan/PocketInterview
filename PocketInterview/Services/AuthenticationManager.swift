@@ -165,9 +165,9 @@ class AuthenticationManager: ObservableObject {
             
             print("🗑️ Starting account deletion for user: \(userId)")
             
-            // 🔥 FIXED: Use Supabase's reauthenticate method
-            print("🔐 Verifying password with reauthentication...")
-            try await verifyPasswordWithReauth(password: password)
+            // 🔥 FIXED: Use proper password verification method
+            print("🔐 Verifying password...")
+            try await verifyPassword(email: userEmail, password: password)
             
             // Step 2: Delete user data from custom tables
             print("🗑️ Deleting user data...")
@@ -194,52 +194,41 @@ class AuthenticationManager: ObservableObject {
         isLoading = false
     }
     
-    // 🔥 NEW: Use Supabase's reauthenticate method for password verification
-    private func verifyPasswordWithReauth(password: String) async throws {
-        guard let currentUser = currentUser,
-              let email = currentUser.email else {
-            throw AuthError.userNotFound
-        }
-        
+    // 🔥 FIXED: Use a temporary sign-in approach for password verification
+    private func verifyPassword(email: String, password: String) async throws {
         do {
-            // Use Supabase's reauthenticate method which is designed for this purpose
-            _ = try await supabase.auth.reauthenticate(
+            // Create a temporary client to test the credentials
+            // This is the most reliable way to verify password with current Supabase Swift SDK
+            let tempClient = SupabaseClient(
+                supabaseURL: supabase.supabaseURL,
+                supabaseKey: supabase.supabaseKey
+            )
+            
+            // Try to sign in with the provided credentials
+            let response = try await tempClient.auth.signIn(
                 email: email,
                 password: password
             )
-            print("✅ Password verification successful via reauthentication")
+            
+            // If we get here, the password is correct
+            print("✅ Password verification successful")
+            
+            // Sign out from the temporary session immediately
+            try await tempClient.auth.signOut()
+            
         } catch {
             print("❌ Password verification failed: \(error)")
             
-            // Check if reauthenticate method exists, if not fall back to alternative
-            if error.localizedDescription.contains("reauthenticate") {
-                // Fallback: Try updating user with same password (this requires correct password)
-                try await fallbackPasswordVerification(password: password)
-            } else {
+            // Check for specific error types
+            let errorDescription = error.localizedDescription.lowercased()
+            if errorDescription.contains("invalid login credentials") || 
+               errorDescription.contains("invalid email or password") ||
+               errorDescription.contains("invalid_credentials") {
                 throw AuthError.invalidPassword
+            } else {
+                // Re-throw other errors
+                throw error
             }
-        }
-    }
-    
-    // 🔥 FALLBACK: Alternative password verification method
-    private func fallbackPasswordVerification(password: String) async throws {
-        guard let currentUser = currentUser,
-              let email = currentUser.email else {
-            throw AuthError.userNotFound
-        }
-        
-        do {
-            // Try to update the user's password to the same password
-            // This will fail if the current password is incorrect
-            _ = try await supabase.auth.update(
-                user: UserAttributes(
-                    password: password
-                )
-            )
-            print("✅ Password verification successful via fallback method")
-        } catch {
-            print("❌ Fallback password verification failed: \(error)")
-            throw AuthError.invalidPassword
         }
     }
     
