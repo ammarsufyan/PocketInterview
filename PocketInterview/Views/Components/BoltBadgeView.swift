@@ -22,7 +22,7 @@ struct BoltBadgeImageView: View {
                 UIApplication.shared.open(url)
             }
         }) {
-            Image("bolt_badge")
+            Image("white_circle_360x360")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(height: height)
