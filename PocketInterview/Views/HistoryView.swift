@@ -408,7 +408,7 @@ struct SessionDetailView: View {
                 }
                 .padding(.top, 20)
                 
-                // 🔥 UPDATED: Session Details Card with boxes for Duration and Date & Time
+                // 🔥 UPDATED: Session Details Card without Questions Answered and equal size boxes
                 SessionDetailsCard(
                     session: session,
                     categoryColor: categoryColor
@@ -514,7 +514,7 @@ struct SessionDetailView: View {
     }
 }
 
-// 🔥 NEW: Session Details Card with boxes for Duration and Date & Time
+// 🔥 UPDATED: Session Details Card without Questions Answered and equal size boxes
 struct SessionDetailsCard: View {
     let session: InterviewSession
     let categoryColor: Color
@@ -535,84 +535,57 @@ struct SessionDetailsCard: View {
                 Spacer()
             }
             
-            // Session details content
-            VStack(spacing: 16) {
-                // Questions Answered (without box)
-                HStack(spacing: 16) {
-                    Image(systemName: "questionmark.circle.fill")
+            // Duration and Date & Time in equal size boxes
+            HStack(spacing: 16) {
+                // Duration Box
+                VStack(spacing: 8) {
+                    Image(systemName: "clock.fill")
                         .font(.title3)
-                        .foregroundColor(.green)
-                        .frame(width: 24)
+                        .foregroundColor(.blue)
                     
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Questions Answered")
+                    VStack(spacing: 4) {
+                        Text("Duration")
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .fontWeight(.medium)
                         
-                        Text("\(session.questionsAnswered)")
+                        Text(session.durationText)
                             .font(.subheadline)
                             .foregroundColor(.primary)
-                            .fontWeight(.semibold)
+                            .fontWeight(.bold)
                     }
-                    
-                    Spacer()
                 }
+                .frame(maxWidth: .infinity)
+                .frame(height: 80)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(12)
                 
-                Divider()
-                
-                // Duration and Date & Time in boxes (like AI Score Breakdown)
-                HStack(spacing: 16) {
-                    // Duration Box
-                    VStack(spacing: 8) {
-                        Image(systemName: "clock.fill")
-                            .font(.title3)
-                            .foregroundColor(.blue)
-                        
-                        VStack(spacing: 4) {
-                            Text("Duration")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fontWeight(.medium)
-                            
-                            Text(session.durationText)
-                                .font(.subheadline)
-                                .foregroundColor(.primary)
-                                .fontWeight(.bold)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(12)
+                // Date & Time Box
+                VStack(spacing: 8) {
+                    Image(systemName: "calendar")
+                        .font(.title3)
+                        .foregroundColor(.purple)
                     
-                    // Date & Time Box
-                    VStack(spacing: 8) {
-                        Image(systemName: "calendar")
-                            .font(.title3)
-                            .foregroundColor(.purple)
+                    VStack(spacing: 4) {
+                        Text("Date & Time")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fontWeight(.medium)
                         
-                        VStack(spacing: 4) {
-                            Text("Date & Time")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fontWeight(.medium)
-                            
-                            Text("\(session.actualFormattedDate)")
-                                .font(.caption)
-                                .foregroundColor(.primary)
-                                .fontWeight(.bold)
-                            
-                            Text("at \(session.formattedTime)")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
+                        Text(session.actualFormattedDate)
+                            .font(.caption)
+                            .foregroundColor(.primary)
+                            .fontWeight(.bold)
+                        
+                        Text("at \(session.formattedTime)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color.purple.opacity(0.1))
-                    .cornerRadius(12)
                 }
+                .frame(maxWidth: .infinity)
+                .frame(height: 80)
+                .background(Color.purple.opacity(0.1))
+                .cornerRadius(12)
             }
         }
         .padding(20)
