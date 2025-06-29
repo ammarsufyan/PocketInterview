@@ -125,6 +125,14 @@ extension InterviewSession {
         }
     }
     
+    // MARK: - 🔥 NEW: Actual date format (e.g., "25 June")
+    var actualFormattedDate: String {
+        let targetDate = completedTimestamp ?? createdAt
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMMM"
+        return formatter.string(from: targetDate)
+    }
+    
     var formattedTime: String {
         let targetDate = completedTimestamp ?? createdAt
         let formatter = DateFormatter()

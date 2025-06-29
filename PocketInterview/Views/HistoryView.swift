@@ -233,7 +233,7 @@ struct HistoryFilterTab: View {
     }
 }
 
-// MARK: - 🔥 CLEANED UP History Session Card
+// MARK: - 🔥 UPDATED History Session Card - Removed chevron and updated date format
 struct HistorySessionCard: View {
     let session: InterviewSession
     let hasTranscript: Bool
@@ -300,18 +300,16 @@ struct HistorySessionCard: View {
                                 .foregroundColor(.secondary)
                         }
                         
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        // REMOVED: Chevron icon
                     }
                 }
                 
-                // SIMPLIFIED: Only show date/time (removed duration and questions)
+                // UPDATED: Show actual date instead of "Today/Yesterday"
                 HStack(spacing: 16) {
                     Spacer()
                     
                     VStack(alignment: .trailing, spacing: 1) {
-                        Text(session.formattedDate)
+                        Text(session.actualFormattedDate)
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .fontWeight(.medium)
@@ -439,7 +437,7 @@ struct SessionDetailView: View {
                     // Date Card
                     DetailCard(
                         title: "Date & Time",
-                        value: "\(session.formattedDate) at \(session.formattedTime)",
+                        value: "\(session.actualFormattedDate) at \(session.formattedTime)",
                         icon: "calendar",
                         color: .purple
                     )
