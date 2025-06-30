@@ -14,7 +14,9 @@ struct ProfileView: View {
                     // Profile Header
                     VStack(spacing: 16) {
                         // User Info
-                        VStack(spacing: 4) {
+                        VStack(spacing: 6) {
+                            BoltBadgeImageView(height: 60, scaleEffect: 0.95)
+                            
                             Text(authManager.userName ?? "User")
                                 .font(.title2)
                                 .fontWeight(.semibold)

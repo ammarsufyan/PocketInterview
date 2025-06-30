@@ -832,7 +832,7 @@ struct TranscriptCard: View {
                             session: session
                         )) {
                             HStack {
-                                Text("View Full Transcript (\(transcript.transcriptData.count - 10) more messages)")
+                                Text("View Full Transcript")
                                     .font(.subheadline)
                                     .foregroundColor(categoryColor)
                                 

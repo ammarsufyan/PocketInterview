@@ -99,7 +99,8 @@ struct TranscriptDetailView: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 10)
                     }
                 }
                 .padding(.horizontal, 20)
