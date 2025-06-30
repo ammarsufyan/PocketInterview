@@ -296,7 +296,7 @@ struct CVUploadCard: View {
                 "\(interviewerName) will analyze your technical background"
         case "Behavioral":
             return isUploaded ?
-                "\(interviewerName) will create personalized behavioral questions based on your work experience and achievements" :
+                "\(interviewerName) will create personalized behavioral questions based on your skills and experience" :
                 "\(interviewerName) will analyze your background"
         default:
             return "Your AI interviewer will analyze your background"

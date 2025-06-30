@@ -178,7 +178,6 @@ struct ChangePasswordView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(.orange)
                     .disabled(authManager.isLoading)
                 }
             }
