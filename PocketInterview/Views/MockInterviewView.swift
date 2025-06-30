@@ -47,7 +47,7 @@ struct MockInterviewView: View {
                             // Technical Category - Steve
                             CategoryCard(
                                 title: "Technical",
-                                description: "Practice with Steve",
+                                description: "Practice technical skills interview with Steve",
                                 icon: "laptopcomputer",
                                 color: .blue,
                                 interviewerName: "Steve",
@@ -62,7 +62,7 @@ struct MockInterviewView: View {
                             // Behavioral Category - Lucy
                             CategoryCard(
                                 title: "Behavioral",
-                                description: "Practice with Lucy",
+                                description: "Practice behavioral skills interview with Lucy",
                                 icon: "person.2.fill",
                                 color: .purple,
                                 interviewerName: "Lucy",
@@ -297,7 +297,7 @@ struct CVUploadCard: View {
         case "Behavioral":
             return isUploaded ?
                 "\(interviewerName) will create personalized behavioral questions based on your skills and experience" :
-                "\(interviewerName) will analyze your background"
+                "\(interviewerName) will analyze your behavioral background"
         default:
             return "Your AI interviewer will analyze your background"
         }
@@ -503,7 +503,7 @@ struct SessionSetupView: View {
     private var placeholderText: String {
         switch sessionData.category {
         case "Technical":
-            return "e.g., iOS Development Practice, Android Development Practice"
+            return "e.g., iOS Development, Web Development"
         case "Behavioral":
             return "e.g., Leadership Experience, Communication Skills"
         default:

@@ -19,9 +19,22 @@
 		85B233C52E099323008315FC /* PocketInterview.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PocketInterview.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		8550A0452E122C21006EA187 /* Exceptions for "PocketInterview" folder in "PocketInterview" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 85B233C42E099323008315FC /* PocketInterview */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		85B233C72E099323008315FC /* PocketInterview */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8550A0452E122C21006EA187 /* Exceptions for "PocketInterview" folder in "PocketInterview" target */,
+			);
 			path = PocketInterview;
 			sourceTree = "<group>";
 		};
@@ -296,7 +309,7 @@
 				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "";
+				INFOPLIST_FILE = PocketInterview/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = PocketInterview;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Please turn on your camera for interview.";
@@ -337,7 +350,7 @@
 				ENABLE_RESOURCE_ACCESS_CAMERA = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "";
+				INFOPLIST_FILE = PocketInterview/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = PocketInterview;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Please turn on your camera for interview.";
