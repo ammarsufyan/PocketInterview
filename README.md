@@ -1,7 +1,5 @@
 # PocketInterview 
 
-**Master Your Interview Skills with AI-Powered Practice**
-
 <img src="https://github.com/user-attachments/assets/d73026fb-22b6-4f91-bff3-68dfe18c9fbb" width="300">
 
 PocketInterview is an AI-powered mobile application designed to provide realistic and personalized mock interview experiences. It allows users to practice with two distinct AI interviewers: "Steve" for technical interviews and "Lucy" for behavioral interviews. 
