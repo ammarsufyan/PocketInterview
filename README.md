@@ -48,14 +48,11 @@ PocketInterview is an AI-powered mobile application designed to provide realisti
 - **OpenRouter LLM** - Intelligent scoring and feedback
 
 ## 🙏 Acknowledgments
-
 - **Tavus** - AI video conversation platform
 - **Supabase** - Backend infrastructure and authentication
 - **OpenRouter** - LLM integration for intelligent scoring
 - **Bolt.new** - Development platform and tools
-
----
-
-**Built with ❤️ using Swift, SwiftUI, and cutting-edge AI technology.**
-
-*PocketInterview - Your personal interview coach, available anytime, anywhere.*
+  
+## 👥 Created By:
+- Ammar Sufyan
+- Evan Lokajaya
