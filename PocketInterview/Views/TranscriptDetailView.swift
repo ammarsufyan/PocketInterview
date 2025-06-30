@@ -127,17 +127,9 @@ struct TranscriptDetailView: View {
                     }
                 }
             }
-            .navigationTitle("Interview Transcript")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden()
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .foregroundColor(categoryColor)
-                }
-            }
         }
     }
 }
@@ -165,10 +157,6 @@ struct TranscriptStatsHeader: View {
                 }
                 
                 Spacer()
-                
-                Text(session.formattedDate)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
             
             // Transcript Stats
